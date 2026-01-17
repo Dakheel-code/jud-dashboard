@@ -125,6 +125,21 @@ export async function POST(request: NextRequest) {
         .eq('id', store_id)
         .single();
       
+      // جلب اسم المتجر وأيقونته من API
+      let storeName = storeInfo?.store_url;
+      let storeLogo = null;
+      
+      try {
+        const metadataRes = await fetch(`${request.nextUrl.origin}/api/store/metadata?url=${encodeURIComponent(storeInfo?.store_url || '')}`);
+        if (metadataRes.ok) {
+          const metadata = await metadataRes.json();
+          storeName = metadata.name || storeInfo?.store_url;
+          storeLogo = metadata.logo || null;
+        }
+      } catch (metaError) {
+        console.error('Metadata fetch error:', metaError);
+      }
+      
       // جلب معلومات المهمة إذا وجدت
       let taskTitle = null;
       if (task_id) {
@@ -143,6 +158,8 @@ export async function POST(request: NextRequest) {
           type: 'help_request',
           data: {
             store_url: storeInfo?.store_url,
+            store_name: storeName,
+            store_logo: storeLogo,
             store_id,
             task_title: taskTitle,
             message
