@@ -84,12 +84,32 @@ export async function POST(request: NextRequest) {
     
     // إرسال إشعار Slack للمتجر الجديد
     try {
+      // جلب معلومات المتجر (الاسم والأيقونة)
+      let storeName = store_url;
+      let storeLogo = null;
+      
+      try {
+        const metadataRes = await fetch(`${request.nextUrl.origin}/api/store/metadata?url=${encodeURIComponent(store_url)}`);
+        if (metadataRes.ok) {
+          const metadata = await metadataRes.json();
+          storeName = metadata.name || store_url;
+          storeLogo = metadata.logo || null;
+        }
+      } catch (metaError) {
+        console.error('Metadata fetch error:', metaError);
+      }
+      
       await fetch(`${request.nextUrl.origin}/api/admin/slack/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'new_store',
-          data: { store_url, store_id: newStore.id }
+          data: { 
+            store_url, 
+            store_id: newStore.id,
+            store_name: storeName,
+            store_logo: storeLogo
+          }
         })
       });
     } catch (slackError) {

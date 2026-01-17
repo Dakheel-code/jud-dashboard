@@ -60,12 +60,32 @@ function createSlackMessage(type: NotificationType, data: any): SlackMessage {
   ];
 
   if (type === 'new_store' && data.store_url) {
+    // إضافة أيقونة المتجر إذا وجدت
+    if (data.store_logo) {
+      blocks.push({
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*${data.store_name || data.store_url}*` },
+        accessory: {
+          type: 'image',
+          image_url: data.store_logo,
+          alt_text: data.store_name || 'Store Logo'
+        }
+      });
+    }
+    
     blocks.push(
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: `*المتجر:*\n${data.store_url}` },
+          { type: 'mrkdwn', text: `*اسم المتجر:*\n${data.store_name || data.store_url}` },
+          { type: 'mrkdwn', text: `*الرابط:*\n${data.store_url}` },
+        ],
+      },
+      {
+        type: 'section',
+        fields: [
           { type: 'mrkdwn', text: `*التاريخ:*\n${new Date().toLocaleDateString('ar-SA')}` },
+          { type: 'mrkdwn', text: `*الوقت:*\n${new Date().toLocaleTimeString('ar-SA')}` },
         ],
       },
       {
