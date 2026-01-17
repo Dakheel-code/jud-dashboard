@@ -133,3 +133,47 @@ VALUES (
   '["manage_tasks", "manage_stores", "manage_users", "manage_help", "view_stats"]'::jsonb,
   true
 ) ON CONFLICT (username) DO NOTHING;
+
+-- =====================================================
+-- جداول إعدادات Slack
+-- =====================================================
+
+-- Create slack_webhooks table for Slack integration
+CREATE TABLE IF NOT EXISTS slack_webhooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL, -- اسم القناة أو وصف
+  webhook_url TEXT NOT NULL,
+  channel_name TEXT, -- اسم القناة في Slack
+  is_active BOOLEAN DEFAULT TRUE,
+  notify_new_store BOOLEAN DEFAULT TRUE, -- إشعار عند تسجيل متجر جديد
+  notify_store_complete BOOLEAN DEFAULT TRUE, -- إشعار عند إكمال متجر 100%
+  notify_milestone BOOLEAN DEFAULT TRUE, -- إشعار عند وصول متجر لمرحلة (50%, 75%)
+  notify_help_request BOOLEAN DEFAULT TRUE, -- إشعار عند طلب مساعدة جديد
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create slack_notifications_log table to track sent notifications
+CREATE TABLE IF NOT EXISTS slack_notifications_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  webhook_id UUID REFERENCES slack_webhooks(id) ON DELETE CASCADE,
+  notification_type TEXT NOT NULL, -- new_store, store_complete, milestone, help_request
+  store_id UUID REFERENCES stores(id) ON DELETE SET NULL,
+  message TEXT NOT NULL,
+  status TEXT DEFAULT 'sent', -- sent, failed
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_slack_webhooks_is_active ON slack_webhooks(is_active);
+CREATE INDEX IF NOT EXISTS idx_slack_notifications_log_webhook_id ON slack_notifications_log(webhook_id);
+CREATE INDEX IF NOT EXISTS idx_slack_notifications_log_type ON slack_notifications_log(notification_type);
+
+-- Enable RLS
+ALTER TABLE slack_webhooks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slack_notifications_log ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Allow all operations on slack_webhooks" ON slack_webhooks FOR ALL USING (true);
+CREATE POLICY "Allow all operations on slack_notifications_log" ON slack_notifications_log FOR ALL USING (true);

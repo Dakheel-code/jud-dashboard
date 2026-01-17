@@ -142,7 +142,7 @@ function StoreDetailsContent() {
               />
             )}
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+              <h1 className="text-2xl sm:text-3xl text-white" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>
                 {storeDetails?.name || 'تفاصيل المتجر'}
               </h1>
               <p className="text-purple-300/70 text-sm">{storeDetails?.store_url}</p>

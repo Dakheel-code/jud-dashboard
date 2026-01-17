@@ -67,7 +67,6 @@ const AchievementIcons = {
 
 const achievements: Achievement[] = [
   { id: 'start', title: 'البداية', description: 'أكمل أول مهمة', icon: 'start', unlocked: false, percentage: 5 },
-  { id: 'quarter', title: 'ربع الطريق', description: 'أكمل 25% من المهام', icon: 'quarter', unlocked: false, percentage: 25 },
   { id: 'half', title: 'نصف الطريق', description: 'أكمل 50% من المهام', icon: 'half', unlocked: false, percentage: 50 },
   { id: 'threequarter', title: 'قريب من النهاية', description: 'أكمل 75% من المهام', icon: 'threequarter', unlocked: false, percentage: 75 },
   { id: 'complete', title: 'البطل', description: 'أكمل جميع المهام', icon: 'complete', unlocked: false, percentage: 100 },
@@ -314,9 +313,15 @@ export default function TasksPage() {
     }
   };
 
-  const checkAchievements = (percentage: number) => {
-    // التحقق من جميع الإنجازات التي يجب فتحها
-    const newUnlocked = new Set(unlockedAchievements);
+  const checkAchievements = (percentage: number, isInitialLoad: boolean = false) => {
+    const storeId = localStorage.getItem('store_id');
+    if (!storeId) return;
+    
+    // تحميل الإنجازات المحفوظة مباشرة من localStorage
+    const savedAchievements = localStorage.getItem(`achievements_${storeId}`);
+    const currentUnlocked: Set<string> = savedAchievements ? new Set(JSON.parse(savedAchievements) as string[]) : new Set();
+    
+    const newUnlocked = new Set<string>(currentUnlocked);
     let latestAchievement: Achievement | null = null;
     
     achievements.forEach(achievement => {
@@ -326,21 +331,19 @@ export default function TasksPage() {
       }
     });
     
-    // تحديث الإنجازات المفتوحة
-    if (newUnlocked.size > unlockedAchievements.size) {
+    // تحديث الإنجازات المفتوحة فقط إذا كان هناك إنجاز جديد
+    if (newUnlocked.size > currentUnlocked.size) {
       setUnlockedAchievements(newUnlocked);
+      localStorage.setItem(`achievements_${storeId}`, JSON.stringify([...newUnlocked]));
       
-      // حفظ الإنجازات في localStorage
-      const storeId = localStorage.getItem('store_id');
-      if (storeId) {
-        localStorage.setItem(`achievements_${storeId}`, JSON.stringify([...newUnlocked]));
-      }
-      
-      // عرض آخر إنجاز تم فتحه
-      if (latestAchievement) {
+      // عرض الإنجاز فقط إذا لم يكن التحميل الأولي
+      if (latestAchievement && !isInitialLoad) {
         setShowAchievement(latestAchievement);
         setTimeout(() => setShowAchievement(null), 5000);
       }
+    } else {
+      // تحديث الـ state بالإنجازات المحفوظة
+      setUnlockedAchievements(currentUnlocked);
     }
   };
 
@@ -370,7 +373,7 @@ export default function TasksPage() {
 
       setTasks(data.tasks);
       setStats(data.stats);
-      checkAchievements(data.stats.percentage);
+      checkAchievements(data.stats.percentage, true);
       setLoading(false);
     } catch (err) {
       setError('حدث خطأ في الاتصال');
@@ -382,7 +385,36 @@ export default function TasksPage() {
     const storeId = localStorage.getItem('store_id');
     if (!storeId) return;
 
+    // Optimistic Update - تحديث فوري للواجهة
+    const updatedTasks = { ...tasks };
+    let newIsDone = false;
+    
+    Object.keys(updatedTasks).forEach(category => {
+      updatedTasks[category] = updatedTasks[category].map(task => {
+        if (task.id === taskId) {
+          newIsDone = !task.is_done;
+          return { ...task, is_done: newIsDone };
+        }
+        return task;
+      });
+    });
+    
+    // تحديث الـ state فوراً
+    setTasks(updatedTasks);
     setAnimatingTasks(prev => new Set(prev).add(taskId));
+    
+    // تحديث الإحصائيات فوراً
+    const allTasks = Object.values(updatedTasks).flat();
+    const completed = allTasks.filter(t => t.is_done).length;
+    const total = allTasks.length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    setStats({ total, completed, percentage });
+    
+    // التحقق من إكمال قسم كامل مباشرة (قبل انتظار الـ API)
+    if (newIsDone) {
+      checkCategoryCompletion(updatedTasks);
+      checkAchievements(percentage);
+    }
 
     try {
       const response = await fetch('/api/tasks/toggle', {
@@ -392,21 +424,21 @@ export default function TasksPage() {
       });
 
       if (response.ok) {
-        await fetchTasks(storeId);
-        
-        // التحقق من إكمال قسم كامل
-        checkCategoryCompletion();
-        
         setTimeout(() => {
           setAnimatingTasks(prev => {
             const newSet = new Set(prev);
             newSet.delete(taskId);
             return newSet;
           });
-        }, 600);
+        }, 300);
+      } else {
+        // إذا فشل الطلب، أعد الحالة السابقة
+        await fetchTasks(storeId);
       }
     } catch (err) {
       console.error('Failed to toggle task:', err);
+      // إذا فشل الطلب، أعد الحالة السابقة
+      await fetchTasks(storeId);
       setAnimatingTasks(prev => {
         const newSet = new Set(prev);
         newSet.delete(taskId);
@@ -454,16 +486,17 @@ export default function TasksPage() {
     return categoryMessages[Math.floor(Math.random() * categoryMessages.length)];
   };
 
-  const checkCategoryCompletion = () => {
+  const checkCategoryCompletion = (updatedTasks?: typeof tasks) => {
+    const tasksToCheck = updatedTasks || tasks;
     // التحقق من الأقسام المكتملة حديثاً
-    Object.entries(tasks).forEach(([category, categoryTasks]) => {
+    Object.entries(tasksToCheck).forEach(([category, categoryTasks]) => {
       const allCompleted = categoryTasks.every(task => task.is_done);
       if (allCompleted && categoryTasks.length > 0 && !completedCategories.has(category)) {
         // قسم جديد مكتمل!
         setCompletedCategories(prev => new Set(prev).add(category));
         setShowConfetti(true);
         
-        // عرض رسالة التهنئة
+        // عرض رسالة التهنئة مباشرة
         const message = getCategoryCompleteMessage(category);
         setCategoryCompleteMessage({ category, message });
         
@@ -582,17 +615,26 @@ export default function TasksPage() {
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 animate-fade-in">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
-            />
+            <div className="relative">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-xl animate-pulse"></div>
+              <div className="absolute inset-2 bg-violet-400/20 rounded-full blur-lg animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="relative z-10 w-14 h-14 sm:w-20 sm:h-20 object-contain animate-pulse"
+                style={{ 
+                  filter: 'drop-shadow(0 0 10px rgba(167, 139, 250, 0.6)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
+                  animationDuration: '3s'
+                }}
+              />
+            </div>
             {/* Vertical Divider */}
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
-              <h1 className="text-2xl sm:text-4xl font-bold mb-1">
-                <span className="text-white">{getGreeting()} </span>
-                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-4xl mb-1">
+                <span className="text-white font-semibold" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif" }}>{getGreeting()} </span>
+                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
                   {storeName || 'المتجر'}
                 </span>
               </h1>
@@ -802,46 +844,32 @@ export default function TasksPage() {
         <div className="mb-6 animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Store Rank */}
           {storeRank && (
-            <div className={`relative overflow-hidden backdrop-blur-xl rounded-2xl p-6 border shadow-lg ${
-              storeRank.rank === 1 
-                ? 'bg-gradient-to-r from-yellow-900/40 to-amber-900/40 border-yellow-500/30' 
-                : storeRank.is_top_3 
-                  ? 'bg-gradient-to-r from-purple-900/40 to-violet-900/40 border-purple-500/30'
-                  : 'bg-purple-950/40 border-purple-500/20'
-            }`}>
+            <div className="relative overflow-hidden backdrop-blur-xl rounded-2xl p-6 border shadow-lg bg-purple-950/40 border-white/30">
               {/* Falling Confetti */}
               {storeRank.rank === 1 && (
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {/* Confetti pieces */}
-                  <div className="absolute w-2 h-3 bg-yellow-400 rotate-12 animate-confetti-fall" style={{ left: '5%', animationDelay: '0s' }} />
-                  <div className="absolute w-1.5 h-2 bg-amber-500 -rotate-45 animate-confetti-fall" style={{ left: '15%', animationDelay: '0.4s' }} />
-                  <div className="absolute w-2 h-1 bg-yellow-300 rotate-45 animate-confetti-fall" style={{ left: '25%', animationDelay: '0.8s' }} />
-                  <div className="absolute w-1 h-3 bg-amber-400 -rotate-12 animate-confetti-fall" style={{ left: '35%', animationDelay: '1.2s' }} />
-                  <div className="absolute w-2 h-2 bg-yellow-500 rotate-90 animate-confetti-fall" style={{ left: '45%', animationDelay: '0.2s' }} />
-                  <div className="absolute w-1.5 h-3 bg-amber-300 rotate-30 animate-confetti-fall" style={{ left: '55%', animationDelay: '0.6s' }} />
-                  <div className="absolute w-2 h-1.5 bg-yellow-400 -rotate-30 animate-confetti-fall" style={{ left: '65%', animationDelay: '1s' }} />
-                  <div className="absolute w-1 h-2 bg-amber-500 rotate-60 animate-confetti-fall" style={{ left: '75%', animationDelay: '1.4s' }} />
-                  <div className="absolute w-2 h-2 bg-yellow-300 -rotate-60 animate-confetti-fall" style={{ left: '85%', animationDelay: '0.3s' }} />
-                  <div className="absolute w-1.5 h-1 bg-amber-400 rotate-15 animate-confetti-fall" style={{ left: '95%', animationDelay: '0.7s' }} />
+                  <div className="absolute w-2 h-3 bg-white/60 rotate-12 animate-confetti-fall" style={{ left: '5%', animationDelay: '0s' }} />
+                  <div className="absolute w-1.5 h-2 bg-white/50 -rotate-45 animate-confetti-fall" style={{ left: '15%', animationDelay: '0.4s' }} />
+                  <div className="absolute w-2 h-1 bg-white/70 rotate-45 animate-confetti-fall" style={{ left: '25%', animationDelay: '0.8s' }} />
+                  <div className="absolute w-1 h-3 bg-white/40 -rotate-12 animate-confetti-fall" style={{ left: '35%', animationDelay: '1.2s' }} />
+                  <div className="absolute w-2 h-2 bg-white/60 rotate-90 animate-confetti-fall" style={{ left: '45%', animationDelay: '0.2s' }} />
+                  <div className="absolute w-1.5 h-3 bg-white/50 rotate-30 animate-confetti-fall" style={{ left: '55%', animationDelay: '0.6s' }} />
+                  <div className="absolute w-2 h-1.5 bg-white/70 -rotate-30 animate-confetti-fall" style={{ left: '65%', animationDelay: '1s' }} />
+                  <div className="absolute w-1 h-2 bg-white/40 rotate-60 animate-confetti-fall" style={{ left: '75%', animationDelay: '1.4s' }} />
+                  <div className="absolute w-2 h-2 bg-white/60 -rotate-60 animate-confetti-fall" style={{ left: '85%', animationDelay: '0.3s' }} />
+                  <div className="absolute w-1.5 h-1 bg-white/50 rotate-15 animate-confetti-fall" style={{ left: '95%', animationDelay: '0.7s' }} />
                 </div>
               )}
               <div className="relative flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                  storeRank.rank === 1 
-                    ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg shadow-yellow-500/50' 
-                    : storeRank.rank === 2
-                      ? 'bg-gradient-to-br from-gray-300 to-gray-400 shadow-lg shadow-gray-400/50'
-                      : storeRank.rank === 3
-                        ? 'bg-gradient-to-br from-amber-600 to-amber-700 shadow-lg shadow-amber-600/50'
-                        : 'bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/50'
-                }`}>
-                  <span className={`text-2xl font-bold ${storeRank.rank <= 3 ? 'text-white' : 'text-white'}`}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-yellow-400 to-amber-500 shadow-lg shadow-yellow-500/50">
+                  <span className="text-2xl font-bold text-white">
                     #{storeRank.rank}
                   </span>
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white mb-1">ترتيبك بين المتاجر</h3>
-                  <p className={`text-sm ${storeRank.rank === 1 ? 'text-yellow-300' : 'text-purple-300/80'}`}>
+                  <p className="text-sm text-white/80">
                     {storeRank.rank === 1 
                       ? '🏆 أنت في المركز الأول!' 
                       : storeRank.is_top_3 
@@ -875,7 +903,7 @@ export default function TasksPage() {
               </svg>
               الإنجازات
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {achievements.map((achievement, index) => {
                 const isUnlocked = unlockedAchievements.has(achievement.id);
                 const IconComponent = AchievementIcons[achievement.icon as keyof typeof AchievementIcons];
@@ -884,7 +912,7 @@ export default function TasksPage() {
                     key={achievement.id}
                     className={`relative p-4 rounded-2xl border-2 transition-all duration-500 transform hover:scale-105 group ${
                       isUnlocked
-                        ? 'bg-transparent border-yellow-500/60 shadow-xl shadow-yellow-500/20'
+                        ? 'bg-transparent border-white/60 shadow-xl shadow-white/10'
                         : 'bg-purple-900/20 border-purple-700/30 opacity-50 grayscale'
                     }`}
                     style={{ animationDelay: `${index * 100}ms` }}
@@ -892,14 +920,14 @@ export default function TasksPage() {
                   >
                     {/* Glow effect for unlocked */}
                     {isUnlocked && (
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-400/10 to-amber-400/10 animate-pulse" />
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 animate-pulse" />
                     )}
                     
                     {/* Icon */}
                     <div className={`relative flex justify-center mb-3 ${isUnlocked ? 'animate-bounce' : ''}`} style={{ animationDuration: '2s' }}>
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                         isUnlocked 
-                          ? 'bg-yellow-500/20 border-2 border-yellow-400/50' 
+                          ? 'bg-white/10 border-2 border-white/50' 
                           : 'bg-purple-800/50'
                       }`}>
                         {IconComponent && IconComponent('w-7 h-7 text-white')}
@@ -907,12 +935,12 @@ export default function TasksPage() {
                     </div>
                     
                     {/* Title */}
-                    <div className={`text-sm text-center font-bold truncate ${isUnlocked ? 'text-yellow-300' : 'text-purple-400'}`}>
+                    <div className={`text-sm text-center font-bold truncate ${isUnlocked ? 'text-white' : 'text-purple-400'}`}>
                       {achievement.title}
                     </div>
                     
                     {/* Description */}
-                    <div className={`text-xs text-center mt-1 ${isUnlocked ? 'text-yellow-200/70' : 'text-purple-500'}`}>
+                    <div className={`text-xs text-center mt-1 ${isUnlocked ? 'text-white/70' : 'text-purple-500'}`}>
                       {achievement.description}
                     </div>
                     
@@ -1273,24 +1301,24 @@ export default function TasksPage() {
 
       {/* Category Complete Popup */}
       {categoryCompleteMessage && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 shadow-2xl shadow-green-500/50 border-2 border-green-300 max-w-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed top-16 sm:top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down w-[90%] sm:w-auto max-w-xs sm:max-w-sm">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl shadow-green-500/50 border-2 border-green-300 relative">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white mb-1">أكملت قسم {categoryCompleteMessage.category}!</h3>
-                <p className="text-sm text-green-100">{categoryCompleteMessage.message}</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm sm:text-lg font-bold text-white mb-0.5 sm:mb-1 leading-tight">أكملت قسم {categoryCompleteMessage.category}!</h3>
+                <p className="text-xs sm:text-sm text-green-100 leading-tight">{categoryCompleteMessage.message}</p>
               </div>
             </div>
             <button
               onClick={() => setCategoryCompleteMessage(null)}
               className="absolute top-2 left-2 text-white/70 hover:text-white transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -1300,16 +1328,16 @@ export default function TasksPage() {
 
       {/* Achievement Popup */}
       {showAchievement && (
-        <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
-          <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-6 shadow-2xl shadow-yellow-500/50 border-2 border-yellow-300">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center animate-bounce">
-                {AchievementIcons[showAchievement.icon as keyof typeof AchievementIcons]?.('w-10 h-10 text-white')}
+        <div className="fixed top-4 sm:top-8 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down w-[90%] sm:w-auto max-w-sm sm:max-w-md">
+          <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl shadow-yellow-500/50 border-2 border-yellow-300">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center animate-bounce flex-shrink-0">
+                {AchievementIcons[showAchievement.icon as keyof typeof AchievementIcons]?.('w-7 h-7 sm:w-10 sm:h-10 text-white')}
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-1">إنجاز جديد!</h3>
-                <p className="text-xl font-bold text-yellow-100">{showAchievement.title}</p>
-                <p className="text-sm text-yellow-50/80">{showAchievement.description}</p>
+              <div className="min-w-0">
+                <h3 className="text-lg sm:text-2xl font-bold text-white mb-0.5 sm:mb-1">إنجاز جديد!</h3>
+                <p className="text-base sm:text-xl font-bold text-yellow-100 truncate">{showAchievement.title}</p>
+                <p className="text-xs sm:text-sm text-yellow-50/80 truncate">{showAchievement.description}</p>
               </div>
             </div>
           </div>
@@ -1418,6 +1446,20 @@ export default function TasksPage() {
           animation: slide-down 0.5s ease-out;
         }
       `}</style>
+
+      {/* Footer */}
+      <footer className="relative z-10 mt-12 py-6 border-t border-purple-500/20">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <img 
+            src="https://jud-calendar.netlify.app/_next/image?url=%2Flogo.png&w=128&q=75" 
+            alt="Zid Logo" 
+            className="h-8 object-contain"
+          />
+          <p className="text-purple-400/70 text-sm">
+            الحقوق محفوظة لـ <a href="https://zid.sa" target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-white/80 transition-colors">زد</a> © {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

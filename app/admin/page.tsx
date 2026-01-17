@@ -206,9 +206,9 @@ function AdminPageContent() {
             {/* Vertical Divider */}
             <div className="h-14 sm:h-20 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
-              <h1 className="text-2xl sm:text-4xl font-bold mb-2">
-                <span className="text-white">لوحة </span>
-                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">الإدارة</span>
+              <h1 className="text-2xl sm:text-4xl mb-2">
+                <span className="text-white font-semibold" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif" }}>لوحة </span>
+                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>الإدارة</span>
               </h1>
               <p className="text-purple-300/80 flex items-center gap-2">
                 إدارة ومتابعة جميع المتاجر
@@ -245,6 +245,16 @@ function AdminPageContent() {
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </Link>
+            <Link
+              href="/admin/settings"
+              className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
+              title="الإعدادات"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </Link>
             <Link
@@ -311,7 +321,7 @@ function AdminPageContent() {
         {/* Top 10 Stores */}
         {stores.length > 0 && (
           <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/30 p-6 border border-purple-500/20 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <h2 className="text-xl text-white mb-4 flex items-center gap-2" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>
               <svg className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
@@ -378,7 +388,7 @@ function AdminPageContent() {
 
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/30 overflow-hidden border border-purple-500/20">
           <div className="px-4 sm:px-6 py-4 border-b border-purple-500/20">
-            <h2 className="text-xl sm:text-2xl font-bold text-white">جميع المتاجر</h2>
+            <h2 className="text-xl sm:text-2xl text-white" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>جميع المتاجر</h2>
           </div>
 
           {/* Mobile View - Cards */}

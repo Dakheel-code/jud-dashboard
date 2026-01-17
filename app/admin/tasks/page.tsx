@@ -224,7 +224,7 @@ function TasksManagementContent() {
             />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold text-white mb-1">
+              <h1 className="text-xl sm:text-3xl text-white mb-1" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>
                 إدارة المهام والأقسام
               </h1>
               <p className="text-purple-300/80 text-xs sm:text-sm">إضافة وتعديل وحذف المهام</p>

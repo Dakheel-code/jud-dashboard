@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
                 className="relative z-10 w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">لوحة التحكم</h1>
+            <h1 className="text-2xl text-white mb-2 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>لوحة التحكم</h1>
             <p className="text-purple-300/70 text-sm">تسجيل دخول المسؤول</p>
           </div>
 
@@ -121,7 +121,7 @@ export default function AdminLoginPage() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-purple-400/50 text-xs">
-              © 2024 معسكر الخير - جميع الحقوق محفوظة
+              © 2026 <span className="text-white">معسكر الخير</span> - جميع الحقوق محفوظة
             </p>
           </div>
         </div>

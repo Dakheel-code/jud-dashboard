@@ -95,68 +95,9 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="relative z-10 flex flex-col min-h-screen items-center justify-center px-3 sm:px-4 py-8 sm:py-12">
         <div className="w-full max-w-md">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/50 p-8 border border-purple-500/20 relative overflow-visible">
-            {/* Hanging Lanterns - Right Side */}
-            <div className="absolute top-0 right-2 w-20 sm:right-4 sm:w-32 z-50">
-              <div className="flex flex-row gap-1 items-start">
-                {/* Lantern 1 - Bigger and Taller (Left) */}
-                <div className="relative w-12 h-16 sm:w-16 sm:h-24" style={{ animationDelay: '0.5s' }}>
-                  <div className="absolute inset-0 bg-amber-400/30 blur-xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                  <svg viewBox="0 0 100 180" className="relative z-10 w-full h-full">
-                    <defs>
-                      <linearGradient id="lanternGoldR2" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: '#fbbf24', stopOpacity: 1 }} />
-                        <stop offset="100%" style={{ stopColor: '#f59e0b', stopOpacity: 1 }} />
-                      </linearGradient>
-                      <radialGradient id="lanternLightR2">
-                        <stop offset="0%" style={{ stopColor: '#fef3c7', stopOpacity: 0.9 }} />
-                        <stop offset="100%" style={{ stopColor: '#fcd34d', stopOpacity: 0.3 }} />
-                      </radialGradient>
-                    </defs>
-                    {/* Chain - Longer */}
-                    <line x1="50" y1="0" x2="50" y2="35" stroke="#d97706" strokeWidth="1.5"/>
-                    <path d="M 40 35 L 50 30 L 60 35 Z" fill="url(#lanternGoldR2)"/>
-                    <ellipse cx="50" cy="50" rx="18" ry="8" fill="url(#lanternGoldR2)"/>
-                    <rect x="32" y="50" width="36" height="45" fill="url(#lanternGoldR2)" rx="2"/>
-                    <ellipse cx="50" cy="95" rx="18" ry="8" fill="#d97706"/>
-                    <ellipse cx="50" cy="72" rx="15" ry="28" fill="url(#lanternLightR2)"/>
-                    <path d="M 45 100 L 50 110 L 55 100 Z" fill="#d97706"/>
-                  </svg>
-                </div>
-
-                {/* Lantern 2 - Smaller (Right) */}
-                <div className="relative w-10 h-12 sm:w-14 sm:h-16">
-                  <div className="absolute inset-0 bg-yellow-400/30 blur-xl animate-pulse"></div>
-                  <svg viewBox="0 0 100 160" className="relative z-10 w-full h-full">
-                    <defs>
-                      <linearGradient id="lanternGoldR1" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: '#fbbf24', stopOpacity: 1 }} />
-                        <stop offset="100%" style={{ stopColor: '#f59e0b', stopOpacity: 1 }} />
-                      </linearGradient>
-                      <radialGradient id="lanternLightR1">
-                        <stop offset="0%" style={{ stopColor: '#fef3c7', stopOpacity: 0.9 }} />
-                        <stop offset="100%" style={{ stopColor: '#fcd34d', stopOpacity: 0.3 }} />
-                      </radialGradient>
-                    </defs>
-                    {/* Chain - Longer */}
-                    <line x1="50" y1="0" x2="50" y2="30" stroke="#d97706" strokeWidth="1.5"/>
-                    {/* Top Cap */}
-                    <path d="M 40 30 L 50 25 L 60 30 Z" fill="url(#lanternGoldR1)"/>
-                    {/* Lantern Body */}
-                    <ellipse cx="50" cy="45" rx="18" ry="8" fill="url(#lanternGoldR1)"/>
-                    <rect x="32" y="45" width="36" height="40" fill="url(#lanternGoldR1)" rx="2"/>
-                    <ellipse cx="50" cy="85" rx="18" ry="8" fill="#d97706"/>
-                    {/* Light Glow */}
-                    <ellipse cx="50" cy="65" rx="15" ry="25" fill="url(#lanternLightR1)"/>
-                    {/* Bottom */}
-                    <path d="M 45 90 L 50 100 L 55 90 Z" fill="#d97706"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/50 p-5 sm:p-8 border border-purple-500/20 relative overflow-visible">
             {/* Hanging Lanterns - Left Side */}
             <div className="absolute top-0 left-2 w-20 sm:left-4 sm:w-32 z-50">
               <div className="flex flex-row gap-1 items-start">
@@ -216,8 +157,8 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 mb-2 relative">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 sm:w-32 sm:h-32 mb-2 relative">
                 {/* Glow effect for logo */}
                 <div className="absolute inset-0 bg-purple-400/30 rounded-full blur-2xl animate-pulse"></div>
                 <div className="absolute inset-4 bg-violet-400/20 rounded-full blur-xl"></div>
@@ -229,23 +170,15 @@ export default function Home() {
                   style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.6)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.4))' }}
                 />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-                <span className="text-white">لوحة مهام </span>
-                <span 
-                  className="bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent"
-                  style={{ 
-                    filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.4)) drop-shadow(0 0 12px rgba(245, 158, 11, 0.2))'
-                  }}
-                >
-                  المعسكر
-                </span>
+              <h1 className="text-title-h3 md:text-title-h3 xl:text-title-h1 text-white mb-2">
+                لوحة مهام المعسكر
               </h1>
               <p className="text-purple-300/80 text-sm">
                 خلّك جاهز للموسم 🚀
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               <div>
                 <label
                   htmlFor="store_url"
@@ -266,7 +199,7 @@ export default function Home() {
                     onChange={(e) => setStoreUrl(e.target.value)}
                     placeholder="mystore.com"
                     required
-                    className="w-full px-4 py-3.5 pr-11 bg-purple-900/30 border-2 border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition-all text-right placeholder:text-purple-400/50"
+                    className="w-full px-4 py-3 sm:py-3.5 pr-11 bg-purple-900/30 border-2 border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none transition-all text-right placeholder:text-purple-400/50 text-sm sm:text-base"
                     disabled={loading}
                   />
                 </div>
@@ -299,7 +232,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={loading || !storeUrl}
-                className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white py-3.5 rounded-xl font-semibold hover:from-purple-700 hover:to-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-purple-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/50"
+                className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white py-3 sm:py-3.5 rounded-xl font-semibold hover:from-purple-700 hover:to-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-purple-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/50 text-sm sm:text-base"
               >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -319,6 +252,21 @@ export default function Home() {
               )}
             </button>
           </form>
+
+            {/* Divider */}
+            <div className="border-t border-purple-500/20 my-4 sm:my-5"></div>
+
+            {/* Footer - داخل المربع */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2">
+              <img 
+                src="https://jud-calendar.netlify.app/_next/image?url=%2Flogo.png&w=128&q=75" 
+                alt="Zid Logo" 
+                className="h-5 sm:h-6 object-contain"
+              />
+              <p className="text-purple-400/60 text-[10px] sm:text-xs">
+                الحقوق محفوظة لـ <a href="https://zid.sa" target="_blank" rel="noopener noreferrer" className="text-white font-medium hover:text-white/80 transition-colors">زد</a> © {new Date().getFullYear()}
+              </p>
+            </div>
           </div>
         </div>
       </div>

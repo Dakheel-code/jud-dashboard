@@ -36,21 +36,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // تحويل اسم المستخدم لحروف صغيرة لتجاهل حالة الحروف
+    const normalizedUsername = username.toLowerCase().trim();
+
     const supabase = getSupabaseClient();
     const passwordHash = hashPassword(password);
 
-    // البحث عن المستخدم في قاعدة البيانات
+    // البحث عن المستخدم في قاعدة البيانات (بحث غير حساس لحالة الحروف)
     const { data: user, error: userError } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('username', username)
+      .ilike('username', normalizedUsername)
       .eq('is_active', true)
       .single();
 
     // إذا لم يوجد في قاعدة البيانات، تحقق من البيانات الافتراضية
     if (!user) {
       // بيانات افتراضية للمسؤول
-      if (username === 'admin' && password === 'admin123') {
+      if (normalizedUsername === 'admin' && password === 'admin123') {
         const token = generateToken();
         
         const response = NextResponse.json({
