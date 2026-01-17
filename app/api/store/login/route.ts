@@ -81,6 +81,21 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ New store created:', newStore.id);
+    
+    // إرسال إشعار Slack للمتجر الجديد
+    try {
+      await fetch(`${request.nextUrl.origin}/api/admin/slack/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'new_store',
+          data: { store_url, store_id: newStore.id }
+        })
+      });
+    } catch (slackError) {
+      console.error('Slack notification error:', slackError);
+    }
+    
     return NextResponse.json({ store_id: newStore.id });
   } catch (error) {
     console.error('❌ API error:', error);

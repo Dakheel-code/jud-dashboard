@@ -116,6 +116,43 @@ export async function POST(request: NextRequest) {
     console.log('✅ Help request created:', data);
     console.log('=== SUCCESS ===');
     
+    // إرسال إشعار Slack لطلب المساعدة الجديد
+    try {
+      // جلب معلومات المتجر
+      const { data: storeInfo } = await supabase
+        .from('stores')
+        .select('store_url')
+        .eq('id', store_id)
+        .single();
+      
+      // جلب معلومات المهمة إذا وجدت
+      let taskTitle = null;
+      if (task_id) {
+        const { data: taskInfo } = await supabase
+          .from('tasks')
+          .select('title')
+          .eq('id', task_id)
+          .single();
+        taskTitle = taskInfo?.title;
+      }
+      
+      await fetch(`${request.nextUrl.origin}/api/admin/slack/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'help_request',
+          data: {
+            store_url: storeInfo?.store_url,
+            store_id,
+            task_title: taskTitle,
+            message
+          }
+        })
+      });
+    } catch (slackError) {
+      console.error('Slack notification error:', slackError);
+    }
+    
     return NextResponse.json({ success: true, request: data });
   } catch (error: any) {
     console.error('❌ FATAL ERROR:', error);

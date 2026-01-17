@@ -84,6 +84,49 @@ export async function PUT(
       console.log('✅ Notification created:', notifData);
     }
 
+    // إرسال إشعار Slack للرد على طلب المساعدة
+    try {
+      // جلب معلومات المتجر والطلب
+      const { data: storeInfo } = await supabase
+        .from('stores')
+        .select('store_url')
+        .eq('id', helpRequest.store_id)
+        .single();
+      
+      const { data: fullRequest } = await supabase
+        .from('help_requests')
+        .select('message, task_id')
+        .eq('id', id)
+        .single();
+      
+      let taskTitle = null;
+      if (fullRequest?.task_id) {
+        const { data: taskInfo } = await supabase
+          .from('tasks')
+          .select('title')
+          .eq('id', fullRequest.task_id)
+          .single();
+        taskTitle = taskInfo?.title;
+      }
+      
+      await fetch(`${request.nextUrl.origin}/api/admin/slack/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'help_reply',
+          data: {
+            store_url: storeInfo?.store_url,
+            store_id: helpRequest.store_id,
+            task_title: taskTitle,
+            message: fullRequest?.message,
+            reply
+          }
+        })
+      });
+    } catch (slackError) {
+      console.error('Slack notification error:', slackError);
+    }
+
     console.log('=== SUCCESS ===');
     return NextResponse.json({ success: true, request: data });
   } catch (error: any) {
