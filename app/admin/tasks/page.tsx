@@ -26,6 +26,9 @@ function TasksManagementContent() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newCategory, setNewCategory] = useState('');
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editedCategoryName, setEditedCategoryName] = useState('');
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -173,6 +176,51 @@ function TasksManagementContent() {
     }
   };
 
+  const openEditCategoryModal = (category: string) => {
+    setEditingCategory(category);
+    setEditedCategoryName(category);
+    setShowEditCategoryModal(true);
+  };
+
+  const handleEditCategory = async () => {
+    if (!editingCategory || !editedCategoryName.trim()) return;
+    if (editedCategoryName.trim() === editingCategory) {
+      setShowEditCategoryModal(false);
+      return;
+    }
+    
+    setShowEditCategoryModal(false);
+    
+    try {
+      const tasksInCategory = groupedTasks[editingCategory] || [];
+      
+      for (const task of tasksInCategory) {
+        await fetch(`/api/admin/tasks/${task.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: task.title,
+            description: task.description,
+            category: editedCategoryName.trim(),
+            order_index: task.order_index
+          })
+        });
+      }
+      
+      await fetchTasks();
+      setResultModalType('success');
+      setResultModalMessage('تم تعديل اسم القسم بنجاح!');
+    } catch (err) {
+      console.error('Failed to edit category:', err);
+      setResultModalType('error');
+      setResultModalMessage('فشل تعديل القسم. حاول مرة أخرى.');
+    } finally {
+      setEditingCategory(null);
+      setEditedCategoryName('');
+      setShowResultModal(true);
+    }
+  };
+
   const groupedTasks = tasks.reduce((acc, task) => {
     if (!acc[task.category]) {
       acc[task.category] = [];
@@ -276,15 +324,26 @@ function TasksManagementContent() {
             <div key={category} className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/30 p-6 border border-purple-500/20">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-white">{category}</h2>
-                <button
-                  onClick={() => openDeleteCategoryModal(category)}
-                  className="p-2 text-red-400 border border-red-500/30 hover:border-red-400/50 hover:bg-red-500/10 rounded-lg transition-all"
-                  title="حذف القسم"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEditCategoryModal(category)}
+                    className="p-2 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-lg transition-all"
+                    title="تعديل القسم"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => openDeleteCategoryModal(category)}
+                    className="p-2 text-red-400 border border-red-500/30 hover:border-red-400/50 hover:bg-red-500/10 rounded-lg transition-all"
+                    title="حذف القسم"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div className="space-y-3">
                 {groupedTasks[category]?.sort((a, b) => a.order_index - b.order_index).map(task => (
@@ -349,6 +408,46 @@ function TasksManagementContent() {
                   onClick={() => {
                     setShowCategoryModal(false);
                     setNewCategory('');
+                  }}
+                  className="flex-1 py-3 bg-purple-900/50 text-white rounded-xl font-medium hover:bg-purple-900/70 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {showEditCategoryModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-white mb-6">تعديل اسم القسم</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-white mb-2 text-sm font-medium">اسم القسم</label>
+                <input
+                  type="text"
+                  value={editedCategoryName}
+                  onChange={(e) => setEditedCategoryName(e.target.value)}
+                  placeholder="اسم القسم الجديد"
+                  className="w-full px-4 py-3 bg-purple-900/30 border-2 border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                  onKeyPress={(e) => e.key === 'Enter' && handleEditCategory()}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleEditCategory}
+                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all"
+                >
+                  حفظ التعديل
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditCategoryModal(false);
+                    setEditingCategory(null);
+                    setEditedCategoryName('');
                   }}
                   className="flex-1 py-3 bg-purple-900/50 text-white rounded-xl font-medium hover:bg-purple-900/70 transition-all"
                 >
