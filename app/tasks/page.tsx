@@ -561,6 +561,31 @@ export default function TasksPage() {
     );
   }
 
+  // مجموعة الألوان المتاحة للأقسام
+  const availableColors = [
+    { bg: 'from-blue-900/30 to-cyan-900/30', border: 'border-blue-500/30', icon: 'text-blue-400', gradient: 'from-blue-500 to-cyan-500' },
+    { bg: 'from-purple-900/30 to-pink-900/30', border: 'border-purple-500/30', icon: 'text-purple-400', gradient: 'from-purple-500 to-pink-500' },
+    { bg: 'from-green-900/30 to-emerald-900/30', border: 'border-green-500/30', icon: 'text-green-400', gradient: 'from-green-500 to-emerald-500' },
+    { bg: 'from-orange-900/30 to-amber-900/30', border: 'border-orange-500/30', icon: 'text-orange-400', gradient: 'from-orange-500 to-amber-500' },
+    { bg: 'from-red-900/30 to-rose-900/30', border: 'border-red-500/30', icon: 'text-red-400', gradient: 'from-red-500 to-rose-500' },
+    { bg: 'from-yellow-900/30 to-amber-900/30', border: 'border-yellow-500/30', icon: 'text-yellow-400', gradient: 'from-yellow-500 to-amber-500' },
+    { bg: 'from-teal-900/30 to-cyan-900/30', border: 'border-teal-500/30', icon: 'text-teal-400', gradient: 'from-teal-500 to-cyan-500' },
+    { bg: 'from-indigo-900/30 to-violet-900/30', border: 'border-indigo-500/30', icon: 'text-indigo-400', gradient: 'from-indigo-500 to-violet-500' },
+    { bg: 'from-fuchsia-900/30 to-pink-900/30', border: 'border-fuchsia-500/30', icon: 'text-fuchsia-400', gradient: 'from-fuchsia-500 to-pink-500' },
+    { bg: 'from-lime-900/30 to-green-900/30', border: 'border-lime-500/30', icon: 'text-lime-400', gradient: 'from-lime-500 to-green-500' },
+  ];
+
+  // دالة للحصول على لون ثابت بناءً على اسم القسم
+  const getCategoryColor = (categoryName: string) => {
+    // استخدام hash بسيط لاسم القسم للحصول على لون ثابت
+    let hash = 0;
+    for (let i = 0; i < categoryName.length; i++) {
+      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % availableColors.length;
+    return availableColors[index];
+  };
+
   const categoryColors: Record<string, { bg: string; border: string; icon: string; gradient: string }> = {
     'الإعدادات الأساسية': { 
       bg: 'from-blue-900/30 to-cyan-900/30', 
@@ -968,7 +993,7 @@ export default function TasksPage() {
 
         <div className="space-y-6">
           {Object.entries(tasks).map(([category, categoryTasks], index) => {
-            const colors = categoryColors[category] || categoryColors['الإعدادات الأساسية'];
+            const colors = categoryColors[category] || getCategoryColor(category);
             const completedCount = categoryTasks.filter(t => t.is_done).length;
             const categoryPercentage = Math.round((completedCount / categoryTasks.length) * 100);
             

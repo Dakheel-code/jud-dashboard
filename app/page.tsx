@@ -171,7 +171,7 @@ export default function Home() {
                 />
               </div>
               <h1 className="text-title-h3 md:text-title-h3 xl:text-title-h1 text-white mb-2">
-                لوحة مهام المعسكر
+                معسكر الخير X10
               </h1>
               <p className="text-purple-300/80 text-sm">
                 خلّك جاهز للموسم 🚀

@@ -26,9 +26,26 @@ function TasksManagementContent() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [newCategory, setNewCategory] = useState('');
+  const [selectedCategoryIcon, setSelectedCategoryIcon] = useState('settings');
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editedCategoryName, setEditedCategoryName] = useState('');
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+
+  // مجموعة الأيقونات المتاحة للأقسام
+  const categoryIcons: Record<string, { name: string; svg: string }> = {
+    settings: { name: 'إعدادات', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />' },
+    rocket: { name: 'إطلاق', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />' },
+    megaphone: { name: 'تسويق', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />' },
+    truck: { name: 'شحن', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />' },
+    creditCard: { name: 'دفع', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />' },
+    palette: { name: 'تصميم', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z" />' },
+    users: { name: 'عملاء', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />' },
+    chart: { name: 'تحليلات', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />' },
+    star: { name: 'مميز', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />' },
+    gift: { name: 'عروض', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />' },
+    shield: { name: 'أمان', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />' },
+    globe: { name: 'عالمي', svg: '<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />' },
+  };
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -87,11 +104,21 @@ function TasksManagementContent() {
       if (response.ok) {
         await fetchTasks();
         setShowAddModal(false);
+        setResultModalType('success');
+        setResultModalMessage(editingTask ? 'تم تعديل المهمة بنجاح!' : 'تم إضافة المهمة بنجاح!');
+        setShowResultModal(true);
         setEditingTask(null);
         setFormData({ title: '', description: '', category: categories[0], order_index: 0 });
+      } else {
+        setResultModalType('error');
+        setResultModalMessage(editingTask ? 'فشل تعديل المهمة.' : 'فشل إضافة المهمة.');
+        setShowResultModal(true);
       }
     } catch (err) {
       console.error('Failed to save task:', err);
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ أثناء حفظ المهمة.');
+      setShowResultModal(true);
     }
   };
 
@@ -142,7 +169,11 @@ function TasksManagementContent() {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       setCategories([...categories, newCategory.trim()]);
       setNewCategory('');
+      setSelectedCategoryIcon('settings');
       setShowCategoryModal(false);
+      setResultModalType('success');
+      setResultModalMessage('تم إضافة القسم بنجاح!');
+      setShowResultModal(true);
     }
   };
 
@@ -383,7 +414,7 @@ function TasksManagementContent() {
       {/* Add Category Modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-md w-full">
+          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-white mb-6">إضافة قسم جديد</h2>
             <div className="space-y-4">
               <div>
@@ -397,6 +428,27 @@ function TasksManagementContent() {
                   onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
                 />
               </div>
+              <div>
+                <label className="block text-white mb-3 text-sm font-medium">اختر أيقونة القسم</label>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {Object.entries(categoryIcons).map(([key, icon]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedCategoryIcon(key)}
+                      className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                        selectedCategoryIcon === key
+                          ? 'border-purple-400 bg-purple-500/30 text-purple-300'
+                          : 'border-purple-500/30 bg-purple-900/20 text-purple-400 hover:border-purple-400/50 hover:bg-purple-500/10'
+                      }`}
+                      title={icon.name}
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                      <span className="text-xs truncate w-full text-center">{icon.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleAddCategory}
@@ -408,6 +460,7 @@ function TasksManagementContent() {
                   onClick={() => {
                     setShowCategoryModal(false);
                     setNewCategory('');
+                    setSelectedCategoryIcon('settings');
                   }}
                   className="flex-1 py-3 bg-purple-900/50 text-white rounded-xl font-medium hover:bg-purple-900/70 transition-all"
                 >

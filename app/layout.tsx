@@ -17,8 +17,12 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "لوحة مهام المتجر",
+  title: "معسكر الخير X10",
   description: "نظام إدارة مهام المتاجر الإلكترونية",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+      </head>
       <body className={`${cairo.className} antialiased`}>
         {children}
       </body>
