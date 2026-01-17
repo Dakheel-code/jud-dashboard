@@ -1,15 +1,35 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { StoreWithProgress } from '@/types';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
+    console.log('=== FETCH STORES ===');
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Supabase credentials missing');
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+
+    console.log('🔗 Connecting to Supabase:', supabaseUrl);
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { data: stores, error: storesError } = await supabase
       .from('stores')
       .select('*')
       .order('created_at', { ascending: false });
 
+    console.log('📦 Stores fetched:', stores?.length, 'Data:', JSON.stringify(stores), 'Error:', storesError);
+
     if (storesError) {
+      console.error('❌ Stores error:', storesError);
       return NextResponse.json(
         { error: 'Failed to fetch stores' },
         { status: 500 }

@@ -3,14 +3,24 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HelpRequest } from '@/types';
+import Modal from '@/components/ui/Modal';
+import AdminAuth from '@/components/AdminAuth';
+import AdminBottomNav from '@/components/AdminBottomNav';
 
-export default function HelpRequestsPage() {
+function HelpRequestsContent() {
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<HelpRequest | null>(null);
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
   const [viewConversation, setViewConversation] = useState<string | null>(null);
+
+  // Modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultModalType, setResultModalType] = useState<'success' | 'error'>('success');
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRequests();
@@ -46,31 +56,53 @@ export default function HelpRequestsPage() {
         await fetchRequests();
         setSelectedRequest(null);
         setReplyText('');
-        alert('تم إرسال الرد بنجاح!');
+        setResultModalType('success');
+        setResultModalMessage('تم إرسال الرد بنجاح!');
+        setShowResultModal(true);
       } else {
-        alert(data.error || 'فشل إرسال الرد');
+        setResultModalType('error');
+        setResultModalMessage(data.error || 'فشل إرسال الرد');
+        setShowResultModal(true);
       }
     } catch (err) {
       console.error('Failed to send reply:', err);
-      alert('فشل إرسال الرد');
+      setResultModalType('error');
+      setResultModalMessage('فشل إرسال الرد');
+      setShowResultModal(true);
     } finally {
       setSending(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
+  const openDeleteModal = (id: string) => {
+    setRequestToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!requestToDelete) return;
+    setShowDeleteModal(false);
 
     try {
-      const response = await fetch(`/api/admin/help?id=${id}`, {
+      const response = await fetch(`/api/admin/help?id=${requestToDelete}`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
         await fetchRequests();
+        setResultModalType('success');
+        setResultModalMessage('تم حذف الطلب بنجاح!');
+      } else {
+        setResultModalType('error');
+        setResultModalMessage('فشل حذف الطلب.');
       }
     } catch (err) {
       console.error('Failed to delete request:', err);
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ أثناء حذف الطلب.');
+    } finally {
+      setRequestToDelete(null);
+      setShowResultModal(true);
     }
   };
 
@@ -89,8 +121,24 @@ export default function HelpRequestsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0118]">
-        <div className="text-white">جاري التحميل...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
+        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
+        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
+            <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            <div className="absolute inset-4 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Loading" 
+                className="w-full h-full object-contain animate-pulse"
+                style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.8)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.6))' }}
+              />
+            </div>
+          </div>
+          <div className="text-xl text-white font-semibold">جاري التحميل...</div>
+        </div>
       </div>
     );
   }
@@ -122,9 +170,12 @@ export default function HelpRequestsPage() {
           </div>
           <Link
             href="/admin"
-            className="px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm text-purple-300 hover:text-white bg-purple-900/30 hover:bg-purple-800/50 rounded-xl transition-all border border-purple-500/30"
+            className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
+            title="العودة"
           >
-            العودة
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
           </Link>
         </div>
 
@@ -284,7 +335,7 @@ export default function HelpRequestsPage() {
                           رد
                         </button>
                         <button
-                          onClick={() => handleDelete(request.id)}
+                          onClick={() => openDeleteModal(request.id)}
                           className="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm transition-all"
                         >
                           حذف
@@ -342,6 +393,41 @@ export default function HelpRequestsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد من حذف هذا الطلب؟"
+        type="confirm"
+        confirmText="حذف"
+        cancelText="إلغاء"
+      />
+
+      {/* Result Modal */}
+      <Modal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        title={resultModalType === 'success' ? 'نجاح' : 'خطأ'}
+        message={resultModalMessage}
+        type={resultModalType}
+      />
+
+      {/* Bottom Navigation for Mobile */}
+      <AdminBottomNav />
+      
+      {/* Spacer for bottom nav */}
+      <div className="h-20 lg:hidden"></div>
     </div>
+  );
+}
+
+export default function HelpRequestsPage() {
+  return (
+    <AdminAuth>
+      <HelpRequestsContent />
+    </AdminAuth>
   );
 }

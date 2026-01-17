@@ -98,18 +98,62 @@ export default function Home() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/50 p-8 border border-purple-500/20 relative overflow-visible">
-            {/* Ramadan Crescent - Right Side */}
-            <div className="absolute -top-8 -right-8 w-24 h-24 sm:-top-12 sm:-right-12 sm:w-36 sm:h-36 z-50">
-              <div className="relative w-full h-full">
-                {/* White Glow - Lighter */}
-                <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl animate-pulse"></div>
-                
-                <img 
-                  src="/ramadan.png"
-                  alt="Ramadan Crescent"
-                  className="relative z-10 w-full h-full object-contain brightness-0 invert"
-                  style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.3))' }}
-                />
+            {/* Hanging Lanterns - Right Side */}
+            <div className="absolute top-0 right-2 w-20 sm:right-4 sm:w-32 z-50">
+              <div className="flex flex-row gap-1 items-start">
+                {/* Lantern 1 - Bigger and Taller (Left) */}
+                <div className="relative w-12 h-16 sm:w-16 sm:h-24" style={{ animationDelay: '0.5s' }}>
+                  <div className="absolute inset-0 bg-amber-400/30 blur-xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                  <svg viewBox="0 0 100 180" className="relative z-10 w-full h-full">
+                    <defs>
+                      <linearGradient id="lanternGoldR2" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: '#fbbf24', stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: '#f59e0b', stopOpacity: 1 }} />
+                      </linearGradient>
+                      <radialGradient id="lanternLightR2">
+                        <stop offset="0%" style={{ stopColor: '#fef3c7', stopOpacity: 0.9 }} />
+                        <stop offset="100%" style={{ stopColor: '#fcd34d', stopOpacity: 0.3 }} />
+                      </radialGradient>
+                    </defs>
+                    {/* Chain - Longer */}
+                    <line x1="50" y1="0" x2="50" y2="35" stroke="#d97706" strokeWidth="1.5"/>
+                    <path d="M 40 35 L 50 30 L 60 35 Z" fill="url(#lanternGoldR2)"/>
+                    <ellipse cx="50" cy="50" rx="18" ry="8" fill="url(#lanternGoldR2)"/>
+                    <rect x="32" y="50" width="36" height="45" fill="url(#lanternGoldR2)" rx="2"/>
+                    <ellipse cx="50" cy="95" rx="18" ry="8" fill="#d97706"/>
+                    <ellipse cx="50" cy="72" rx="15" ry="28" fill="url(#lanternLightR2)"/>
+                    <path d="M 45 100 L 50 110 L 55 100 Z" fill="#d97706"/>
+                  </svg>
+                </div>
+
+                {/* Lantern 2 - Smaller (Right) */}
+                <div className="relative w-10 h-12 sm:w-14 sm:h-16">
+                  <div className="absolute inset-0 bg-yellow-400/30 blur-xl animate-pulse"></div>
+                  <svg viewBox="0 0 100 160" className="relative z-10 w-full h-full">
+                    <defs>
+                      <linearGradient id="lanternGoldR1" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: '#fbbf24', stopOpacity: 1 }} />
+                        <stop offset="100%" style={{ stopColor: '#f59e0b', stopOpacity: 1 }} />
+                      </linearGradient>
+                      <radialGradient id="lanternLightR1">
+                        <stop offset="0%" style={{ stopColor: '#fef3c7', stopOpacity: 0.9 }} />
+                        <stop offset="100%" style={{ stopColor: '#fcd34d', stopOpacity: 0.3 }} />
+                      </radialGradient>
+                    </defs>
+                    {/* Chain - Longer */}
+                    <line x1="50" y1="0" x2="50" y2="30" stroke="#d97706" strokeWidth="1.5"/>
+                    {/* Top Cap */}
+                    <path d="M 40 30 L 50 25 L 60 30 Z" fill="url(#lanternGoldR1)"/>
+                    {/* Lantern Body */}
+                    <ellipse cx="50" cy="45" rx="18" ry="8" fill="url(#lanternGoldR1)"/>
+                    <rect x="32" y="45" width="36" height="40" fill="url(#lanternGoldR1)" rx="2"/>
+                    <ellipse cx="50" cy="85" rx="18" ry="8" fill="#d97706"/>
+                    {/* Light Glow */}
+                    <ellipse cx="50" cy="65" rx="15" ry="25" fill="url(#lanternLightR1)"/>
+                    {/* Bottom */}
+                    <path d="M 45 90 L 50 100 L 55 90 Z" fill="#d97706"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
