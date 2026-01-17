@@ -1,0 +1,99 @@
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+export async function GET() {
+  try {
+    const { data: stores, error: storesError } = await supabase
+      .from('stores')
+      .select('id');
+
+    if (storesError) {
+      return NextResponse.json(
+        { error: 'Failed to fetch stores' },
+        { status: 500 }
+      );
+    }
+
+    const { data: allTasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('id, category');
+
+    if (tasksError) {
+      return NextResponse.json(
+        { error: 'Failed to fetch tasks' },
+        { status: 500 }
+      );
+    }
+
+    const { data: allProgress, error: progressError } = await supabase
+      .from('tasks_progress')
+      .select('store_id, task_id, is_done');
+
+    if (progressError) {
+      return NextResponse.json(
+        { error: 'Failed to fetch progress' },
+        { status: 500 }
+      );
+    }
+
+    const totalStores = stores.length;
+    const totalTasks = allTasks.length;
+
+    let totalCompletion = 0;
+    stores.forEach((store: any) => {
+      const storeProgress = allProgress.filter(
+        (p: any) => p.store_id === store.id && p.is_done
+      );
+      const completion =
+        totalTasks > 0 ? (storeProgress.length / totalTasks) * 100 : 0;
+      totalCompletion += completion;
+    });
+
+    const averageCompletion =
+      totalStores > 0 ? Math.round(totalCompletion / totalStores) : 0;
+
+    const categoryStats: { [key: string]: { completed: number; total: number } } = {};
+    allTasks.forEach((task: { category: string; id: number }) => {
+      if (!categoryStats[task.category]) {
+        categoryStats[task.category] = { completed: 0, total: 0 };
+      }
+      categoryStats[task.category].total++;
+
+      const taskProgress = allProgress.filter(
+        (p: any) => p.task_id === task.id && p.is_done
+      );
+      categoryStats[task.category].completed += taskProgress.length;
+    });
+
+    let mostCompletedCategory = '';
+    let leastCompletedCategory = '';
+    let maxPercentage = -1;
+    let minPercentage = 101;
+
+    Object.entries(categoryStats).forEach(([category, stats]) => {
+      const percentage =
+        stats.total > 0 ? (stats.completed / (stats.total * totalStores)) * 100 : 0;
+
+      if (percentage > maxPercentage) {
+        maxPercentage = percentage;
+        mostCompletedCategory = category;
+      }
+      if (percentage < minPercentage) {
+        minPercentage = percentage;
+        leastCompletedCategory = category;
+      }
+    });
+
+    return NextResponse.json({
+      total_stores: totalStores,
+      average_completion: averageCompletion,
+      most_completed_category: mostCompletedCategory || 'N/A',
+      least_completed_category: leastCompletedCategory || 'N/A',
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
