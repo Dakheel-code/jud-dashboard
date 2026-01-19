@@ -221,6 +221,40 @@ function ClientsPageContent() {
     (client.company_name && client.company_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const exportToExcel = () => {
+    // تحضير البيانات للتصدير
+    const data = filteredClients.map(client => ({
+      'الاسم': client.name,
+      'البريد الإلكتروني': client.email || '-',
+      'رقم الهاتف': client.phone || '-',
+      'الشركة': client.company_name || '-',
+      'عدد المتاجر': client.stores?.length || 0,
+      'المتاجر': client.stores?.map(s => s.store_name || s.store_url).join(', ') || '-',
+      'روابط المتاجر': client.stores?.map(s => s.store_url).join(', ') || '-',
+      'تاريخ الإضافة': new Date(client.created_at).toLocaleDateString('ar-SA'),
+      'ملاحظات': client.notes || '-'
+    }));
+
+    // إنشاء محتوى CSV
+    const headers = Object.keys(data[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(h => `"${(row as Record<string, string | number>)[h]}"`).join(','))
+    ].join('\n');
+
+    // إضافة BOM للعربية
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `العملاء_${new Date().toLocaleDateString('ar-SA')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0118] flex items-center justify-center">
@@ -320,8 +354,17 @@ function ClientsPageContent() {
 
         {/* Clients List */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
-          <div className="p-4 border-b border-purple-500/20">
+          <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">قائمة العملاء ({filteredClients.length})</h2>
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-400 border border-emerald-500/30 hover:border-emerald-400/50 hover:bg-emerald-500/10 rounded-lg transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              تصدير Excel
+            </button>
           </div>
 
           {filteredClients.length === 0 ? (
