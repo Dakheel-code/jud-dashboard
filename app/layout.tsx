@@ -17,8 +17,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "معسكر الخير X10",
-  description: "نظام إدارة مهام المتاجر الإلكترونية",
+  title: "إدارة المتاجر | جود",
+  description: "نظام إدارة المتاجر - وكالة جود",
   icons: {
     icon: [
       { url: "/favicon.ico" },

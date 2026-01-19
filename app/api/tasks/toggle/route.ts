@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// دالة لتحديث بداية الاشتراك عند إكمال مهمة إطلاق الحملات
+async function updateSubscriptionStartDate(store_id: string, task_id: string, newIsDone: boolean) {
+  try {
+    // جلب معلومات المهمة
+    const { data: taskInfo } = await supabase
+      .from('tasks')
+      .select('title')
+      .eq('id', task_id)
+      .single();
+    
+    // التحقق من أن المهمة هي "إطلاق الحملات"
+    if (taskInfo?.title === 'إطلاق الحملات') {
+      if (newIsDone) {
+        // تحديث بداية الاشتراك بالتاريخ الحالي
+        await supabase
+          .from('stores')
+          .update({ subscription_start_date: new Date().toISOString() })
+          .eq('id', store_id);
+      } else {
+        // إلغاء بداية الاشتراك
+        await supabase
+          .from('stores')
+          .update({ subscription_start_date: null })
+          .eq('id', store_id);
+      }
+    }
+  } catch (error) {
+    console.error('Update subscription start date error:', error);
+  }
+}
+
 // دالة لحساب نسبة الإنجاز وإرسال إشعارات Slack
 async function checkAndSendMilestoneNotification(
   request: NextRequest,
@@ -104,6 +135,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // تحديث بداية الاشتراك إذا كانت مهمة إطلاق الحملات
+      await updateSubscriptionStartDate(store_id, task_id, newIsDone);
+      
       // التحقق من المراحل وإرسال إشعارات
       await checkAndSendMilestoneNotification(request, store_id, newIsDone);
 
@@ -130,6 +164,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // تحديث بداية الاشتراك إذا كانت مهمة إطلاق الحملات
+    await updateSubscriptionStartDate(store_id, task_id, true);
+    
     // التحقق من المراحل وإرسال إشعارات
     await checkAndSendMilestoneNotification(request, store_id, true);
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
-import AdminBottomNav from '@/components/AdminBottomNav';
 
 interface SlackWebhook {
   id: string;
@@ -14,7 +13,6 @@ interface SlackWebhook {
   notify_new_store: boolean;
   notify_store_complete: boolean;
   notify_milestone: boolean;
-  notify_help_request: boolean;
   created_at: string;
 }
 
@@ -31,7 +29,6 @@ function SettingsPageContent() {
     notify_new_store: true,
     notify_store_complete: true,
     notify_milestone: true,
-    notify_help_request: true,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -158,7 +155,6 @@ function SettingsPageContent() {
       notify_new_store: true,
       notify_store_complete: true,
       notify_milestone: true,
-      notify_help_request: true,
     });
   };
 
@@ -171,7 +167,6 @@ function SettingsPageContent() {
       notify_new_store: webhook.notify_new_store,
       notify_store_complete: webhook.notify_store_complete,
       notify_milestone: webhook.notify_milestone,
-      notify_help_request: webhook.notify_help_request,
     });
     setShowAddModal(true);
   };
@@ -185,9 +180,9 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8">
+    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
         <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
       </div>
@@ -324,9 +319,6 @@ function SettingsPageContent() {
                         )}
                         {webhook.notify_milestone && (
                           <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-lg">مراحل</span>
-                        )}
-                        {webhook.notify_help_request && (
-                          <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-lg">مساعدة</span>
                         )}
                       </div>
                     </div>
@@ -468,15 +460,6 @@ function SettingsPageContent() {
                     />
                     <span className="text-white">متجر وصل لمرحلة 50%</span>
                   </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.notify_help_request}
-                      onChange={(e) => setFormData({ ...formData, notify_help_request: e.target.checked })}
-                      className="w-5 h-5 rounded border-purple-500/30 bg-purple-900/30 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-white">طلبات المساعدة والردود</span>
-                  </label>
                 </div>
               </div>
 
@@ -503,8 +486,6 @@ function SettingsPageContent() {
           </div>
         </div>
       )}
-
-      <AdminBottomNav />
     </div>
   );
 }

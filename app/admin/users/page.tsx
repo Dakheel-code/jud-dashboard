@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
 import AdminAuth from '@/components/AdminAuth';
-import AdminBottomNav from '@/components/AdminBottomNav';
 
 interface AdminUser {
   id: string;
@@ -19,10 +18,10 @@ interface AdminUser {
 }
 
 const ROLES = [
-  { value: 'super_admin', label: 'مسؤول رئيسي', color: 'red' },
-  { value: 'admin', label: 'مسؤول', color: 'purple' },
-  { value: 'editor', label: 'محرر', color: 'blue' },
-  { value: 'viewer', label: 'مشاهد', color: 'gray' },
+  { value: 'super_admin', label: 'المسؤول الرئيسي', color: 'red' },
+  { value: 'admin', label: 'المسؤول', color: 'orange' },
+  { value: 'team_leader', label: 'قائد فريق', color: 'blue' },
+  { value: 'account_manager', label: 'مدير حساب', color: 'green' },
 ];
 
 const PERMISSIONS = [
@@ -50,7 +49,7 @@ function UsersManagementContent() {
     password: '',
     name: '',
     email: '',
-    role: 'viewer',
+    role: 'account_manager',
     permissions: [] as string[],
   });
 
@@ -159,7 +158,7 @@ function UsersManagementContent() {
       password: '',
       name: '',
       email: '',
-      role: 'viewer',
+      role: 'account_manager',
       permissions: [],
     });
   };
@@ -181,8 +180,9 @@ function UsersManagementContent() {
     const roleObj = ROLES.find(r => r.value === role);
     switch (roleObj?.color) {
       case 'red': return 'bg-red-500/20 text-red-300 border-red-500/30';
-      case 'purple': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+      case 'orange': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
       case 'blue': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+      case 'green': return 'bg-green-500/20 text-green-300 border-green-500/30';
       default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
     }
   };
@@ -394,6 +394,16 @@ function UsersManagementContent() {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
+                          <Link
+                            href={`/admin/users/${user.id}`}
+                            className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
+                            title="عرض التفاصيل"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </Link>
                           <button
                             onClick={() => openEditModal(user)}
                             className="p-2 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-lg transition-all"
@@ -567,11 +577,6 @@ function UsersManagementContent() {
         type={resultModalType}
       />
 
-      {/* Bottom Navigation for Mobile */}
-      <AdminBottomNav />
-      
-      {/* Spacer for bottom nav */}
-      <div className="h-20 lg:hidden"></div>
     </div>
   );
 }

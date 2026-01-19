@@ -1,8 +1,78 @@
+-- =====================================================
+-- جداول إدارة المستخدمين (يجب إنشاؤها أولاً)
+-- =====================================================
+
+-- Create admin_users table for admin authentication
+CREATE TABLE IF NOT EXISTS admin_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT,
+  role TEXT NOT NULL DEFAULT 'account_manager', -- super_admin, admin, team_leader, account_manager
+  permissions JSONB DEFAULT '[]'::jsonb, -- ['manage_tasks', 'manage_stores', 'manage_users', 'manage_help', 'view_stats']
+  is_active BOOLEAN DEFAULT TRUE,
+  last_login TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create admin_sessions table for token management
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  token TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ip_address TEXT,
+  user_agent TEXT
+);
+
+-- Create indexes for admin tables
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
+CREATE INDEX IF NOT EXISTS idx_admin_users_role ON admin_users(role);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);
+
+-- Enable RLS for admin tables
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for admin tables
+CREATE POLICY "Allow all operations on admin_users" ON admin_users FOR ALL USING (true);
+CREATE POLICY "Allow all operations on admin_sessions" ON admin_sessions FOR ALL USING (true);
+
+-- Insert default super admin user (password: admin123)
+-- Password hash is SHA-256 of 'admin123'
+INSERT INTO admin_users (username, password_hash, name, role, permissions, is_active)
+VALUES (
+  'admin',
+  '240be518fabd2724ddb6f04eeb9d5b0e5c8b8c5c0e0e0e0e0e0e0e0e0e0e0e0e',
+  'سوبر أدمن',
+  'super_admin',
+  '["manage_tasks", "manage_stores", "manage_users", "manage_help", "view_stats", "manage_team"]'::jsonb,
+  true
+) ON CONFLICT (username) DO NOTHING;
+
+-- =====================================================
+-- جداول المتاجر والمهام
+-- =====================================================
+
 -- Create stores table
 CREATE TABLE IF NOT EXISTS stores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  store_url TEXT UNIQUE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  store_name TEXT NOT NULL,                    -- اسم المتجر
+  store_url TEXT UNIQUE NOT NULL,              -- رابط المتجر
+  owner_name TEXT NOT NULL,                    -- صاحب المتجر
+  owner_phone TEXT,                            -- رقم الجوال
+  owner_email TEXT,                            -- البريد الإلكتروني
+  owner_whatsapp TEXT,                         -- واتساب
+  account_manager_id UUID REFERENCES admin_users(id) ON DELETE SET NULL,  -- مدير الحساب المسؤول
+  created_by UUID REFERENCES admin_users(id) ON DELETE SET NULL,          -- من أضاف المتجر
+  notes TEXT,                                  -- ملاحظات
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create tasks table
@@ -29,6 +99,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_progress_store_id ON tasks_progress(store_i
 CREATE INDEX IF NOT EXISTS idx_tasks_progress_task_id ON tasks_progress(task_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category);
 CREATE INDEX IF NOT EXISTS idx_stores_url ON stores(store_url);
+CREATE INDEX IF NOT EXISTS idx_stores_account_manager ON stores(account_manager_id);
+CREATE INDEX IF NOT EXISTS idx_stores_created_by ON stores(created_by);
 
 -- Enable Row Level Security (optional, for future use)
 ALTER TABLE stores ENABLE ROW LEVEL SECURITY;
@@ -77,62 +149,6 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 -- Create policies
 CREATE POLICY "Allow all operations on help_requests" ON help_requests FOR ALL USING (true);
 CREATE POLICY "Allow all operations on notifications" ON notifications FOR ALL USING (true);
-
--- =====================================================
--- جداول إدارة المستخدمين
--- =====================================================
-
--- Create admin_users table for admin authentication
-CREATE TABLE IF NOT EXISTS admin_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  name TEXT NOT NULL,
-  email TEXT,
-  role TEXT NOT NULL DEFAULT 'viewer', -- super_admin, admin, editor, viewer
-  permissions JSONB DEFAULT '[]'::jsonb, -- ['manage_tasks', 'manage_stores', 'manage_users', 'manage_help', 'view_stats']
-  is_active BOOLEAN DEFAULT TRUE,
-  last_login TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create admin_sessions table for token management
-CREATE TABLE IF NOT EXISTS admin_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
-  token TEXT UNIQUE NOT NULL,
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  ip_address TEXT,
-  user_agent TEXT
-);
-
--- Create indexes for admin tables
-CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
-CREATE INDEX IF NOT EXISTS idx_admin_users_role ON admin_users(role);
-CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(token);
-CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);
-
--- Enable RLS for admin tables
-ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_sessions ENABLE ROW LEVEL SECURITY;
-
--- Create policies for admin tables
-CREATE POLICY "Allow all operations on admin_users" ON admin_users FOR ALL USING (true);
-CREATE POLICY "Allow all operations on admin_sessions" ON admin_sessions FOR ALL USING (true);
-
--- Insert default super admin user (password: admin123)
--- Password hash is SHA-256 of 'admin123'
-INSERT INTO admin_users (username, password_hash, name, role, permissions, is_active)
-VALUES (
-  'admin',
-  '240be518fabd2724ddb6f04eeb9d5b0e5c8b8c5c0e0e0e0e0e0e0e0e0e0e0e0e',
-  'مدير النظام',
-  'super_admin',
-  '["manage_tasks", "manage_stores", "manage_users", "manage_help", "view_stats"]'::jsonb,
-  true
-) ON CONFLICT (username) DO NOTHING;
 
 -- =====================================================
 -- جداول إعدادات Slack

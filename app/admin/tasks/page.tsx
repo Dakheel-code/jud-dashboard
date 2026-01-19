@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
 import AdminAuth from '@/components/AdminAuth';
-import AdminBottomNav from '@/components/AdminBottomNav';
 
 interface Task {
   id: string;
@@ -352,9 +351,9 @@ function TasksManagementContent() {
             const minOrderB = Math.min(...(groupedTasks[b]?.map(t => t.order_index) || [Infinity]));
             return minOrderA - minOrderB;
           }).map(category => (
-            <div key={category} className="bg-purple-950/40 backdrop-blur-xl rounded-3xl shadow-2xl shadow-purple-900/30 p-6 border border-purple-500/20">
+            <div key={category} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">{category}</h2>
+                <h2 className="text-lg sm:text-2xl font-bold text-white">{category}</h2>
                 <div className="flex gap-2">
                   <button
                     onClick={() => openEditCategoryModal(category)}
@@ -619,11 +618,6 @@ function TasksManagementContent() {
         type={resultModalType}
       />
 
-      {/* Bottom Navigation for Mobile */}
-      <AdminBottomNav />
-      
-      {/* Spacer for bottom nav */}
-      <div className="h-20 lg:hidden"></div>
     </div>
   );
 }

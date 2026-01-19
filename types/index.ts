@@ -1,7 +1,22 @@
+export type StoreStatus = 'new' | 'active' | 'paused' | 'expired';
+
 export interface Store {
   id: string;
+  store_name: string;
   store_url: string;
+  owner_name: string;
+  owner_phone?: string;
+  owner_email?: string;
+  account_manager_id?: string;
+  account_manager_name?: string;  // للعرض فقط
+  created_by?: string;
+  notes?: string;
+  priority?: 'high' | 'medium' | 'low';
+  budget?: string;
+  status?: StoreStatus;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Task {
@@ -34,12 +49,26 @@ export interface StoreStats {
   average_completion: number;
   most_completed_category: string;
   least_completed_category: string;
+  top_account_manager?: { id: string; name: string };
+  lowest_account_manager?: { id: string; name: string };
 }
 
 export interface StoreWithProgress {
   id: string;
+  store_name: string;
   store_url: string;
+  owner_name: string;
+  owner_phone?: string;
+  owner_email?: string;
+  account_manager_id?: string;
+  account_manager_name?: string;
+  notes?: string;
+  priority?: 'high' | 'medium' | 'low';
+  budget?: string;
+  status?: StoreStatus;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
   total_tasks: number;
   completed_tasks: number;
   completion_percentage: number;
@@ -68,3 +97,57 @@ export interface Notification {
   help_request_id?: string;
   created_at: string;
 }
+
+// =====================================================
+// أنواع المستخدمين والصلاحيات - وكالة جود
+// =====================================================
+
+export type UserRole = 'super_admin' | 'admin' | 'team_leader' | 'account_manager';
+
+export type Permission = 
+  | 'manage_tasks'      // إدارة المهام
+  | 'manage_stores'     // إدارة المتاجر
+  | 'add_stores'        // إضافة متاجر جديدة (team_leader وأعلى)
+  | 'manage_users'      // إدارة المستخدمين
+  | 'manage_help'       // إدارة طلبات المساعدة
+  | 'view_stats'        // عرض الإحصائيات
+  | 'manage_team';      // إدارة الفريق
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  name: string;
+  email?: string;
+  role: UserRole;
+  permissions: Permission[];
+  is_active: boolean;
+  last_login?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminSession {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  created_at: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+// صلاحيات كل دور
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  super_admin: ['manage_tasks', 'manage_stores', 'add_stores', 'manage_users', 'manage_help', 'view_stats', 'manage_team'],
+  admin: ['manage_tasks', 'manage_stores', 'add_stores', 'manage_help', 'view_stats', 'manage_team'],
+  team_leader: ['manage_tasks', 'add_stores', 'manage_help', 'view_stats'],
+  account_manager: ['view_stats']
+};
+
+// أسماء الأدوار بالعربي
+export const ROLE_NAMES: Record<UserRole, string> = {
+  super_admin: 'سوبر أدمن',
+  admin: 'أدمن',
+  team_leader: 'تيم ليدر',
+  account_manager: 'مدير حساب'
+};

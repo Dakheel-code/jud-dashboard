@@ -5,11 +5,31 @@ import { TaskWithProgress, TasksByCategory } from '@/types';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const store_id = searchParams.get('store_id');
+    let store_id = searchParams.get('store_id');
+    const store_url = searchParams.get('store_url');
+
+    // إذا تم تمرير store_url، نجلب بيانات المتجر الكاملة من قاعدة البيانات
+    let storeFullData: any = null;
+    if (!store_id && store_url) {
+      const { data: storeData, error: storeError } = await supabase
+        .from('stores')
+        .select('*, account_manager:admin_users!stores_account_manager_id_fkey(id, name)')
+        .eq('store_url', store_url)
+        .single();
+
+      if (storeError || !storeData) {
+        return NextResponse.json(
+          { error: 'Store not found' },
+          { status: 404 }
+        );
+      }
+      store_id = storeData.id;
+      storeFullData = storeData;
+    }
 
     if (!store_id) {
       return NextResponse.json(
-        { error: 'store_id is required' },
+        { error: 'store_id or store_url is required' },
         { status: 400 }
       );
     }
@@ -19,7 +39,10 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('order_index', { ascending: true });
 
+    console.log('Tasks from DB:', allTasks?.length, 'Error:', tasksError);
+
     if (tasksError) {
+      console.error('Tasks error:', tasksError);
       return NextResponse.json(
         { error: 'Failed to fetch tasks' },
         { status: 500 }
@@ -63,6 +86,17 @@ export async function GET(request: NextRequest) {
     const completionPercentage =
       totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+    // جلب store_url إذا لم يكن متاحاً
+    let responseStoreUrl = store_url;
+    if (!responseStoreUrl && store_id) {
+      const { data: storeInfo } = await supabase
+        .from('stores')
+        .select('store_url')
+        .eq('id', store_id)
+        .single();
+      responseStoreUrl = storeInfo?.store_url;
+    }
+
     return NextResponse.json({
       tasks: tasksByCategory,
       stats: {
@@ -70,6 +104,9 @@ export async function GET(request: NextRequest) {
         completed: completedTasks,
         percentage: completionPercentage,
       },
+      store_id,
+      store_url: responseStoreUrl,
+      store: storeFullData,
     });
   } catch (error) {
     return NextResponse.json(

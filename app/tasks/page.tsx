@@ -110,9 +110,6 @@ export default function TasksPage() {
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const [showAchievement, setShowAchievement] = useState<Achievement | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskWithProgress | null>(null);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [helpMessage, setHelpMessage] = useState('');
-  const [sendingHelp, setSendingHelp] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -210,48 +207,6 @@ export default function TasksPage() {
     }
   };
 
-  const handleSendHelp = async () => {
-    if (!helpMessage.trim()) return;
-    
-    const storeId = localStorage.getItem('store_id');
-    if (!storeId) {
-      alert('خطأ: لم يتم العثور على معرف المتجر');
-      return;
-    }
-
-    console.log('📤 Sending help request...', { storeId, message: helpMessage });
-    setSendingHelp(true);
-    
-    try {
-      const response = await fetch('/api/help', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: storeId,
-          task_id: selectedTask?.id || null,
-          message: helpMessage
-        })
-      });
-
-      const data = await response.json();
-      console.log('📥 Response:', data);
-
-      if (response.ok && data.success) {
-        alert('تم إرسال طلب المساعدة بنجاح! سيتم الرد عليك قريباً.');
-        setHelpMessage('');
-        setShowHelpModal(false);
-        setSelectedTask(null);
-      } else {
-        console.error('❌ Error:', data.error);
-        alert(data.error || 'فشل إرسال الطلب');
-      }
-    } catch (err) {
-      console.error('❌ Failed to send help request:', err);
-      alert('فشل إرسال الطلب - تحقق من الاتصال');
-    } finally {
-      setSendingHelp(false);
-    }
-  };
 
   const markNotificationsAsRead = async () => {
     const storeId = localStorage.getItem('store_id');
@@ -290,12 +245,11 @@ export default function TasksPage() {
 
     setSendingNotifReply(true);
     try {
-      const response = await fetch('/api/help', {
+      const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_id: storeId,
-          task_id: null,
           message: `رد على: "${replyToNotification.message}"\n\n${notificationReply}`
         })
       });
@@ -1171,86 +1125,11 @@ export default function TasksPage() {
                 )}
               </button>
 
-              {/* Help Button */}
-              <button
-                onClick={() => setShowHelpModal(true)}
-                className="w-full py-3 rounded-xl font-medium text-amber-300 bg-amber-900/30 hover:bg-amber-800/50 border border-amber-500/30 transition-all flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                طلب مساعدة
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Help Request Modal */}
-      {showHelpModal && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowHelpModal(false)}
-        >
-          <div 
-            className="bg-purple-950/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-amber-500/30 max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">طلب مساعدة</h2>
-                {selectedTask && (
-                  <p className="text-amber-300/80 text-sm">بخصوص: {selectedTask.title}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-white mb-2 text-sm font-medium">اكتب استفسارك</label>
-              <textarea
-                value={helpMessage}
-                onChange={(e) => setHelpMessage(e.target.value)}
-                placeholder="اكتب استفسارك أو المشكلة التي تواجهها..."
-                rows={4}
-                className="w-full px-4 py-3 bg-purple-900/30 border-2 border-amber-500/30 text-white rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-400 outline-none resize-none"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleSendHelp}
-                disabled={sendingHelp || !helpMessage.trim()}
-                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-yellow-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {sendingHelp ? (
-                  'جاري الإرسال...'
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                    إرسال
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => {
-                  setShowHelpModal(false);
-                  setHelpMessage('');
-                }}
-                className="flex-1 py-3 bg-purple-900/50 text-white rounded-xl font-medium hover:bg-purple-900/70 transition-all"
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Reply to Notification Modal */}
       {replyToNotification && (

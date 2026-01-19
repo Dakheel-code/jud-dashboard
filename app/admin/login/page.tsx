@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
 
       if (response.ok) {
         localStorage.setItem('admin_token', data.token);
-        localStorage.setItem('admin_user', username);
+        localStorage.setItem('admin_user', JSON.stringify(data.user));
         router.push('/admin');
       } else {
         setError(data.error || 'خطأ في تسجيل الدخول');
@@ -121,7 +121,7 @@ export default function AdminLoginPage() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-purple-400/50 text-xs">
-              © 2026 <span className="text-white">معسكر الخير</span> - جميع الحقوق محفوظة
+              <span className="text-white">وكالة جود</span> - جميع الحقوق محفوظة © 2026
             </p>
           </div>
         </div>

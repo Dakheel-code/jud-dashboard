@@ -17,7 +17,7 @@ export async function GET() {
 
     const { data: stores, error: storesError } = await supabase
       .from('stores')
-      .select('id');
+      .select('id, account_manager_id');
 
     if (storesError) {
       return NextResponse.json(
@@ -25,6 +25,12 @@ export async function GET() {
         { status: 500 }
       );
     }
+
+    // جلب مديري الحسابات
+    const { data: accountManagers } = await supabase
+      .from('admin_users')
+      .select('id, name')
+      .eq('is_active', true);
 
     const { data: allTasks, error: tasksError } = await supabase
       .from('tasks')
@@ -96,11 +102,58 @@ export async function GET() {
       }
     });
 
+    // حساب إنجازات مديري الحسابات
+    const managerStats: { [key: string]: { name: string; totalCompletion: number; storeCount: number } } = {};
+    
+    stores.forEach((store: any) => {
+      if (store.account_manager_id) {
+        const manager = accountManagers?.find((m: any) => m.id === store.account_manager_id);
+        if (manager) {
+          if (!managerStats[store.account_manager_id]) {
+            managerStats[store.account_manager_id] = { 
+              name: manager.name.split(' ')[0], 
+              totalCompletion: 0, 
+              storeCount: 0 
+            };
+          }
+          
+          const storeProgress = allProgress.filter(
+            (p: any) => p.store_id === store.id && p.is_done
+          );
+          const completion = totalTasks > 0 ? (storeProgress.length / totalTasks) * 100 : 0;
+          
+          managerStats[store.account_manager_id].totalCompletion += completion;
+          managerStats[store.account_manager_id].storeCount++;
+        }
+      }
+    });
+
+    let topAccountManager = { id: '', name: '-' };
+    let lowestAccountManager = { id: '', name: '-' };
+    let maxAvg = -1;
+    let minAvg = 101;
+
+    Object.entries(managerStats).forEach(([managerId, stat]) => {
+      if (stat.storeCount > 0) {
+        const avg = stat.totalCompletion / stat.storeCount;
+        if (avg > maxAvg) {
+          maxAvg = avg;
+          topAccountManager = { id: managerId, name: stat.name };
+        }
+        if (avg < minAvg) {
+          minAvg = avg;
+          lowestAccountManager = { id: managerId, name: stat.name };
+        }
+      }
+    });
+
     return NextResponse.json({
       total_stores: totalStores,
       average_completion: averageCompletion,
       most_completed_category: mostCompletedCategory || 'N/A',
       least_completed_category: leastCompletedCategory || 'N/A',
+      top_account_manager: topAccountManager,
+      lowest_account_manager: lowestAccountManager,
     });
   } catch (error) {
     return NextResponse.json(
