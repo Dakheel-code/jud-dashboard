@@ -12,7 +12,7 @@ export default function SetupPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl text-white mb-2 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
               دليل إعداد المشروع
             </h1>
             <p className="text-gray-600">

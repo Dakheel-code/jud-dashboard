@@ -9,6 +9,7 @@ export interface Store {
   owner_email?: string;
   account_manager_id?: string;
   account_manager_name?: string;  // للعرض فقط
+  client_id?: string;
   created_by?: string;
   notes?: string;
   priority?: 'high' | 'medium' | 'low';

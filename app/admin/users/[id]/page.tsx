@@ -24,6 +24,8 @@ interface Store {
   completed_tasks: number;
   total_tasks: number;
   created_at: string;
+  status?: string;
+  priority?: string;
 }
 
 interface UserData {
@@ -42,6 +44,11 @@ const ROLE_NAMES: Record<string, string> = {
   admin: 'المسؤول',
   team_leader: 'قائد فريق',
   account_manager: 'مدير حساب',
+};
+
+// دالة لتنظيف رابط المتجر
+const cleanStoreUrl = (url: string) => {
+  return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -125,7 +132,7 @@ function UserDetailsContent() {
               {user.name.charAt(0)}
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl text-white font-semibold">{user.name}</h1>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user.name}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-purple-400">@{user.username}</span>
                 <span className={`px-3 py-1 rounded-full text-xs border ${ROLE_COLORS[user.role] || 'bg-gray-500/20 text-gray-300'}`}>
@@ -191,11 +198,11 @@ function UserDetailsContent() {
             </div>
             <div>
               <p className="text-purple-400/60 text-sm">تاريخ الإنشاء</p>
-              <p className="text-white">{new Date(user.created_at).toLocaleDateString('ar-SA')}</p>
+              <p className="text-white">{new Date(user.created_at).toLocaleDateString('en-US')}</p>
             </div>
             <div>
               <p className="text-purple-400/60 text-sm">آخر دخول</p>
-              <p className="text-white">{user.last_login ? new Date(user.last_login).toLocaleDateString('ar-SA') : 'لم يسجل دخول'}</p>
+              <p className="text-white">{user.last_login ? new Date(user.last_login).toLocaleDateString('en-US') : 'لم يسجل دخول'}</p>
             </div>
           </div>
         </div>
@@ -215,24 +222,61 @@ function UserDetailsContent() {
               {stores.map((store) => (
                 <div key={store.id} className="p-4 hover:bg-purple-900/20 transition-colors">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <a 
-                          href={`https://${store.store_url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white font-medium hover:text-fuchsia-400 transition-colors"
-                        >
-                          {store.store_name || store.store_url}
-                        </a>
-                        <svg className="w-3 h-3 text-purple-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                    <div className="flex items-center gap-3 flex-1">
+                      {/* Store Logo */}
+                      <img 
+                        src={`https://www.google.com/s2/favicons?domain=${store.store_url}&sz=64`}
+                        alt={store.store_name || store.store_url}
+                        className="w-12 h-12 rounded-xl object-cover bg-purple-900/50"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/logo.png';
+                        }}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link 
+                            href={`/admin/store/${cleanStoreUrl(store.store_url)}`}
+                            className="text-white font-medium hover:text-fuchsia-400 transition-colors"
+                          >
+                            {store.store_name || cleanStoreUrl(store.store_url)}
+                          </Link>
+                          <a 
+                            href={store.store_url.startsWith('http') ? store.store_url : `https://${store.store_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-purple-400/50 hover:text-purple-300 transition-colors"
+                            title="فتح المتجر"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                          {/* Status Badge */}
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            store.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                            store.status === 'paused' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                            store.status === 'expired' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {store.status === 'active' ? 'نشط' :
+                             store.status === 'paused' ? 'متوقف' :
+                             store.status === 'expired' ? 'منتهي' : 'جديد'}
+                          </span>
+                          {/* Priority Badge */}
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            store.priority === 'high' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            store.priority === 'low' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' :
+                            'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                          }`}>
+                            {store.priority === 'high' ? 'مرتفع' :
+                             store.priority === 'low' ? 'منخفض' : 'متوسط'}
+                          </span>
+                        </div>
+                        <p className="text-purple-400/60 text-sm mt-1">
+                          {store.owner_name && store.owner_name !== '-' ? `${store.owner_name} • ` : ''}
+                          {store.owner_phone || ''}
+                        </p>
                       </div>
-                      <p className="text-purple-400/60 text-sm mt-1">
-                        {store.owner_name && store.owner_name !== '-' ? `${store.owner_name} • ` : ''}
-                        {store.owner_phone || ''}
-                      </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-center">
@@ -259,7 +303,7 @@ function UserDetailsContent() {
                         </div>
                       </div>
                       <Link
-                        href={`/admin/store/${encodeURIComponent(store.store_url)}`}
+                        href={`/admin/store/${cleanStoreUrl(store.store_url)}`}
                         className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
                         title="عرض التفاصيل"
                       >

@@ -69,6 +69,8 @@ export async function GET(
         owner_name: store.owner_name,
         owner_phone: store.owner_phone,
         created_at: store.created_at,
+        status: store.status || 'new',
+        priority: store.priority || 'medium',
         total_tasks: totalTasksCount,
         completed_tasks: completedTasks,
         completion_percentage: completionPercentage,

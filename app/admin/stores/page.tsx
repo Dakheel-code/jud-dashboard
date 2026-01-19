@@ -52,6 +52,7 @@ function StoresPageContent() {
   const filteredStores = stores.filter(store => {
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'new' && (!store.status || store.status === 'new')) ||
+      (statusFilter === 'completed' && store.completion_percentage === 100) ||
       store.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || 
       (priorityFilter === 'medium' && (!store.priority || store.priority === 'medium')) ||
@@ -268,52 +269,61 @@ function StoresPageContent() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img src="/logo.png" alt="Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
-            <div className="h-14 sm:h-20 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
-              <h1 className="text-2xl sm:text-4xl mb-2">
-                <span className="text-white font-semibold">إدارة </span>
-                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent uppercase font-black">المتاجر</span>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
+                إدارة المتاجر
               </h1>
-              <p className="text-purple-300/80">عرض وإدارة جميع المتاجر</p>
+              <p className="text-purple-300/80 text-xs sm:text-sm">عرض وإدارة جميع المتاجر</p>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+        {/* Stats - Clickable for filtering */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <button 
+            onClick={() => setStatusFilter('all')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'all' ? 'border-purple-400 ring-2 ring-purple-500/30' : 'border-purple-500/20 hover:border-purple-400/50'}`}
+          >
             <h3 className="text-sm text-purple-300/80 mb-1">إجمالي المتاجر</h3>
             <p className="text-2xl font-bold text-white">{stores.length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-blue-500/20">
+          </button>
+          <button 
+            onClick={() => setStatusFilter('new')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'new' ? 'border-blue-400 ring-2 ring-blue-500/30' : 'border-blue-500/20 hover:border-blue-400/50'}`}
+          >
             <h3 className="text-sm text-blue-300/80 mb-1">المتاجر الجديدة</h3>
             <p className="text-2xl font-bold text-blue-400">{stores.filter(s => s.status === 'new' || !s.status).length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-green-500/20">
+          </button>
+          <button 
+            onClick={() => setStatusFilter('active')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'active' ? 'border-green-400 ring-2 ring-green-500/30' : 'border-green-500/20 hover:border-green-400/50'}`}
+          >
             <h3 className="text-sm text-green-300/80 mb-1">المتاجر النشطة</h3>
             <p className="text-2xl font-bold text-green-400">{stores.filter(s => s.status === 'active').length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-orange-500/20">
+          </button>
+          <button 
+            onClick={() => setStatusFilter('paused')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'paused' ? 'border-orange-400 ring-2 ring-orange-500/30' : 'border-orange-500/20 hover:border-orange-400/50'}`}
+          >
             <h3 className="text-sm text-orange-300/80 mb-1">المتاجر المتوقفة</h3>
             <p className="text-2xl font-bold text-orange-400">{stores.filter(s => s.status === 'paused').length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-red-500/20">
+          </button>
+          <button 
+            onClick={() => setStatusFilter('expired')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'expired' ? 'border-red-400 ring-2 ring-red-500/30' : 'border-red-500/20 hover:border-red-400/50'}`}
+          >
             <h3 className="text-sm text-red-300/80 mb-1">المتاجر المنتهية</h3>
             <p className="text-2xl font-bold text-red-400">{stores.filter(s => s.status === 'expired').length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
-            <h3 className="text-sm text-purple-300/80 mb-1">المتاجر المكتملة</h3>
-            <p className="text-2xl font-bold text-purple-400">{stores.filter(s => s.completion_percentage === 100).length}</p>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-fuchsia-500/20">
-            <h3 className="text-sm text-fuchsia-300/80 mb-1">متوسط الإنجاز</h3>
-            <p className="text-2xl font-bold text-fuchsia-400">
-              {stores.length > 0 
-                ? Math.round(stores.reduce((acc, s) => acc + s.completion_percentage, 0) / stores.length)
-                : 0}%
-            </p>
-          </div>
+          </button>
+          <button 
+            onClick={() => setStatusFilter('completed')}
+            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'completed' ? 'border-fuchsia-400 ring-2 ring-fuchsia-500/30' : 'border-fuchsia-500/20 hover:border-fuchsia-400/50'}`}
+          >
+            <h3 className="text-sm text-fuchsia-300/80 mb-1">المتاجر المكتملة</h3>
+            <p className="text-2xl font-bold text-fuchsia-400">{stores.filter(s => s.completion_percentage === 100).length}</p>
+          </button>
         </div>
 
         {/* Filters */}
@@ -378,7 +388,13 @@ function StoresPageContent() {
           {filteredStores.map((store) => (
             <div
               key={store.id}
-              className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden hover:border-purple-400/40 transition-all"
+              className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl overflow-hidden transition-all ${
+                store.priority === 'high' 
+                  ? 'border-2 border-red-500/50 hover:border-red-400/70' 
+                  : store.priority === 'low' 
+                    ? 'border border-purple-500/20 hover:border-purple-400/40' 
+                    : 'border-2 border-orange-500/50 hover:border-orange-400/70'
+              }`}
             >
               {/* Card Header - Always Visible (Clickable) */}
               <div 
@@ -410,9 +426,22 @@ function StoresPageContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-end gap-1">
-                      {getPriorityBadge(store.priority)}
                       {getStatusBadge(store.status)}
                     </div>
+                    {/* Go to Store Page */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/admin/store/${store.store_url}`);
+                      }}
+                      className="p-2 text-purple-400 hover:text-white hover:bg-purple-500/20 rounded-lg transition-all"
+                      title="فتح صفحة المتجر"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
                     {/* Expand/Collapse Arrow */}
                     <svg 
                       className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${expandedCards.has(store.id) ? 'rotate-180' : ''}`} 
@@ -487,7 +516,7 @@ function StoresPageContent() {
                   </span>
                   <div className="flex gap-2">
                     <Link
-                      href={`/admin/store/${store.id}`}
+                      href={`/admin/store/${store.store_url}`}
                       className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-all"
                       title="عرض التفاصيل"
                       onClick={(e) => e.stopPropagation()}

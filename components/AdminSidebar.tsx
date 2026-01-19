@@ -63,6 +63,15 @@ const menuItems: MenuItem[] = [
     ),
   },
   {
+    href: '/admin/clients',
+    label: 'العملاء',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/settings',
     label: 'الإعدادات',
     icon: (
@@ -225,21 +234,22 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
       <aside 
         className={`
-          fixed top-0 right-0 h-full w-72 bg-[#0a0118]/95 backdrop-blur-xl border-l border-purple-500/20 z-50
+          fixed top-0 right-0 h-screen w-72 bg-[#0a0118] border-l border-purple-500/20 z-50
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           lg:translate-x-0 lg:static lg:z-auto
         `}
       >
         <div className="flex flex-col h-full">
+          {/* Logo Header */}
           <div className="p-6 border-b border-purple-500/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
                 <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
                 <div>
-                  <h2 className="text-white font-bold text-lg">{user?.name || 'مستخدم'}</h2>
-                  <p className="text-purple-400/60 text-xs">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
+                  <h2 className="text-white text-lg uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</h2>
+                  <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
                 </div>
               </div>
               <button 
@@ -275,11 +285,12 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             })}
           </nav>
 
-          <div className="p-4 border-t border-purple-500/20 space-y-3">
+          {/* User Profile & Logout - Fixed at Bottom */}
+          <div className="mt-auto p-4 border-t border-purple-500/20 bg-[#0a0118]">
             {/* Profile Section */}
             <button
               onClick={() => setShowProfileModal(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-purple-900/30 hover:bg-purple-500/20 rounded-xl transition-all text-right border border-purple-500/20"
+              className="w-full flex items-center gap-3 px-4 py-3 bg-purple-900/30 hover:bg-purple-500/20 rounded-xl transition-all text-right border border-purple-500/20 mb-3"
             >
               {user?.avatar ? (
                 <img 
@@ -293,20 +304,17 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{user?.name || 'مستخدم'}</p>
-                <p className="text-purple-400/60 text-xs truncate">{user?.email || user?.username || ''}</p>
+                <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
+                <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
               </div>
-              <svg className="w-4 h-4 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
             </button>
 
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-right"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-red-500/20"
             >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
               <span className="font-medium">تسجيل الخروج</span>

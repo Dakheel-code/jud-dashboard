@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
         id: user.id,
         username: user.username,
         name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
         role: user.role,
         permissions: user.permissions
       },

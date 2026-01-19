@@ -84,8 +84,8 @@ function createSlackMessage(type: NotificationType, data: any): SlackMessage {
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: `*التاريخ:*\n${new Date().toLocaleDateString('ar-SA')}` },
-          { type: 'mrkdwn', text: `*الوقت:*\n${new Date().toLocaleTimeString('ar-SA')}` },
+          { type: 'mrkdwn', text: `*التاريخ:*\n${new Date().toLocaleDateString('en-US')}` },
+          { type: 'mrkdwn', text: `*الوقت:*\n${new Date().toLocaleTimeString('en-US')}` },
         ],
       },
       {

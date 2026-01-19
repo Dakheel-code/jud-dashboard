@@ -18,6 +18,7 @@ interface SlackWebhook {
 
 function SettingsPageContent() {
   const [webhooks, setWebhooks] = useState<SlackWebhook[]>([]);
+  const [adAccounts, setAdAccounts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<SlackWebhook | null>(null);
@@ -30,11 +31,14 @@ function SettingsPageContent() {
     notify_store_complete: true,
     notify_milestone: true,
   });
+  const [newAdEmail, setNewAdEmail] = useState('');
+  const [savingAdAccounts, setSavingAdAccounts] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchWebhooks();
+    fetchAdAccounts();
   }, []);
 
   const fetchWebhooks = async () => {
@@ -49,6 +53,68 @@ function SettingsPageContent() {
     }
   };
 
+  const fetchAdAccounts = async () => {
+    try {
+      const response = await fetch('/api/admin/ad-accounts');
+      const data = await response.json();
+      setAdAccounts(data.accounts || []);
+    } catch (err) {
+      console.error('Error fetching ad accounts:', err);
+    }
+  };
+
+  const addAdAccount = async () => {
+    if (!newAdEmail.trim()) return;
+    
+    const updatedAccounts = [...adAccounts, newAdEmail.trim()];
+    setSavingAdAccounts(true);
+    
+    try {
+      const response = await fetch('/api/admin/ad-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accounts: updatedAccounts })
+      });
+      
+      if (response.ok) {
+        setAdAccounts(updatedAccounts);
+        setNewAdEmail('');
+        setSuccess('تم إضافة الحساب بنجاح');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving ad account:', err);
+      setError('فشل في حفظ الحساب');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingAdAccounts(false);
+    }
+  };
+
+  const removeAdAccount = async (index: number) => {
+    const updatedAccounts = adAccounts.filter((_, i) => i !== index);
+    setSavingAdAccounts(true);
+    
+    try {
+      const response = await fetch('/api/admin/ad-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accounts: updatedAccounts })
+      });
+      
+      if (response.ok) {
+        setAdAccounts(updatedAccounts);
+        setSuccess('تم حذف الحساب بنجاح');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error removing ad account:', err);
+    } finally {
+      setSavingAdAccounts(false);
+    }
+  };
+
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -198,10 +264,10 @@ function SettingsPageContent() {
             />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
-              <h1 className="text-xl sm:text-3xl text-white mb-1" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>
-                إعدادات الربط
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
+                إعدادات عامة
               </h1>
-              <p className="text-purple-300/80 text-xs sm:text-sm">ربط الإشعارات مع Slack</p>
+              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة الحسابات الإعلانية وربط الإشعارات</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -241,6 +307,64 @@ function SettingsPageContent() {
             {success}
           </div>
         )}
+
+        {/* Ad Accounts Section */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">الحسابات الإعلانية</h3>
+              <p className="text-purple-300/70 text-sm mb-4">
+                أضف إيميلات الحسابات الإعلانية لاستخدامها في المتاجر.
+              </p>
+              
+              {/* Add New Account */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <input
+                  type="email"
+                  placeholder="أدخل الإيميل..."
+                  value={newAdEmail}
+                  onChange={(e) => setNewAdEmail(e.target.value)}
+                  className="flex-1 px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
+                />
+                <button
+                  onClick={addAdAccount}
+                  disabled={savingAdAccounts || !newAdEmail.trim()}
+                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 text-white rounded-xl transition-colors"
+                >
+                  {savingAdAccounts ? 'جاري الحفظ...' : 'إضافة'}
+                </button>
+              </div>
+
+              {/* Accounts List */}
+              {adAccounts.length > 0 ? (
+                <div className="space-y-2">
+                  {adAccounts.map((email, index) => (
+                    <div key={index} className="flex items-center justify-between bg-purple-900/30 rounded-xl p-3 border border-purple-500/20">
+                      <span className="text-white">{email}</span>
+                      <button
+                        onClick={() => removeAdAccount(index)}
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        title="حذف"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-purple-300/50 text-sm text-center py-4">لا توجد حسابات مضافة</p>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Slack Info */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">

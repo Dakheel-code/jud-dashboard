@@ -129,7 +129,8 @@ export async function POST(request: Request) {
       account_manager_id,
       priority,
       budget,
-      notes 
+      notes,
+      client_id 
     } = body;
 
     // التحقق من الحقول المطلوبة
@@ -139,12 +140,18 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // تنظيف رابط المتجر - إزالة https:// و http:// و www.
+    const cleanStoreUrl = store_url
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .replace(/\/+$/, '');
+
     // إنشاء المتجر
     const { data: newStore, error: createError } = await supabase
       .from('stores')
       .insert({
         store_name,
-        store_url,
+        store_url: cleanStoreUrl,
         owner_name: owner_name || '-',
         owner_phone,
         owner_email: owner_email || null,
@@ -152,6 +159,7 @@ export async function POST(request: Request) {
         priority: priority || 'medium',
         budget: budget || null,
         notes: notes || null,
+        client_id: client_id || null,
         is_active: true
       })
       .select()
@@ -200,19 +208,25 @@ export async function PUT(request: Request) {
       account_manager_id,
       priority,
       budget,
-      notes 
+      notes,
+      client_id 
     } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'معرف المتجر مطلوب' }, { status: 400 });
     }
 
+    // تنظيف رابط المتجر - إزالة https:// و http:// و www.
+    const cleanStoreUrl = store_url
+      ? store_url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '')
+      : undefined;
+
     // تحديث المتجر
     const { data: updatedStore, error: updateError } = await supabase
       .from('stores')
       .update({
         store_name,
-        store_url,
+        store_url: cleanStoreUrl,
         owner_name: owner_name || '-',
         owner_phone,
         owner_email: owner_email || null,
@@ -220,6 +234,7 @@ export async function PUT(request: Request) {
         priority: priority || 'medium',
         budget: budget || null,
         notes: notes || null,
+        client_id: client_id || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

@@ -215,9 +215,13 @@ function UsersManagementContent() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl text-white mb-2" style={{ fontFamily: "'Suisse Intl', var(--font-cairo), sans-serif", fontWeight: 600 }}>إدارة المستخدمين</h1>
-            <p className="text-purple-300/70">إضافة وتعديل صلاحيات المستخدمين</p>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+            <div>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>إدارة المستخدمين</h1>
+              <p className="text-purple-300/70 text-xs sm:text-sm">إضافة وتعديل صلاحيات المستخدمين</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             <button
@@ -255,11 +259,11 @@ function UsersManagementContent() {
             users.map((user) => (
               <div key={user.id} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="text-white font-medium">{user.name}</p>
+                  <Link href={`/admin/users/${user.id}`} className="hover:opacity-80 transition-opacity">
+                    <p className="text-white font-medium hover:text-fuchsia-400 transition-colors">{user.name}</p>
                     <p className="text-purple-400 text-sm">@{user.username}</p>
                     {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
-                  </div>
+                  </Link>
                   <span className={`px-3 py-1 rounded-full text-xs border ${getRoleColor(user.role)}`}>
                     {getRoleLabel(user.role)}
                   </span>
@@ -350,11 +354,11 @@ function UsersManagementContent() {
                   users.map((user) => (
                     <tr key={user.id} className="border-b border-purple-500/10 hover:bg-purple-900/20">
                       <td className="p-4">
-                        <div>
-                          <p className="text-white font-medium">{user.name}</p>
+                        <Link href={`/admin/users/${user.id}`} className="block hover:opacity-80 transition-opacity">
+                          <p className="text-white font-medium hover:text-fuchsia-400 transition-colors">{user.name}</p>
                           <p className="text-purple-400 text-sm">@{user.username}</p>
                           {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
-                        </div>
+                        </Link>
                       </td>
                       <td className="p-4">
                         <span className={`px-3 py-1 rounded-full text-xs border ${getRoleColor(user.role)}`}>

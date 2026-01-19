@@ -57,7 +57,7 @@ export async function PUT(request: Request) {
       // Get current user
       const { data: user, error: userError } = await supabase
         .from('admin_users')
-        .select('password')
+        .select('password_hash')
         .eq('id', userId)
         .single();
 
@@ -67,12 +67,12 @@ export async function PUT(request: Request) {
 
       // Verify current password (using sha256 hash)
       const hashedCurrentPassword = hashPassword(currentPassword);
-      if (hashedCurrentPassword !== user.password) {
+      if (hashedCurrentPassword !== user.password_hash) {
         return NextResponse.json({ error: 'كلمة المرور الحالية غير صحيحة' }, { status: 400 });
       }
 
       // Hash new password
-      updateData.password = hashPassword(newPassword);
+      updateData.password_hash = hashPassword(newPassword);
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -84,7 +84,7 @@ export async function PUT(request: Request) {
       .from('admin_users')
       .update(updateData)
       .eq('id', userId)
-      .select('id, name, email, username, role')
+      .select('id, name, email, phone, avatar, username, role')
       .single();
 
     if (updateError) {

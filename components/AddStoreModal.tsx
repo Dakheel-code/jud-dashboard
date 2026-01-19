@@ -8,6 +8,14 @@ interface AccountManager {
   username: string;
 }
 
+interface Client {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company_name: string | null;
+}
+
 interface StoreFormData {
   store_name: string;
   store_url: string;
@@ -18,6 +26,7 @@ interface StoreFormData {
   priority: 'high' | 'medium' | 'low';
   budget: string;
   notes: string;
+  client_id: string;
 }
 
 interface AddStoreModalProps {
@@ -47,18 +56,21 @@ const initialFormData: StoreFormData = {
   account_manager_id: '',
   priority: 'medium',
   budget: '',
-  notes: ''
+  notes: '',
+  client_id: ''
 };
 
 export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore }: AddStoreModalProps) {
   const [formData, setFormData] = useState<StoreFormData>(initialFormData);
   const [accountManagers, setAccountManagers] = useState<AccountManager[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       fetchAccountManagers();
+      fetchClients();
       if (editingStore) {
         setFormData({
           store_name: editingStore.store_name || '',
@@ -69,7 +81,8 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
           account_manager_id: editingStore.account_manager_id || '',
           priority: editingStore.priority || 'medium',
           budget: editingStore.budget || '',
-          notes: editingStore.notes || ''
+          notes: editingStore.notes || '',
+          client_id: (editingStore as any).client_id || ''
         });
       } else {
         setFormData(initialFormData);
@@ -85,6 +98,16 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       setAccountManagers(data.managers || []);
     } catch (err) {
       console.error('Failed to fetch account managers:', err);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/admin/clients', { cache: 'no-store' });
+      const data = await response.json();
+      setClients(data.clients || []);
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
     }
   };
 
@@ -259,21 +282,39 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-purple-300 mb-1">مدير الحساب المسؤول</label>
-            <select
-              name="account_manager_id"
-              value={formData.account_manager_id}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-            >
-              <option value="">-- اختر مدير الحساب --</option>
-              {accountManagers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.name} ({manager.username})
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-purple-300 mb-1">العميل (صاحب المتجر)</label>
+              <select
+                name="client_id"
+                value={formData.client_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+              >
+                <option value="">-- اختر العميل --</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} {client.company_name ? `(${client.company_name})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-purple-300 mb-1">مدير الحساب المسؤول</label>
+              <select
+                name="account_manager_id"
+                value={formData.account_manager_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+              >
+                <option value="">-- اختر مدير الحساب --</option>
+                {accountManagers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name} ({manager.username})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
