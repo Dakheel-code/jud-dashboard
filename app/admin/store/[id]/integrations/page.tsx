@@ -43,6 +43,7 @@ export default function IntegrationsPage() {
   const [savingAccount, setSavingAccount] = useState(false);
   const [showSelectModal, setShowSelectModal] = useState(false);
   const [currentPlatform, setCurrentPlatform] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // جلب حالة المنصات
   const fetchStatus = async () => {
@@ -124,11 +125,14 @@ export default function IntegrationsPage() {
       });
 
       const data = await response.json();
+      console.log('Save account response:', data);
       if (data.success) {
         setShowSelectModal(false);
         fetchStatus();
+        // إعادة التوجيه لصفحة المتجر
+        window.location.href = `/admin/store/${storeId}`;
       } else {
-        alert('فشل في حفظ الحساب');
+        alert('فشل في حفظ الحساب: ' + (data.error || 'خطأ غير معروف'));
       }
     } catch (error) {
       console.error('Failed to save account:', error);
@@ -354,6 +358,17 @@ export default function IntegrationsPage() {
             <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md">
               <h3 className="text-xl font-bold text-white mb-4">اختيار الحساب الإعلاني</h3>
 
+              {/* حقل البحث */}
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="ابحث عن حساب..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white placeholder-purple-400 focus:ring-2 focus:ring-purple-500 outline-none"
+                />
+              </div>
+
               {loadingAccounts ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
@@ -362,9 +377,15 @@ export default function IntegrationsPage() {
                 <p className="text-purple-300 text-center py-8">لا توجد حسابات إعلانية متاحة</p>
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {adAccounts.map((account) => (
-                    <label
-                      key={account.ad_account_id}
+                  {adAccounts
+                    .filter(account => 
+                      !searchQuery || 
+                      account.ad_account_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      account.ad_account_id?.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((account) => (
+                      <label
+                        key={account.ad_account_id}
                       className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
                         selectedAccount === account.ad_account_id
                           ? 'bg-purple-600/30 border border-purple-500'
