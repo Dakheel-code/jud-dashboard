@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (!store_id && store_url) {
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('*, account_manager:admin_users!stores_account_manager_id_fkey(id, name)')
+        .select('*, account_manager:admin_users!stores_account_manager_id_fkey(id, name), media_buyer:admin_users!stores_media_buyer_id_fkey(id, name)')
         .eq('store_url', store_url)
         .single();
 

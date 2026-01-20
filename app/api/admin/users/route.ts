@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const { data: users, error } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, role, permissions, is_active, last_login, created_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, last_login, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -45,9 +45,11 @@ export async function GET(request: NextRequest) {
 // POST - إضافة مستخدم جديد
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, name, email, role, permissions } = await request.json();
+    const { username, password, name, email, role, roles, permissions } = await request.json();
 
-    if (!username || !password || !name || !role) {
+    const userRoles = roles || (role ? [role] : ['account_manager']);
+
+    if (!username || !password || !name) {
       return NextResponse.json(
         { error: 'جميع الحقول المطلوبة يجب ملؤها' },
         { status: 400 }
@@ -78,11 +80,12 @@ export async function POST(request: NextRequest) {
         password_hash: hashPassword(password),
         name,
         email: email || null,
-        role,
+        role: userRoles[0],
+        roles: userRoles,
         permissions: permissions || [],
         is_active: true
       })
-      .select('id, username, name, email, role, permissions, is_active, created_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, created_at')
       .single();
 
     if (error) {
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
 // PUT - تحديث مستخدم
 export async function PUT(request: NextRequest) {
   try {
-    const { id, username, password, name, email, role, permissions, is_active } = await request.json();
+    const { id, username, password, name, email, role, roles, permissions, is_active } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'معرف المستخدم مطلوب' }, { status: 400 });
@@ -115,7 +118,12 @@ export async function PUT(request: NextRequest) {
     if (username) updateData.username = username;
     if (name) updateData.name = name;
     if (email !== undefined) updateData.email = email;
-    if (role) updateData.role = role;
+    if (roles) {
+      updateData.roles = roles;
+      updateData.role = roles[0];
+    } else if (role) {
+      updateData.role = role;
+    }
     if (permissions) updateData.permissions = permissions;
     if (is_active !== undefined) updateData.is_active = is_active;
     if (password) updateData.password_hash = hashPassword(password);
@@ -124,7 +132,7 @@ export async function PUT(request: NextRequest) {
       .from('admin_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, name, email, role, permissions, is_active, created_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, created_at')
       .single();
 
     if (error) {

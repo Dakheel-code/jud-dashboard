@@ -27,6 +27,10 @@ interface StoreFullData {
     id: string;
     name: string;
   };
+  media_buyer?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface StoreMetadata {
@@ -69,6 +73,18 @@ function StoreDetailsContent() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tasks' | 'info'>('tasks');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string> | null>(null);
+  const [isTasksListCollapsed, setIsTasksListCollapsed] = useState(true);
+  const [isCampaignsCollapsed, setIsCampaignsCollapsed] = useState(false);
+  const [campaignDateRange, setCampaignDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('week');
+  const [showPlatformTokenModal, setShowPlatformTokenModal] = useState<string | null>(null);
+  const [platformTokenForm, setPlatformTokenForm] = useState({ accessToken: '', accountId: '' });
+  const [platformTokens, setPlatformTokens] = useState<{[key: string]: { accessToken: string; accountId: string; connectedAt: string }}>({});
+  const [savingPlatformToken, setSavingPlatformToken] = useState(false);
+  const [campaignData, setCampaignData] = useState<{ sales: number; revenue: number; spend: number; roas: number } | null>(null);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [campaignError, setCampaignError] = useState<string | null>(null);
+  const [showManualCampaignModal, setShowManualCampaignModal] = useState(false);
+  const [manualCampaignForm, setManualCampaignForm] = useState({ sales: '', revenue: '', spend: '' });
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     store_name: '',
@@ -82,13 +98,112 @@ function StoreDetailsContent() {
     snapchat_account: '',
     tiktok_account: '',
     google_account: '',
-    meta_account: ''
+    meta_account: '',
+    media_buyer_id: ''
   });
   const [editLoading, setEditLoading] = useState(false);
+  const [mediaBuyers, setMediaBuyers] = useState<{id: string; name: string}[]>([]);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [adAccountsList, setAdAccountsList] = useState<string[]>([]);
   const [editingAdAccounts, setEditingAdAccounts] = useState(false);
   const [adAccountsExpanded, setAdAccountsExpanded] = useState(false);
+  const [showDailyUpdateModal, setShowDailyUpdateModal] = useState(false);
+  const [dailyUpdateForm, setDailyUpdateForm] = useState({
+    sales: '',
+    revenue: '',
+    spend: ''
+  });
+  const [dailyUpdateTemplate, setDailyUpdateTemplate] = useState('');
+
+  // جلب قائمة الميديا باير
+  useEffect(() => {
+    const fetchMediaBuyers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+        const buyers = (data.users || []).filter((user: any) => 
+          user.roles?.includes('media_buyer') || user.role === 'media_buyer'
+        );
+        setMediaBuyers(buyers.map((u: any) => ({ id: u.id, name: u.name })));
+      } catch (err) {
+        console.error('Failed to fetch media buyers:', err);
+      }
+    };
+    fetchMediaBuyers();
+  }, []);
+
+  // جلب قالب رسالة التحديث اليومي
+  useEffect(() => {
+    const fetchDailyUpdateTemplate = async () => {
+      const defaultTemplate = 'مرحباً {store_name}،\n\nالتحديث اليومي:\n📊 المبيعات: {sales}\n💰 العائد: {revenue}\n💸 الصرف: {spend}\n\nشكراً لتعاونكم';
+      try {
+        const response = await fetch('/api/admin/settings/whatsapp-templates');
+        const data = await response.json();
+        
+        if (data.templates) {
+          // البحث عن قالب مرتبط بـ daily_update
+          const linkedTemplate = Object.values(data.templates).find(
+            (t: any) => t.linkedButton === 'daily_update'
+          ) as any;
+          
+          if (linkedTemplate?.content) {
+            setDailyUpdateTemplate(linkedTemplate.content);
+            return;
+          }
+          
+          // البحث عن قالب باسم daily_update
+          if (data.templates.daily_update?.content) {
+            setDailyUpdateTemplate(data.templates.daily_update.content);
+            return;
+          }
+          
+          // إذا لم يوجد، استخدم أول قالب متاح
+          const templateKeys = Object.keys(data.templates);
+          if (templateKeys.length > 0) {
+            const firstTemplate = data.templates[templateKeys[0]];
+            if (firstTemplate?.content) {
+              setDailyUpdateTemplate(firstTemplate.content);
+              return;
+            }
+          }
+        }
+        
+        setDailyUpdateTemplate(defaultTemplate);
+      } catch (err) {
+        setDailyUpdateTemplate(defaultTemplate);
+      }
+    };
+    fetchDailyUpdateTemplate();
+  }, []);
+
+  const sendWhatsAppMessage = () => {
+    if (!storeData?.owner_phone) {
+      alert('لا يوجد رقم هاتف للتاجر');
+      return;
+    }
+    
+    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const today = new Date();
+    const dayName = days[today.getDay()];
+    const dateStr = today.toLocaleDateString('en-US');
+    
+    let message = dailyUpdateTemplate
+      .replace('{store_name}', storeData?.store_name || '')
+      .replace('{owner_name}', storeData?.owner_name || '')
+      .replace('{account_manager}', storeData?.account_manager?.name || '')
+      .replace('{sales}', dailyUpdateForm.sales || '0')
+      .replace('{revenue}', dailyUpdateForm.revenue || '0')
+      .replace('{spend}', dailyUpdateForm.spend || '0')
+      .replace('{day}', dayName)
+      .replace('{date}', dateStr)
+      .replace('{store_url}', storeData?.store_url || '');
+    
+    const phone = storeData.owner_phone.replace(/[^0-9]/g, '');
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowDailyUpdateModal(false);
+    setDailyUpdateForm({ sales: '', revenue: '', spend: '' });
+  };
 
   const toggleCategory = (category: string) => {
     setCollapsedCategories(prev => {
@@ -126,6 +241,109 @@ function StoreDetailsContent() {
       }
     } catch (err) {
       console.error('Error fetching ad accounts:', err);
+    }
+  };
+
+  const fetchPlatformTokens = async () => {
+    if (!storeId) return;
+    try {
+      const response = await fetch(`/api/admin/stores/${storeId}/platform-tokens`);
+      const data = await response.json();
+      if (data.tokens) {
+        setPlatformTokens(data.tokens);
+      }
+    } catch (err) {
+      console.error('Error fetching platform tokens:', err);
+    }
+  };
+
+  const savePlatformToken = async () => {
+    if (!storeId || !showPlatformTokenModal) return;
+    setSavingPlatformToken(true);
+    try {
+      const response = await fetch(`/api/admin/stores/${storeId}/platform-tokens`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: showPlatformTokenModal,
+          accessToken: platformTokenForm.accessToken,
+          accountId: platformTokenForm.accountId
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPlatformTokens(prev => ({
+          ...prev,
+          [showPlatformTokenModal]: {
+            accessToken: platformTokenForm.accessToken,
+            accountId: platformTokenForm.accountId,
+            connectedAt: new Date().toISOString()
+          }
+        }));
+        setShowPlatformTokenModal(null);
+        setPlatformTokenForm({ accessToken: '', accountId: '' });
+      }
+    } catch (err) {
+      console.error('Error saving platform token:', err);
+    } finally {
+      setSavingPlatformToken(false);
+    }
+  };
+
+  useEffect(() => {
+    if (storeId) {
+      fetchPlatformTokens();
+    }
+  }, [storeId]);
+
+  const fetchCampaignData = async () => {
+    if (!storeId) return;
+    setLoadingCampaigns(true);
+    setCampaignError(null);
+    try {
+      const response = await fetch(`/api/admin/stores/${storeId}/campaigns?range=${campaignDateRange}`);
+      const data = await response.json();
+      if (data.error) {
+        setCampaignError(data.error);
+      }
+      if (data.summary) {
+        setCampaignData(data.summary);
+      }
+      // عرض تفاصيل الخطأ من Snapchat إن وجد
+      if (data.snapchat?.error) {
+        setCampaignError(data.snapchat.error);
+      }
+    } catch (err) {
+      console.error('Error fetching campaigns:', err);
+      setCampaignError('فشل في جلب بيانات الحملات');
+    } finally {
+      setLoadingCampaigns(false);
+    }
+  };
+
+  useEffect(() => {
+    if (storeId && Object.keys(platformTokens).length > 0) {
+      fetchCampaignData();
+    }
+  }, [storeId, platformTokens, campaignDateRange]);
+
+  const disconnectPlatform = async (platform: string) => {
+    if (!storeId || !confirm('هل أنت متأكد من إلغاء ربط هذه المنصة؟')) return;
+    try {
+      const response = await fetch(`/api/admin/stores/${storeId}/platform-tokens`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform })
+      });
+      if (response.ok) {
+        setPlatformTokens(prev => {
+          const newTokens = { ...prev };
+          delete newTokens[platform];
+          return newTokens;
+        });
+      }
+    } catch (err) {
+      console.error('Error disconnecting platform:', err);
     }
   };
 
@@ -250,7 +468,8 @@ function StoreDetailsContent() {
         snapchat_account: storeData.snapchat_account || '',
         tiktok_account: storeData.tiktok_account || '',
         google_account: storeData.google_account || '',
-        meta_account: storeData.meta_account || ''
+        meta_account: storeData.meta_account || '',
+        media_buyer_id: storeData.media_buyer?.id || ''
       });
       setShowEditModal(true);
     }
@@ -411,6 +630,15 @@ function StoreDetailsContent() {
               )}
             </div>
             <button
+              onClick={() => setShowDailyUpdateModal(true)}
+              className="p-3 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-xl transition-all"
+              title="التحديث اليومي"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </button>
+            <button
               onClick={openEditModal}
               className="p-3 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-xl transition-all"
               title="تعديل بيانات المتجر"
@@ -460,8 +688,26 @@ function StoreDetailsContent() {
               )}
             </div>
             
+            {/* ميديا باير */}
+            <div className="p-4 text-center border-l border-purple-500/20">
+              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+              </div>
+              <p className="text-xs text-purple-300/70">ميديا باير</p>
+              {storeData?.media_buyer ? (
+                <Link href={`/admin/users/${storeData.media_buyer.id}`} className="text-sm text-white font-medium hover:text-cyan-400 transition-colors">
+                  {storeData.media_buyer.name.split(' ')[0]}
+                </Link>
+              ) : (
+                <p className="text-sm text-purple-400">غير محدد</p>
+              )}
+            </div>
+            
             {/* صاحب المتجر */}
-            <div className="p-4 text-center">
+            <div className="p-4 text-center border-l border-purple-500/20">
               <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-green-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -478,17 +724,6 @@ function StoreDetailsContent() {
               ) : (
                 <p className="text-sm text-white font-medium">{storeData?.owner_name || '-'}</p>
               )}
-            </div>
-            
-            {/* تاريخ الإضافة */}
-            <div className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-xs text-purple-300/70">تاريخ الإضافة</p>
-              <p className="text-sm text-white font-medium">{storeData?.created_at ? getTimeAgo(storeData.created_at) : '-'}</p>
             </div>
           </div>
           
@@ -663,12 +898,25 @@ function StoreDetailsContent() {
             <div className="border-t border-purple-500/20 p-4">
               <div className="flex flex-wrap gap-4 justify-center">
                 {storeData?.owner_phone && (
-                  <a href={`tel:${storeData.owner_phone}`} className="flex items-center gap-2 text-sm text-purple-300 hover:text-white transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    {storeData.owner_phone}
-                  </a>
+                  <>
+                    <a href={`tel:${storeData.owner_phone}`} className="flex items-center gap-2 text-sm text-purple-300 hover:text-white transition-colors">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      {storeData.owner_phone}
+                    </a>
+                    <a 
+                      href={`https://wa.me/${storeData.owner_phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                      واتساب
+                    </a>
+                  </>
                 )}
                 {storeData?.owner_email && (
                   <a href={`mailto:${storeData.owner_email}`} className="flex items-center gap-2 text-sm text-purple-300 hover:text-white transition-colors">
@@ -677,6 +925,17 @@ function StoreDetailsContent() {
                     </svg>
                     {storeData.owner_email}
                   </a>
+                )}
+                {storeData?.created_at && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-purple-300">تاريخ الإنشاء:</span>
+                    <span className="text-white font-medium">
+                      {new Date(storeData.created_at).toLocaleDateString('en-US')}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -706,19 +965,33 @@ function StoreDetailsContent() {
           </div>
         </div>
 
-        {/* Section Title */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-white">قائمة المهام</h2>
-        </div>
+        {/* قائمة المهام - مربع قابل للطي */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
+          {/* Header - قابل للنقر */}
+          <button
+            onClick={() => setIsTasksListCollapsed(!isTasksListCollapsed)}
+            className="w-full p-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white">قائمة المهام</h2>
+              <span className="text-sm text-purple-400">({stats.completed}/{stats.total})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className={`w-5 h-5 text-purple-400 transition-transform ${isTasksListCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
 
-        {/* Tasks by Category */}
-        <div className="space-y-4">
-          {Object.entries(tasks).map(([category, categoryTasks]) => {
+          {/* محتوى قائمة المهام */}
+          {!isTasksListCollapsed && (
+            <div className="p-4 pt-0 space-y-4">
+              {Object.entries(tasks).map(([category, categoryTasks]) => {
             const catStats = getCategoryStats(categoryTasks);
             const isCollapsed = collapsedCategories?.has(category) ?? true;
             return (
@@ -829,9 +1102,262 @@ function StoreDetailsContent() {
                 </div>
               </div>
             );
-          })}
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* قسم الحملات الإعلانية */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+          {/* Header - قابل للنقر */}
+          <button
+            onClick={() => setIsCampaignsCollapsed(!isCampaignsCollapsed)}
+            className="w-full p-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white">الحملات الإعلانية</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className={`w-5 h-5 text-purple-400 transition-transform ${isCampaignsCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* محتوى الحملات */}
+          {!isCampaignsCollapsed && (
+            <div className="p-4 pt-0 space-y-4">
+              {/* زر إدخال البيانات يدوياً */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setShowManualCampaignModal(true)}
+                  className="px-4 py-2 bg-purple-500/30 hover:bg-purple-500/50 text-purple-300 rounded-lg text-sm transition-all flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  إدخال بيانات الحملات
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
+                  <p className="text-xs text-green-400 mb-1">المبيعات</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.sales.toLocaleString() : '--'}</p>
+                  <p className="text-xs text-green-400/70">طلب</p>
+                </div>
+                <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
+                  <p className="text-xs text-blue-400 mb-1">العائد</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.revenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '--'}</p>
+                  <p className="text-xs text-blue-400/70">ر.س</p>
+                </div>
+                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
+                  <p className="text-xs text-orange-400 mb-1">الصرف</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '--'}</p>
+                  <p className="text-xs text-orange-400/70">ر.س</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
+                  <p className="text-xs text-purple-400 mb-1">ROAS</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.roas.toFixed(2) : '--'}</p>
+                  <p className="text-xs text-purple-400/70">x</p>
+                </div>
+              </div>
+
+              {/* المنصات */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية (API)</h3>
+                
+                {[
+                  { key: 'snapchat', name: 'Snapchat', bgColor: 'bg-yellow-500/20', textColor: 'text-yellow-400' },
+                  { key: 'tiktok', name: 'TikTok', bgColor: 'bg-pink-500/20', textColor: 'text-pink-400' },
+                  { key: 'meta', name: 'Meta (Facebook/Instagram)', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' },
+                  { key: 'google', name: 'Google Ads', bgColor: 'bg-red-500/20', textColor: 'text-red-400' },
+                ].map(platform => {
+                  const isConnected = !!platformTokens[platform.key];
+                  return (
+                    <div key={platform.key} className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl ${platform.bgColor} flex items-center justify-center`}>
+                            <span className={`text-lg font-bold ${platform.textColor}`}>{platform.name[0]}</span>
+                          </div>
+                          <div>
+                            <p className="text-white font-medium">{platform.name}</p>
+                            <p className="text-xs text-purple-400">
+                              {isConnected ? `Account: ${platformTokens[platform.key].accountId}` : 'غير مرتبط'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isConnected ? (
+                            <>
+                              <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">مرتبط</span>
+                              <button
+                                onClick={() => disconnectPlatform(platform.key)}
+                                className="px-3 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                              >
+                                إلغاء
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setShowPlatformTokenModal(platform.key);
+                                setPlatformTokenForm({ accessToken: '', accountId: '' });
+                              }}
+                              className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
+                            >
+                              ربط
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* نافذة إدخال Access Token للمنصة */}
+      {showPlatformTokenModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowPlatformTokenModal(null)}>
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">
+                ربط {showPlatformTokenModal === 'snapchat' ? 'Snapchat' : 
+                     showPlatformTokenModal === 'tiktok' ? 'TikTok' : 
+                     showPlatformTokenModal === 'meta' ? 'Meta' : 'Google Ads'}
+              </h3>
+              <button
+                onClick={() => setShowPlatformTokenModal(null)}
+                className="text-purple-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Account ID / Ad Account ID</label>
+                <input
+                  type="text"
+                  value={platformTokenForm.accountId}
+                  onChange={e => setPlatformTokenForm(prev => ({ ...prev, accountId: e.target.value }))}
+                  placeholder="أدخل معرف الحساب الإعلاني"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                  dir="ltr"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Access Token</label>
+                <textarea
+                  value={platformTokenForm.accessToken}
+                  onChange={e => setPlatformTokenForm(prev => ({ ...prev, accessToken: e.target.value }))}
+                  placeholder="أدخل Access Token من المنصة"
+                  rows={4}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none resize-none font-mono text-xs"
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
+                <p className="text-xs text-blue-300">
+                  للحصول على Access Token، قم بزيارة لوحة تحكم المطورين للمنصة المعنية وأنشئ تطبيق Marketing API.
+                </p>
+              </div>
+
+              <button
+                onClick={savePlatformToken}
+                disabled={savingPlatformToken || !platformTokenForm.accessToken || !platformTokenForm.accountId}
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-medium hover:from-purple-500 hover:to-purple-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingPlatformToken ? 'جاري الحفظ...' : 'حفظ وربط'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة إدخال بيانات الحملات يدوياً */}
+      {showManualCampaignModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowManualCampaignModal(false)}>
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">إدخال بيانات الحملات</h3>
+              <button
+                onClick={() => setShowManualCampaignModal(false)}
+                className="text-purple-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-purple-400 mb-4">أدخل الأرقام من لوحة تحكم المنصات الإعلانية</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">المبيعات (عدد الطلبات)</label>
+                <input
+                  type="number"
+                  value={manualCampaignForm.sales}
+                  onChange={e => setManualCampaignForm(prev => ({ ...prev, sales: e.target.value }))}
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">العائد (ر.س)</label>
+                <input
+                  type="number"
+                  value={manualCampaignForm.revenue}
+                  onChange={e => setManualCampaignForm(prev => ({ ...prev, revenue: e.target.value }))}
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">الصرف (ر.س)</label>
+                <input
+                  type="number"
+                  value={manualCampaignForm.spend}
+                  onChange={e => setManualCampaignForm(prev => ({ ...prev, spend: e.target.value }))}
+                  placeholder="0"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  const sales = parseFloat(manualCampaignForm.sales) || 0;
+                  const revenue = parseFloat(manualCampaignForm.revenue) || 0;
+                  const spend = parseFloat(manualCampaignForm.spend) || 0;
+                  const roas = spend > 0 ? revenue / spend : 0;
+                  setCampaignData({ sales, revenue, spend, roas });
+                  setShowManualCampaignModal(false);
+                }}
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-medium hover:from-purple-500 hover:to-purple-400 transition-all"
+              >
+                حفظ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Store Modal */}
       {showEditModal && (
@@ -917,6 +1443,21 @@ function StoreDetailsContent() {
                 </div>
               </div>
 
+              {/* ميديا باير */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">ميديا باير</label>
+                <select
+                  value={editForm.media_buyer_id}
+                  onChange={e => setEditForm(prev => ({ ...prev, media_buyer_id: e.target.value }))}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                >
+                  <option value="" className="bg-[#1a0a2e]">غير محدد</option>
+                  {mediaBuyers.map(buyer => (
+                    <option key={buyer.id} value={buyer.id} className="bg-[#1a0a2e]">{buyer.name}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* تاريخ بداية الاشتراك */}
               <div>
                 <label className="block text-sm text-purple-300 mb-2">تاريخ بداية الاشتراك</label>
@@ -957,6 +1498,74 @@ function StoreDetailsContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة التحديث اليومي */}
+      {showDailyUpdateModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">التحديث اليومي</h3>
+              <button
+                onClick={() => setShowDailyUpdateModal(false)}
+                className="text-purple-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* المبيعات */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">المبيعات</label>
+                <input
+                  type="text"
+                  value={dailyUpdateForm.sales}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, sales: e.target.value }))}
+                  placeholder="أدخل قيمة المبيعات"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              {/* العائد */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">العائد</label>
+                <input
+                  type="text"
+                  value={dailyUpdateForm.revenue}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, revenue: e.target.value }))}
+                  placeholder="أدخل قيمة العائد"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              {/* الصرف */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">الصرف</label>
+                <input
+                  type="text"
+                  value={dailyUpdateForm.spend}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, spend: e.target.value }))}
+                  placeholder="أدخل قيمة الصرف"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              {/* زر الإرسال */}
+              <button
+                onClick={sendWhatsAppMessage}
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl font-medium hover:from-green-500 hover:to-green-400 transition-all flex items-center justify-center gap-2 mt-6"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                إرسال عبر الواتساب
+              </button>
+            </div>
           </div>
         </div>
       )}

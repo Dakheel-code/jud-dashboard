@@ -1,0 +1,7 @@
+{
+  "template_1768868064078": {
+    "name": "التحديث اليومي ",
+    "content": "مرحباً *{owner_name}* ، معاك *{account_manager}* \n\nحابين نعطيك تحديث بسيط عن سير حملات في متجر : *{store_name}* \n{store_url} \n\n> التحديث اليومي {day} {date} : \n> •  المبيعات: {sales} طلب\n> •  العائد: {revenue}\n> •  الصرف: {spend} ريال\n\n *شكراً لتعاونكم*",
+    "linkedButton": "daily_update"
+  }
+}

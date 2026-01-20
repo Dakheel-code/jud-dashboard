@@ -11,6 +11,7 @@ interface AdminUser {
   name: string;
   email?: string;
   role: string;
+  roles: string[];
   permissions: string[];
   is_active: boolean;
   last_login?: string;
@@ -22,6 +23,10 @@ const ROLES = [
   { value: 'admin', label: 'المسؤول', color: 'orange' },
   { value: 'team_leader', label: 'قائد فريق', color: 'blue' },
   { value: 'account_manager', label: 'مدير حساب', color: 'green' },
+  { value: 'media_buyer', label: 'ميديا باير', color: 'cyan' },
+  { value: 'programmer', label: 'مبرمج', color: 'yellow' },
+  { value: 'designer', label: 'مصمم', color: 'pink' },
+  { value: 'web_developer', label: 'مطور ويب', color: 'indigo' },
 ];
 
 const PERMISSIONS = [
@@ -42,6 +47,7 @@ function UsersManagementContent() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultModalType, setResultModalType] = useState<'success' | 'error'>('success');
   const [resultModalMessage, setResultModalMessage] = useState('');
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -49,7 +55,7 @@ function UsersManagementContent() {
     password: '',
     name: '',
     email: '',
-    role: 'account_manager',
+    roles: ['account_manager'] as string[],
     permissions: [] as string[],
   });
 
@@ -158,7 +164,7 @@ function UsersManagementContent() {
       password: '',
       name: '',
       email: '',
-      role: 'account_manager',
+      roles: ['account_manager'],
       permissions: [],
     });
   };
@@ -170,7 +176,7 @@ function UsersManagementContent() {
       password: '',
       name: user.name,
       email: user.email || '',
-      role: user.role,
+      roles: user.roles || (user.role ? [user.role] : ['account_manager']),
       permissions: user.permissions || [],
     });
     setShowAddModal(true);
@@ -183,6 +189,10 @@ function UsersManagementContent() {
       case 'orange': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
       case 'blue': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
       case 'green': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'cyan': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+      case 'yellow': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+      case 'pink': return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+      case 'indigo': return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
       default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
     }
   };
@@ -264,9 +274,13 @@ function UsersManagementContent() {
                     <p className="text-purple-400 text-sm">@{user.username}</p>
                     {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
                   </Link>
-                  <span className={`px-3 py-1 rounded-full text-xs border ${getRoleColor(user.role)}`}>
-                    {getRoleLabel(user.role)}
-                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {(user.roles || [user.role]).map((role) => (
+                      <span key={role} className={`px-2 py-0.5 rounded-full text-xs border ${getRoleColor(role)}`}>
+                        {getRoleLabel(role)}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="flex flex-wrap gap-1 mb-3">
@@ -361,9 +375,13 @@ function UsersManagementContent() {
                         </Link>
                       </td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs border ${getRoleColor(user.role)}`}>
-                          {getRoleLabel(user.role)}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(user.roles || [user.role]).map((role) => (
+                            <span key={role} className={`px-2 py-0.5 rounded-full text-xs border ${getRoleColor(role)}`}>
+                              {getRoleLabel(role)}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
@@ -501,16 +519,34 @@ function UsersManagementContent() {
               </div>
 
               <div>
-                <label className="block text-purple-300 text-sm mb-2">الدور</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
-                >
+                <label className="block text-purple-300 text-sm mb-2">الأدوار</label>
+                <div className="grid grid-cols-2 gap-2">
                   {ROLES.map((role) => (
-                    <option key={role.value} value={role.value}>{role.label}</option>
+                    <label 
+                      key={role.value} 
+                      className={`flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all border ${
+                        formData.roles.includes(role.value)
+                          ? `${getRoleColor(role.value)} border-opacity-100`
+                          : 'bg-purple-900/20 border-purple-500/20 hover:bg-purple-900/30'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.roles.includes(role.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, roles: [...formData.roles, role.value] });
+                          } else {
+                            const newRoles = formData.roles.filter(r => r !== role.value);
+                            setFormData({ ...formData, roles: newRoles.length > 0 ? newRoles : ['account_manager'] });
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-purple-500 text-purple-500 focus:ring-purple-500"
+                      />
+                      <span className="text-white text-sm">{role.label}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div>

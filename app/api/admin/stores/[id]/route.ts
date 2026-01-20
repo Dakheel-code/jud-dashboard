@@ -78,6 +78,7 @@ export async function PUT(
     if (body.google_account !== undefined) updateData.google_account = body.google_account || null;
     if (body.meta_account !== undefined) updateData.meta_account = body.meta_account || null;
     if (body.client_id !== undefined) updateData.client_id = body.client_id;
+    if (body.media_buyer_id !== undefined) updateData.media_buyer_id = body.media_buyer_id || null;
 
     const { data: store, error } = await supabase
       .from('stores')

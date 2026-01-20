@@ -29,7 +29,8 @@ export async function GET() {
       .from('stores')
       .select(`
         *,
-        account_manager:admin_users!stores_account_manager_id_fkey(id, name, username)
+        account_manager:admin_users!stores_account_manager_id_fkey(id, name, username),
+        media_buyer:admin_users!stores_media_buyer_id_fkey(id, name, username)
       `)
       .order('created_at', { ascending: false });
 
@@ -84,6 +85,8 @@ export async function GET() {
         owner_email: store.owner_email,
         account_manager_id: store.account_manager_id,
         account_manager_name: store.account_manager?.name || null,
+        media_buyer_id: store.media_buyer_id,
+        media_buyer_name: store.media_buyer?.name || null,
         notes: store.notes,
         priority: store.priority || 'medium',
         budget: store.budget || null,

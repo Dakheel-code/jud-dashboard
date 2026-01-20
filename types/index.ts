@@ -103,7 +103,7 @@ export interface Notification {
 // أنواع المستخدمين والصلاحيات - وكالة جود
 // =====================================================
 
-export type UserRole = 'super_admin' | 'admin' | 'team_leader' | 'account_manager';
+export type UserRole = 'super_admin' | 'admin' | 'team_leader' | 'account_manager' | 'media_buyer' | 'programmer' | 'designer' | 'web_developer';
 
 export type Permission = 
   | 'manage_tasks'      // إدارة المهام
@@ -142,7 +142,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   super_admin: ['manage_tasks', 'manage_stores', 'add_stores', 'manage_users', 'manage_help', 'view_stats', 'manage_team'],
   admin: ['manage_tasks', 'manage_stores', 'add_stores', 'manage_help', 'view_stats', 'manage_team'],
   team_leader: ['manage_tasks', 'add_stores', 'manage_help', 'view_stats'],
-  account_manager: ['view_stats']
+  account_manager: ['view_stats'],
+  media_buyer: ['view_stats'],
+  programmer: ['view_stats'],
+  designer: ['view_stats'],
+  web_developer: ['view_stats']
 };
 
 // أسماء الأدوار بالعربي
@@ -150,5 +154,9 @@ export const ROLE_NAMES: Record<UserRole, string> = {
   super_admin: 'سوبر أدمن',
   admin: 'أدمن',
   team_leader: 'تيم ليدر',
-  account_manager: 'مدير حساب'
+  account_manager: 'مدير حساب',
+  media_buyer: 'ميديا باير',
+  programmer: 'مبرمج',
+  designer: 'مصمم',
+  web_developer: 'مطور ويب'
 };
