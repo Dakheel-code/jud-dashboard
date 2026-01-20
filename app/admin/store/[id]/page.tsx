@@ -1577,13 +1577,14 @@ function StoreDetailsContent() {
                                     });
                                     const data = await response.json();
                                     if (data.success) {
-                                      fetchDirectIntegrations();
+                                      // تحديث الصفحة لإعادة جلب البيانات
+                                      window.location.reload();
                                     } else {
-                                      alert('فشل في فصل الربط');
+                                      alert('فشل في فصل الربط: ' + (data.error || 'خطأ غير معروف'));
                                     }
                                   } catch (error) {
                                     console.error('Disconnect error:', error);
-                                    alert('حدث خطأ');
+                                    alert('حدث خطأ في الاتصال');
                                   }
                                 }}
                                 className="px-2 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"

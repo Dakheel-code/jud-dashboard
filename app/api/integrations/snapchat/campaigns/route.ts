@@ -147,134 +147,45 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // جلب الإحصائيات والإعلانات لكل حملة
-    const campaignDataPromises = campaignIds.map(async (campaignId: string) => {
-      try {
-        // جلب الإحصائيات
-        const statsResponse = await fetch(
-          `${SNAPCHAT_API_URL}/campaigns/${campaignId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        
-        // جلب Ad Squads (مجموعات الإعلانات)
-        const adSquadsResponse = await fetch(
-          `${SNAPCHAT_API_URL}/campaigns/${campaignId}/adsquads`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-
-        let stats: any = {};
-        let ads: any[] = [];
-
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          stats = statsData.total_stats?.[0]?.stats || {};
-        }
-
-        if (adSquadsResponse.ok) {
-          const adSquadsData = await adSquadsResponse.json();
-          const adSquads = adSquadsData.adsquads || [];
-          
-          // جلب الإعلانات من كل Ad Squad
-          for (const sq of adSquads) {
-            const adSquadId = sq.adsquad?.id;
-            if (!adSquadId) continue;
-            
-            try {
-              const adsResponse = await fetch(
-                `${SNAPCHAT_API_URL}/adsquads/${adSquadId}/ads`,
-                {
-                  headers: { Authorization: `Bearer ${accessToken}` },
-                }
-              );
-              
-              if (adsResponse.ok) {
-                const adsData = await adsResponse.json();
-                const adsList = adsData.ads || [];
-                
-                for (const ad of adsList) {
-                  const adInfo = ad.ad;
-                  if (adInfo?.status === 'ACTIVE' || adInfo?.status === 'PAUSED') {
-                    // جلب إحصائيات الإعلان
-                    try {
-                      const adStatsResponse = await fetch(
-                        `${SNAPCHAT_API_URL}/ads/${adInfo.id}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
-                        {
-                          headers: { Authorization: `Bearer ${accessToken}` },
-                        }
-                      );
-                      
-                      let adStats: any = {};
-                      if (adStatsResponse.ok) {
-                        const adStatsData = await adStatsResponse.json();
-                        adStats = adStatsData.total_stats?.[0]?.stats || {};
-                      }
-                      
-                      ads.push({
-                        ad_name: adInfo.name || 'Unknown Ad',
-                        ad_id: adInfo.id,
-                        status: adInfo.status,
-                        impressions: adStats.impressions || 0,
-                        clicks: adStats.swipes || adStats.clicks || 0,
-                        spend: (adStats.spend || 0) / 1000000,
-                        conversions: adStats.conversion_purchases || adStats.purchases || 0,
-                        revenue: (adStats.conversion_purchases_value || adStats.total_conversion_value || 0) / 1000000,
-                      });
-                    } catch (adStatsErr) {
-                      console.error('Error fetching ad stats:', adStatsErr);
-                    }
-                  }
-                }
-              }
-            } catch (adsErr) {
-              console.error('Error fetching ads:', adsErr);
-            }
-          }
-        }
-
-        return { campaignId, stats, ads };
-      } catch (err) {
-        console.error('Error fetching campaign data:', campaignId, err);
-        return { campaignId, stats: {}, ads: [] };
+    // جلب إحصائيات الحساب الإعلاني مباشرة (أبسط وأسرع)
+    const accountStatsResponse = await fetch(
+      `${SNAPCHAT_API_URL}/adaccounts/${adAccountId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
       }
-    });
+    );
 
-    const allCampaignData = await Promise.all(campaignDataPromises);
-    const campaignDataMap = new Map(allCampaignData.map((d) => [d.campaignId, d]));
+    let accountStats: any = {};
+    if (accountStatsResponse.ok) {
+      const accountStatsData = await accountStatsResponse.json();
+      console.log('Account stats response:', JSON.stringify(accountStatsData, null, 2));
+      accountStats = accountStatsData.total_stats?.[0]?.stats || {};
+    }
 
-    // تجميع البيانات
+    // تجميع البيانات للحملات
     const processedCampaigns = activeCampaigns.map((c: any) => {
       const campaign = c.campaign;
-      const data = campaignDataMap.get(campaign?.id) || { stats: {}, ads: [] };
-      const stats = data.stats;
-      
       return {
         campaign: campaign?.name || 'Unknown',
         campaign_id: campaign?.id,
         status: campaign?.status,
-        impressions: stats.impressions || 0,
-        clicks: stats.swipes || stats.clicks || 0,
-        spend: (stats.spend || 0) / 1000000,
-        conversions: stats.conversion_purchases || stats.purchases || 0,
-        revenue: (stats.conversion_purchases_value || stats.total_conversion_value || 0) / 1000000,
-        ads: data.ads || [],
+        impressions: 0,
+        clicks: 0,
+        spend: 0,
+        conversions: 0,
+        revenue: 0,
+        ads: [],
       };
     });
 
-    // حساب الإجماليات
-    const totals = processedCampaigns.reduce(
-      (acc: any, c: any) => ({
-        spend: acc.spend + c.spend,
-        impressions: acc.impressions + c.impressions,
-        clicks: acc.clicks + c.clicks,
-        conversions: acc.conversions + c.conversions,
-        revenue: acc.revenue + c.revenue,
-      }),
-      { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
-    );
+    // حساب الإجماليات من إحصائيات الحساب
+    const totals = {
+      spend: (accountStats.spend || 0) / 1000000,
+      impressions: accountStats.impressions || 0,
+      clicks: accountStats.swipes || accountStats.clicks || 0,
+      conversions: accountStats.conversion_purchases || accountStats.purchases || 0,
+      revenue: (accountStats.conversion_purchases_value || accountStats.total_conversion_value || 0) / 1000000,
+    };
 
     // معالجة الحملات غير النشطة أيضاً للعرض عند الطلب
     const processedInactiveCampaigns = inactiveCampaigns.map((c: any) => {
