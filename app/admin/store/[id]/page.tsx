@@ -1549,6 +1549,48 @@ function StoreDetailsContent() {
                           {isConnected ? (
                             <>
                               <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">مرتبط</span>
+                              {/* زر تغيير الحساب */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (platform.key === 'snapchat') {
+                                    window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`;
+                                  } else {
+                                    window.location.href = `/admin/store/${storeId}/integrations`;
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                                title="تغيير الحساب"
+                              >
+                                تغيير
+                              </button>
+                              {/* زر فصل الربط */}
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!confirm('هل أنت متأكد من فصل الربط؟')) return;
+                                  try {
+                                    const response = await fetch(`/api/integrations/${platform.key}/disconnect`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ storeId }),
+                                    });
+                                    const data = await response.json();
+                                    if (data.success) {
+                                      fetchDirectIntegrations();
+                                    } else {
+                                      alert('فشل في فصل الربط');
+                                    }
+                                  } catch (error) {
+                                    console.error('Disconnect error:', error);
+                                    alert('حدث خطأ');
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                                title="فصل الربط"
+                              >
+                                فصل
+                              </button>
                               <svg className={`w-5 h-5 text-purple-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
