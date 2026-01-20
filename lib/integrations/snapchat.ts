@@ -149,27 +149,53 @@ export async function listAdAccounts({
   }
 
   const data = await response.json();
-  const organizations: SnapchatOrganization[] = data.organizations?.map((org: any) => ({
-    id: org.organization?.id,
-    name: org.organization?.name,
-    ad_accounts: org.organization?.ad_accounts?.map((acc: any) => ({
-      id: acc.ad_account?.id,
-      name: acc.ad_account?.name,
-      type: acc.ad_account?.type,
-      status: acc.ad_account?.status,
-      currency: acc.ad_account?.currency,
-      timezone: acc.ad_account?.timezone,
-      organization_id: org.organization?.id,
-    })),
-  })) || [];
-
-  // تجميع كل الحسابات الإعلانية من جميع المنظمات
+  console.log('Snapchat API raw response:', JSON.stringify(data, null, 2));
+  
+  const organizations: SnapchatOrganization[] = [];
   const adAccounts: SnapchatAdAccount[] = [];
-  organizations.forEach((org) => {
-    if (org.ad_accounts) {
-      adAccounts.push(...org.ad_accounts);
-    }
-  });
+  
+  // معالجة البيانات بشكل مرن
+  if (data.organizations && Array.isArray(data.organizations)) {
+    data.organizations.forEach((orgWrapper: any) => {
+      const org = orgWrapper.organization || orgWrapper;
+      console.log('Processing organization:', org?.id, org?.name);
+      
+      const orgData: SnapchatOrganization = {
+        id: org?.id || '',
+        name: org?.name || '',
+        ad_accounts: [],
+      };
+      
+      // جلب الحسابات الإعلانية من المنظمة
+      const accounts = org?.ad_accounts || orgWrapper?.ad_accounts || [];
+      if (Array.isArray(accounts)) {
+        accounts.forEach((accWrapper: any) => {
+          const acc = accWrapper.ad_account || accWrapper;
+          console.log('Processing ad account:', acc?.id, acc?.name);
+          
+          const adAccount: SnapchatAdAccount = {
+            id: acc?.id || '',
+            name: acc?.name || '',
+            type: acc?.type || '',
+            status: acc?.status || '',
+            currency: acc?.currency || '',
+            timezone: acc?.timezone || '',
+            organization_id: org?.id || '',
+          };
+          
+          if (adAccount.id) {
+            adAccounts.push(adAccount);
+            orgData.ad_accounts?.push(adAccount);
+          }
+        });
+      }
+      
+      organizations.push(orgData);
+    });
+  }
+  
+  console.log('Parsed organizations:', organizations.length);
+  console.log('Parsed ad accounts:', adAccounts.length, adAccounts);
 
   return { organizations, adAccounts };
 }
