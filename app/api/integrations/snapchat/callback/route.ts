@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { exchangeCodeForToken } from '@/lib/integrations/snapchat';
-import { saveTokens } from '@/lib/integrations/token-manager';
+import { exchangeCodeForToken, listAdAccounts } from '@/lib/integrations/snapchat';
+import { saveTokens, updateSelectedAdAccount } from '@/lib/integrations/token-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,8 +87,30 @@ export async function GET(request: NextRequest) {
       scopes: tokens.scope ? tokens.scope.split(' ') : [],
     });
 
-    // إعادة التوجيه إلى صفحة اختيار الحساب
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
+
+    // جلب الحسابات الإعلانية تلقائياً
+    try {
+      const { adAccounts } = await listAdAccounts({ accessToken: tokens.access_token });
+      console.log('Found ad accounts after OAuth:', adAccounts.length);
+      
+      // إذا كان هناك حساب واحد فقط، اختره تلقائياً
+      if (adAccounts.length === 1) {
+        const account = adAccounts[0];
+        await updateSelectedAdAccount(storeId, 'snapchat', {
+          id: account.id,
+          name: account.name,
+          organizationId: account.organization_id,
+        });
+        console.log('Auto-selected single ad account:', account.name);
+        // إعادة التوجيه مباشرة لصفحة المتجر
+        return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}`);
+      }
+    } catch (err) {
+      console.error('Error fetching ad accounts after OAuth:', err);
+    }
+
+    // إعادة التوجيه إلى صفحة اختيار الحساب إذا كان هناك أكثر من حساب
     return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}/integrations?platform=snapchat&step=select-account`);
   } catch (error) {
     console.error('Snapchat OAuth callback error:', error);
