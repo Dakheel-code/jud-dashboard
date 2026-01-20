@@ -267,7 +267,7 @@ function StoreDetailsContent() {
 
   // جلب بيانات جميع المنصات تلقائياً عند تحميل الصفحة أو تغيير الفترة الزمنية
   useEffect(() => {
-    if (storeId && storeData) {
+    if (storeId) {
       setLoadingCampaigns(true);
       const platforms = [
         { key: 'snapchat', datasource: 'snapchat', field: 'snapchat_account' },
@@ -275,8 +275,16 @@ function StoreDetailsContent() {
         { key: 'meta', datasource: 'facebook', field: 'meta_account' },
         { key: 'google', datasource: 'google_ads', field: 'google_account' }
       ];
-      // جلب بيانات المنصات المرتبطة فقط
-      const linkedPlatforms = platforms.filter(p => storeData[p.field as keyof typeof storeData]);
+      
+      // جلب بيانات المنصات المرتبطة (Windsor أو مباشر)
+      const linkedPlatforms = platforms.filter(p => {
+        // التحقق من الربط المباشر
+        const directIntegration = directIntegrations[p.key];
+        const isDirectConnected = directIntegration?.status === 'connected' && !!directIntegration?.ad_account_id;
+        // أو الربط عبر Windsor
+        const isWindsorConnected = storeData?.[p.field as keyof typeof storeData];
+        return isDirectConnected || isWindsorConnected;
+      });
       
       if (linkedPlatforms.length === 0) {
         setLoadingCampaigns(false);
@@ -290,7 +298,7 @@ function StoreDetailsContent() {
         setLoadingCampaigns(false);
       });
     }
-  }, [storeId, storeData, datePreset, customDateRange.start, customDateRange.end]);
+  }, [storeId, storeData, directIntegrations, datePreset, customDateRange.start, customDateRange.end]);
 
   const fetchAdAccountsList = async () => {
     try {
@@ -456,35 +464,42 @@ function StoreDetailsContent() {
   const fetchPlatformCampaigns = async (platformKey: string, datasource: string) => {
     if (!storeId) return;
     try {
-      // استخدام الفترة الزمنية المحددة
+      // التحقق من الربط المباشر أولاً
+      const directIntegration = directIntegrations[platformKey];
+      const isDirectConnected = directIntegration?.status === 'connected' && !!directIntegration?.ad_account_id;
+      
+      if (isDirectConnected) {
+        // استخدام API الربط المباشر
+        let url = `/api/integrations/${platformKey}/campaigns?storeId=${storeId}&datePreset=${datePreset}`;
+        if (datePreset === 'custom' && customDateRange.start && customDateRange.end) {
+          url += `&startDate=${customDateRange.start}&endDate=${customDateRange.end}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log(`Direct API response for ${platformKey}:`, data);
+        
+        if (data.success) {
+          setPlatformCampaigns(prev => ({ ...prev, [platformKey]: data.campaigns || [] }));
+          setPlatformTotals(prev => ({ 
+            ...prev, 
+            [platformKey]: data.totals || { spend: 0, clicks: 0, impressions: 0, conversions: 0, revenue: 0 }
+          }));
+          return;
+        }
+      }
+      
+      // Fallback إلى Windsor API إذا لم يكن هناك ربط مباشر
       let dateParam = datePreset;
       if (datePreset === 'custom' && customDateRange.start && customDateRange.end) {
         dateParam = `custom&start_date=${customDateRange.start}&end_date=${customDateRange.end}`;
       }
       const response = await fetch(`/api/admin/stores/${storeId}/windsor-campaigns?date_preset=${dateParam}`);
       const data = await response.json();
-      console.log('Windsor API response:', data);
-      console.log('Looking for datasource:', datasource);
-      console.log('Available platforms:', Object.keys(data.byPlatform || {}));
-      console.log('Debug info:', data.debug);
-      console.log('Linked accounts:', data.linkedAccounts);
-      console.log('Accounts with platforms:', data.debug?.accountsWithPlatforms);
-      console.log('Available datasources:', data.debug?.availableDatasources);
-      console.log('Total filtered records:', data.count);
-      
-      // إذا لم يتم العثور على بيانات، عرض رسالة مع الحسابات المتاحة
-      if (data.count === 0 && data.debug?.windsorAccounts) {
-        console.log('⚠️ لم يتم العثور على بيانات مطابقة!');
-        console.log('الحسابات المرتبطة بالمتجر:', data.linkedAccounts);
-        console.log('الحسابات المتاحة في Windsor:', data.debug.windsorAccounts);
-        console.log('الحسابات مع المنصات:', data.debug.accountsWithPlatforms);
-      }
       
       if (data.success && data.byPlatform) {
-        // فلترة الحملات حسب المنصة
         const platformData = data.byPlatform[datasource]?.records || [];
         const platformTotal = data.byPlatform[datasource] || { spend: 0, clicks: 0, impressions: 0 };
-        console.log(`Platform ${platformKey} (${datasource}):`, platformData.length, 'records');
         setPlatformCampaigns(prev => ({ ...prev, [platformKey]: platformData }));
         setPlatformTotals(prev => ({ 
           ...prev, 
@@ -1421,19 +1436,7 @@ function StoreDetailsContent() {
 
               {/* المنصات - الربط المباشر */}
               <div className="space-y-3 relative">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية</h3>
-                  <Link 
-                    href={`/admin/store/${storeId}/integrations`}
-                    className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    إعدادات الربط
-                  </Link>
-                </div>
+                <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية</h3>
                 
                 {/* مؤشر التحميل على كامل المنصات */}
                 {loadingCampaigns && (
@@ -1562,13 +1565,21 @@ function StoreDetailsContent() {
                               إصلاح
                             </Link>
                           ) : (
-                            <Link
-                              href={`/admin/store/${storeId}/integrations`}
-                              onClick={(e) => e.stopPropagation()}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // فتح OAuth مباشرة للمنصات المدعومة
+                                if (platform.key === 'snapchat') {
+                                  window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`;
+                                } else {
+                                  // للمنصات غير المدعومة بعد، نوجه لصفحة الإعدادات
+                                  window.location.href = `/admin/store/${storeId}/integrations`;
+                                }
+                              }}
                               className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
                             >
                               ربط
-                            </Link>
+                            </button>
                           )}
                         </div>
                       </div>
