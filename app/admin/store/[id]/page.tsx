@@ -119,6 +119,8 @@ function StoreDetailsContent() {
   const [loadingWindsorAccounts, setLoadingWindsorAccounts] = useState(false);
   const [selectedWindsorAccount, setSelectedWindsorAccount] = useState<string>('');
   const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set());
+  // حالة الربط المباشر للمنصات
+  const [directIntegrations, setDirectIntegrations] = useState<Record<string, {status: string; ad_account_id?: string; ad_account_name?: string}>>({});
   const [platformCampaigns, setPlatformCampaigns] = useState<{[key: string]: any[]}>({});
   const [platformTotals, setPlatformTotals] = useState<{[key: string]: {spend: number; clicks: number; impressions: number; conversions: number; revenue: number}}>({});
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
@@ -242,6 +244,26 @@ function StoreDetailsContent() {
     }
     fetchAdAccountsList();
   }, [paramId]);
+
+  // جلب حالة الربط المباشر للمنصات
+  const fetchDirectIntegrations = async () => {
+    if (!storeId) return;
+    try {
+      const response = await fetch(`/api/integrations/status?storeId=${storeId}`);
+      const data = await response.json();
+      if (data.success && data.platforms) {
+        setDirectIntegrations(data.platforms);
+      }
+    } catch (error) {
+      console.error('Failed to fetch direct integrations:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (storeId) {
+      fetchDirectIntegrations();
+    }
+  }, [storeId]);
 
   // جلب بيانات جميع المنصات تلقائياً عند تحميل الصفحة أو تغيير الفترة الزمنية
   useEffect(() => {
@@ -1397,18 +1419,19 @@ function StoreDetailsContent() {
                 </div>
               </div>
 
-              {/* المنصات */}
+              {/* المنصات - الربط المباشر */}
               <div className="space-y-3 relative">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية (Windsor)</h3>
+                  <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية</h3>
                   <Link 
                     href={`/admin/store/${storeId}/integrations`}
                     className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    ربط مباشر (بدون Windsor)
+                    إعدادات الربط
                   </Link>
                 </div>
                 
@@ -1447,8 +1470,11 @@ function StoreDetailsContent() {
                     </svg>
                   )},
                 ].map(platform => {
-                  const linkedAccount = storeData?.[platform.field as keyof StoreFullData] as string | undefined;
-                  const isConnected = !!linkedAccount;
+                  // استخدام الربط المباشر بدلاً من Windsor
+                  const directIntegration = directIntegrations[platform.key];
+                  const isConnected = directIntegration?.status === 'connected' && !!directIntegration?.ad_account_id;
+                  const needsReauth = directIntegration?.status === 'needs_reauth';
+                  const hasError = directIntegration?.status === 'error';
                   const isExpanded = expandedPlatforms.has(platform.key);
                   const campaigns = platformCampaigns[platform.key] || [];
                   const totals = platformTotals[platform.key] || { spend: 0, clicks: 0, impressions: 0, conversions: 0, revenue: 0 };
@@ -1481,8 +1507,8 @@ function StoreDetailsContent() {
                           </div>
                           <div>
                             <p className="text-white font-medium">{platform.name}</p>
-                            <p className="text-xs text-purple-400 truncate max-w-[150px]" title={linkedAccount || 'غير مرتبط'}>
-                              {isConnected ? `Account: ${linkedAccount}` : 'غير مرتبط'}
+                            <p className="text-xs text-purple-400 truncate max-w-[150px]" title={directIntegration?.ad_account_name || 'غير مرتبط'}>
+                              {isConnected ? directIntegration?.ad_account_name : needsReauth ? 'يحتاج إعادة ربط' : hasError ? 'خطأ في الربط' : 'غير مرتبط'}
                             </p>
                           </div>
                         </div>
@@ -1515,23 +1541,34 @@ function StoreDetailsContent() {
                           {isConnected ? (
                             <>
                               <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">مرتبط</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleAdAccountChange(platform.field, ''); }}
-                                className="px-3 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                              >
-                                إلغاء
-                              </button>
                               <svg className={`w-5 h-5 text-purple-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
                             </>
+                          ) : needsReauth ? (
+                            <Link
+                              href={`/admin/store/${storeId}/integrations`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-4 py-1.5 rounded-lg text-xs bg-orange-500/30 text-orange-300 hover:bg-orange-500/50 transition-colors"
+                            >
+                              إعادة الربط
+                            </Link>
+                          ) : hasError ? (
+                            <Link
+                              href={`/admin/store/${storeId}/integrations`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-4 py-1.5 rounded-lg text-xs bg-red-500/30 text-red-300 hover:bg-red-500/50 transition-colors"
+                            >
+                              إصلاح
+                            </Link>
                           ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openWindsorAccountModal(platform.key); }}
+                            <Link
+                              href={`/admin/store/${storeId}/integrations`}
+                              onClick={(e) => e.stopPropagation()}
                               className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
                             >
                               ربط
-                            </button>
+                            </Link>
                           )}
                         </div>
                       </div>
