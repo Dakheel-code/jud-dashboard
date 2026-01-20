@@ -20,10 +20,10 @@ interface TokenRecord {
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Supabase configuration missing');
+    throw new Error('Supabase configuration missing (SUPABASE_SERVICE_ROLE_KEY is required)');
   }
 
   return createClient(supabaseUrl, supabaseServiceKey);
@@ -206,18 +206,27 @@ export async function updateSelectedAdAccount(
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('ad_platform_accounts')
     .update({
       ad_account_id: adAccount.id,
       ad_account_name: adAccount.name,
       organization_id: adAccount.organizationId || null,
+      status: 'connected',
+      last_connected_at: new Date().toISOString(),
+      error_message: null,
     })
     .eq('store_id', storeId)
-    .eq('platform', platform);
+    .eq('platform', platform)
+    .select('id');
 
   if (error) {
     console.error('Failed to update ad account:', error);
     throw new Error('Failed to update ad account');
+  }
+
+  if (!data || data.length === 0) {
+    console.error('No ad_platform_accounts row updated. storeId/platform not found:', { storeId, platform });
+    throw new Error('Ad platform token record not found. Please re-connect the platform.');
   }
 }

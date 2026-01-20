@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Snapchat select account error:', error);
     return NextResponse.json(
-      { error: 'Failed to select ad account' },
+      { error: error instanceof Error ? error.message : 'Failed to select ad account' },
       { status: 500 }
     );
   }
