@@ -122,8 +122,10 @@ function StoreDetailsContent() {
   // حالة الربط المباشر للمنصات
   const [directIntegrations, setDirectIntegrations] = useState<Record<string, {status: string; ad_account_id?: string; ad_account_name?: string}>>({});
   const [platformCampaigns, setPlatformCampaigns] = useState<{[key: string]: any[]}>({});
+  const [platformInactiveCampaigns, setPlatformInactiveCampaigns] = useState<{[key: string]: any[]}>({});
   const [platformTotals, setPlatformTotals] = useState<{[key: string]: {spend: number; clicks: number; impressions: number; conversions: number; revenue: number}}>({});
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
+  const [showMoreCampaigns, setShowMoreCampaigns] = useState<Set<string>>(new Set());
   const [datePreset, setDatePreset] = useState<string>('last_7d');
   const [customDateRange, setCustomDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
@@ -481,6 +483,7 @@ function StoreDetailsContent() {
         
         if (data.success) {
           setPlatformCampaigns(prev => ({ ...prev, [platformKey]: data.campaigns || [] }));
+          setPlatformInactiveCampaigns(prev => ({ ...prev, [platformKey]: data.inactiveCampaigns || [] }));
           setPlatformTotals(prev => ({ 
             ...prev, 
             [platformKey]: data.totals || { spend: 0, clicks: 0, impressions: 0, conversions: 0, revenue: 0 }
@@ -1480,6 +1483,8 @@ function StoreDetailsContent() {
                   const hasError = directIntegration?.status === 'error';
                   const isExpanded = expandedPlatforms.has(platform.key);
                   const campaigns = platformCampaigns[platform.key] || [];
+                  const inactiveCampaigns = platformInactiveCampaigns[platform.key] || [];
+                  const showMore = showMoreCampaigns.has(platform.key);
                   const totals = platformTotals[platform.key] || { spend: 0, clicks: 0, impressions: 0, conversions: 0, revenue: 0 };
                   
                   return (
@@ -1710,6 +1715,53 @@ function StoreDetailsContent() {
                                   </tr>
                                 </tfoot>
                               </table>
+                              
+                              {/* زر المزيد لعرض الحملات غير النشطة */}
+                              {inactiveCampaigns.length > 0 && (
+                                <div className="mt-4 text-center">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowMoreCampaigns(prev => {
+                                        const newSet = new Set(prev);
+                                        if (showMore) {
+                                          newSet.delete(platform.key);
+                                        } else {
+                                          newSet.add(platform.key);
+                                        }
+                                        return newSet;
+                                      });
+                                    }}
+                                    className="px-4 py-2 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                                  >
+                                    <svg className={`w-4 h-4 transition-transform ${showMore ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    {showMore ? 'إخفاء الحملات القديمة' : `المزيد (${inactiveCampaigns.length} حملة قديمة)`}
+                                  </button>
+                                  
+                                  {/* عرض الحملات غير النشطة */}
+                                  {showMore && (
+                                    <div className="mt-4 border-t border-purple-500/20 pt-4">
+                                      <p className="text-xs text-purple-400 mb-3">الحملات غير النشطة</p>
+                                      <div className="space-y-2">
+                                        {inactiveCampaigns.map((campaign: any, idx: number) => (
+                                          <div key={idx} className="flex items-center justify-between p-2 bg-purple-900/20 rounded-lg text-sm">
+                                            <span className="text-purple-300 truncate max-w-[200px]" title={campaign.campaign}>
+                                              {campaign.campaign}
+                                            </span>
+                                            <span className="text-xs text-purple-500 px-2 py-0.5 bg-purple-900/50 rounded">
+                                              {campaign.status === 'DELETED' ? 'محذوفة' : 
+                                               campaign.status === 'COMPLETED' ? 'مكتملة' : 
+                                               campaign.status === 'ARCHIVED' ? 'مؤرشفة' : campaign.status}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             );
                           })() : (

@@ -117,12 +117,27 @@ export async function GET(request: NextRequest) {
     }
 
     const campaignsData = await campaignsResponse.json();
-    const campaigns = campaignsData.campaigns || [];
+    const allCampaigns = campaignsData.campaigns || [];
 
-    console.log('Found campaigns:', campaigns.length);
+    console.log('Found campaigns:', allCampaigns.length);
 
-    // جلب إحصائيات الحملات
-    const campaignIds = campaigns.map((c: any) => c.campaign?.id).filter(Boolean);
+    // فلترة الحملات النشطة فقط (ACTIVE أو PAUSED)
+    const activeCampaigns = allCampaigns.filter((c: any) => {
+      const status = c.campaign?.status;
+      return status === 'ACTIVE' || status === 'PAUSED';
+    });
+    
+    // الحملات غير النشطة (للعرض عند الطلب)
+    const inactiveCampaigns = allCampaigns.filter((c: any) => {
+      const status = c.campaign?.status;
+      return status !== 'ACTIVE' && status !== 'PAUSED';
+    });
+
+    console.log('Active campaigns:', activeCampaigns.length);
+    console.log('Inactive campaigns:', inactiveCampaigns.length);
+
+    // جلب إحصائيات الحملات النشطة فقط
+    const campaignIds = activeCampaigns.map((c: any) => c.campaign?.id).filter(Boolean);
     
     if (campaignIds.length === 0) {
       return NextResponse.json({
@@ -157,7 +172,7 @@ export async function GET(request: NextRequest) {
     const statsMap = new Map(allStats.map((s) => [s.campaignId, s.stats]));
 
     // تجميع البيانات
-    const processedCampaigns = campaigns.map((c: any) => {
+    const processedCampaigns = activeCampaigns.map((c: any) => {
       const campaign = c.campaign;
       const stats = statsMap.get(campaign?.id) || {};
       
@@ -185,11 +200,32 @@ export async function GET(request: NextRequest) {
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
     );
 
+    // معالجة الحملات غير النشطة أيضاً للعرض عند الطلب
+    const processedInactiveCampaigns = inactiveCampaigns.map((c: any) => {
+      const campaign = c.campaign;
+      return {
+        campaign: campaign?.name || 'Unknown',
+        campaign_id: campaign?.id,
+        status: campaign?.status,
+        impressions: 0,
+        clicks: 0,
+        spend: 0,
+        conversions: 0,
+        revenue: 0,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       campaigns: processedCampaigns,
+      inactiveCampaigns: processedInactiveCampaigns,
       totals,
       dateRange,
+      counts: {
+        active: processedCampaigns.length,
+        inactive: processedInactiveCampaigns.length,
+        total: allCampaigns.length,
+      },
     });
   } catch (error) {
     console.error('Snapchat campaigns error:', error);
