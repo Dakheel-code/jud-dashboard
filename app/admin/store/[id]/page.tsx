@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TasksByCategory } from '@/types';
@@ -80,7 +80,7 @@ function StoreDetailsContent() {
   const [platformTokenForm, setPlatformTokenForm] = useState({ accessToken: '', accountId: '' });
   const [platformTokens, setPlatformTokens] = useState<{[key: string]: { accessToken: string; accountId: string; connectedAt: string }}>({});
   const [savingPlatformToken, setSavingPlatformToken] = useState(false);
-  const [campaignData, setCampaignData] = useState<{ sales: number; revenue: number; spend: number; roas: number } | null>(null);
+  const [campaignData, setCampaignData] = useState<{ sales: number; revenue: number; spend: number; roas: number; clicks?: number; impressions?: number } | null>(null);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [campaignError, setCampaignError] = useState<string | null>(null);
   const [showManualCampaignModal, setShowManualCampaignModal] = useState(false);
@@ -114,6 +114,17 @@ function StoreDetailsContent() {
     spend: ''
   });
   const [dailyUpdateTemplate, setDailyUpdateTemplate] = useState('');
+  const [showWindsorAccountModal, setShowWindsorAccountModal] = useState<string | null>(null);
+  const [windsorAccounts, setWindsorAccounts] = useState<{account_name: string; datasource: string}[]>([]);
+  const [loadingWindsorAccounts, setLoadingWindsorAccounts] = useState(false);
+  const [selectedWindsorAccount, setSelectedWindsorAccount] = useState<string>('');
+  const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set());
+  const [platformCampaigns, setPlatformCampaigns] = useState<{[key: string]: any[]}>({});
+  const [platformTotals, setPlatformTotals] = useState<{[key: string]: {spend: number; clicks: number; impressions: number; conversions: number; revenue: number}}>({});
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
+  const [datePreset, setDatePreset] = useState<string>('last_7d');
+  const [customDateRange, setCustomDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   // جلب قائمة الميديا باير
   useEffect(() => {
@@ -232,6 +243,33 @@ function StoreDetailsContent() {
     fetchAdAccountsList();
   }, [paramId]);
 
+  // جلب بيانات جميع المنصات تلقائياً عند تحميل الصفحة أو تغيير الفترة الزمنية
+  useEffect(() => {
+    if (storeId && storeData) {
+      setLoadingCampaigns(true);
+      const platforms = [
+        { key: 'snapchat', datasource: 'snapchat', field: 'snapchat_account' },
+        { key: 'tiktok', datasource: 'tiktok', field: 'tiktok_account' },
+        { key: 'meta', datasource: 'facebook', field: 'meta_account' },
+        { key: 'google', datasource: 'google_ads', field: 'google_account' }
+      ];
+      // جلب بيانات المنصات المرتبطة فقط
+      const linkedPlatforms = platforms.filter(p => storeData[p.field as keyof typeof storeData]);
+      
+      if (linkedPlatforms.length === 0) {
+        setLoadingCampaigns(false);
+        return;
+      }
+      
+      // جلب البيانات بالتوازي
+      Promise.all(
+        linkedPlatforms.map(platform => fetchPlatformCampaigns(platform.key, platform.datasource))
+      ).finally(() => {
+        setLoadingCampaigns(false);
+      });
+    }
+  }, [storeId, storeData, datePreset, customDateRange.start, customDateRange.end]);
+
   const fetchAdAccountsList = async () => {
     try {
       const response = await fetch('/api/admin/ad-accounts');
@@ -301,17 +339,29 @@ function StoreDetailsContent() {
     setLoadingCampaigns(true);
     setCampaignError(null);
     try {
-      const response = await fetch(`/api/admin/stores/${storeId}/campaigns?range=${campaignDateRange}`);
+      // استخدام Windsor API لجلب بيانات الحملات
+      const datePreset = campaignDateRange === 'today' ? 'today' : 
+                         campaignDateRange === 'week' ? 'last_7d' : 
+                         campaignDateRange === 'month' ? 'last_30d' : 'last_7d';
+      
+      const response = await fetch(`/api/admin/stores/${storeId}/windsor-campaigns?date_preset=${datePreset}`);
       const data = await response.json();
+      
       if (data.error) {
         setCampaignError(data.error);
       }
       if (data.summary) {
-        setCampaignData(data.summary);
+        setCampaignData({
+          sales: data.summary.conversions || 0,
+          revenue: data.summary.revenue || 0,
+          spend: data.summary.spend || 0,
+          roas: parseFloat(data.summary.roas) || 0,
+          clicks: data.summary.clicks || 0,
+          impressions: data.summary.impressions || 0
+        });
       }
-      // عرض تفاصيل الخطأ من Snapchat إن وجد
-      if (data.snapchat?.error) {
-        setCampaignError(data.snapchat.error);
+      if (data.message) {
+        setCampaignError(data.message);
       }
     } catch (err) {
       console.error('Error fetching campaigns:', err);
@@ -322,10 +372,10 @@ function StoreDetailsContent() {
   };
 
   useEffect(() => {
-    if (storeId && Object.keys(platformTokens).length > 0) {
+    if (storeId) {
       fetchCampaignData();
     }
-  }, [storeId, platformTokens, campaignDateRange]);
+  }, [storeId, campaignDateRange]);
 
   const disconnectPlatform = async (platform: string) => {
     if (!storeId || !confirm('هل أنت متأكد من إلغاء ربط هذه المنصة؟')) return;
@@ -344,6 +394,122 @@ function StoreDetailsContent() {
       }
     } catch (err) {
       console.error('Error disconnecting platform:', err);
+    }
+  };
+
+  // جلب حسابات Windsor المتصلة حسب المنصة
+  const fetchWindsorAccounts = async (platform: string) => {
+    setLoadingWindsorAccounts(true);
+    try {
+      // تحويل اسم المنصة إلى datasource
+      const datasourceMap: {[key: string]: string} = {
+        'snapchat': 'snapchat',
+        'tiktok': 'tiktok',
+        'meta': 'facebook',
+        'google': 'google_ads'
+      };
+      const datasource = datasourceMap[platform] || platform;
+      
+      // جلب الحسابات مع فلترة حسب المنصة
+      const response = await fetch(`/api/admin/windsor/accounts?datasource=${datasource}`);
+      const data = await response.json();
+      if (data.success) {
+        setWindsorAccounts(data.accounts || []);
+      }
+    } catch (err) {
+      console.error('Error fetching Windsor accounts:', err);
+    } finally {
+      setLoadingWindsorAccounts(false);
+    }
+  };
+
+  // فتح نافذة اختيار حساب Windsor
+  const openWindsorAccountModal = (platform: string) => {
+    setShowWindsorAccountModal(platform);
+    setSelectedWindsorAccount('');
+    fetchWindsorAccounts(platform);
+  };
+
+  // جلب حملات منصة معينة
+  const fetchPlatformCampaigns = async (platformKey: string, datasource: string) => {
+    if (!storeId) return;
+    try {
+      // استخدام الفترة الزمنية المحددة
+      let dateParam = datePreset;
+      if (datePreset === 'custom' && customDateRange.start && customDateRange.end) {
+        dateParam = `custom&start_date=${customDateRange.start}&end_date=${customDateRange.end}`;
+      }
+      const response = await fetch(`/api/admin/stores/${storeId}/windsor-campaigns?date_preset=${dateParam}`);
+      const data = await response.json();
+      console.log('Windsor API response:', data);
+      console.log('Looking for datasource:', datasource);
+      console.log('Available platforms:', Object.keys(data.byPlatform || {}));
+      console.log('Debug info:', data.debug);
+      console.log('Linked accounts:', data.linkedAccounts);
+      console.log('Accounts with platforms:', data.debug?.accountsWithPlatforms);
+      console.log('Available datasources:', data.debug?.availableDatasources);
+      console.log('Total filtered records:', data.count);
+      
+      // إذا لم يتم العثور على بيانات، عرض رسالة مع الحسابات المتاحة
+      if (data.count === 0 && data.debug?.windsorAccounts) {
+        console.log('⚠️ لم يتم العثور على بيانات مطابقة!');
+        console.log('الحسابات المرتبطة بالمتجر:', data.linkedAccounts);
+        console.log('الحسابات المتاحة في Windsor:', data.debug.windsorAccounts);
+        console.log('الحسابات مع المنصات:', data.debug.accountsWithPlatforms);
+      }
+      
+      if (data.success && data.byPlatform) {
+        // فلترة الحملات حسب المنصة
+        const platformData = data.byPlatform[datasource]?.records || [];
+        const platformTotal = data.byPlatform[datasource] || { spend: 0, clicks: 0, impressions: 0 };
+        console.log(`Platform ${platformKey} (${datasource}):`, platformData.length, 'records');
+        setPlatformCampaigns(prev => ({ ...prev, [platformKey]: platformData }));
+        setPlatformTotals(prev => ({ 
+          ...prev, 
+          [platformKey]: { 
+            spend: platformTotal.spend || 0, 
+            clicks: platformTotal.clicks || 0, 
+            impressions: platformTotal.impressions || 0,
+            conversions: platformTotal.conversions || 0,
+            revenue: platformTotal.revenue || 0
+          } 
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching platform campaigns:', err);
+    }
+  };
+
+  // ربط حساب Windsor بالمتجر
+  const linkWindsorAccount = async () => {
+    if (!storeId || !showWindsorAccountModal || !selectedWindsorAccount) return;
+    
+    const fieldMap: { [key: string]: string } = {
+      'snapchat': 'snapchat_account',
+      'tiktok': 'tiktok_account',
+      'meta': 'meta_account',
+      'google': 'google_account'
+    };
+    
+    const field = fieldMap[showWindsorAccountModal];
+    if (!field) return;
+
+    try {
+      const response = await fetch(`/api/admin/stores/${storeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: selectedWindsorAccount })
+      });
+
+      if (response.ok) {
+        setStoreData(prev => prev ? { ...prev, [field]: selectedWindsorAccount } : null);
+        setShowWindsorAccountModal(null);
+        setSelectedWindsorAccount('');
+        // إعادة جلب بيانات الحملات
+        fetchCampaignData();
+      }
+    } catch (err) {
+      console.error('Error linking Windsor account:', err);
     }
   };
 
@@ -1132,29 +1298,92 @@ function StoreDetailsContent() {
           {/* محتوى الحملات */}
           {!isCampaignsCollapsed && (
             <div className="p-4 pt-0 space-y-4">
-              {/* زر إدخال البيانات يدوياً */}
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setShowManualCampaignModal(true)}
-                  className="px-4 py-2 bg-purple-500/30 hover:bg-purple-500/50 text-purple-300 rounded-lg text-sm transition-all flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  إدخال بيانات الحملات
-                </button>
+              {/* اختيار الفترة الزمنية */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="text-sm text-purple-300">الفترة:</span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'today', label: 'اليوم' },
+                    { value: 'yesterday', label: 'أمس' },
+                    { value: 'last_7d', label: '7 أيام' },
+                    { value: 'last_14d', label: '14 يوم' },
+                    { value: 'last_30d', label: '30 يوم' },
+                    { value: 'this_month', label: 'هذا الشهر' },
+                    { value: 'last_month', label: 'الشهر الماضي' },
+                  ].map(preset => (
+                    <button
+                      key={preset.value}
+                      onClick={() => {
+                        setDatePreset(preset.value);
+                        setShowCustomDatePicker(false);
+                      }}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                        datePreset === preset.value && !showCustomDatePicker
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-900/30 text-purple-300 hover:bg-purple-800/50'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setShowCustomDatePicker(!showCustomDatePicker)}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                      showCustomDatePicker
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-purple-900/30 text-purple-300 hover:bg-purple-800/50'
+                    }`}
+                  >
+                    مخصص
+                  </button>
+                </div>
               </div>
+
+              {/* اختيار التاريخ المخصص */}
+              {showCustomDatePicker && (
+                <div className="flex flex-wrap items-center gap-3 p-3 bg-purple-900/20 rounded-xl border border-purple-500/20">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-purple-300">من:</label>
+                    <input
+                      type="date"
+                      value={customDateRange.start}
+                      onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      className="px-3 py-1.5 text-xs bg-purple-900/50 border border-purple-500/30 rounded-lg text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-purple-300">إلى:</label>
+                    <input
+                      type="date"
+                      value={customDateRange.end}
+                      onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      className="px-3 py-1.5 text-xs bg-purple-900/50 border border-purple-500/30 rounded-lg text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (customDateRange.start && customDateRange.end) {
+                        setDatePreset('custom');
+                      }
+                    }}
+                    disabled={!customDateRange.start || !customDateRange.end}
+                    className="px-4 py-1.5 text-xs bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:text-purple-500 text-white rounded-lg transition-colors"
+                  >
+                    تطبيق
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
-                  <p className="text-xs text-green-400 mb-1">المبيعات</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.sales.toLocaleString() : '--'}</p>
-                  <p className="text-xs text-green-400/70">طلب</p>
+                  <p className="text-xs text-green-400 mb-1">النقرات</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? (campaignData.clicks || 0).toLocaleString() : '--'}</p>
+                  <p className="text-xs text-green-400/70">نقرة</p>
                 </div>
                 <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
-                  <p className="text-xs text-blue-400 mb-1">العائد</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.revenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '--'}</p>
-                  <p className="text-xs text-blue-400/70">ر.س</p>
+                  <p className="text-xs text-blue-400 mb-1">التحويلات</p>
+                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.sales.toLocaleString() : '--'}</p>
+                  <p className="text-xs text-blue-400/70">تحويل</p>
                 </div>
                 <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
                   <p className="text-xs text-orange-400 mb-1">الصرف</p>
@@ -1169,47 +1398,125 @@ function StoreDetailsContent() {
               </div>
 
               {/* المنصات */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية (API)</h3>
+              <div className="space-y-3 relative">
+                <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية (Windsor)</h3>
+                
+                {/* مؤشر التحميل على كامل المنصات */}
+                {loadingCampaigns && (
+                  <div className="absolute inset-0 bg-[#0a0118]/70 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                      <span className="text-purple-300 text-sm font-medium">جاري تحديث البيانات...</span>
+                    </div>
+                  </div>
+                )}
                 
                 {[
-                  { key: 'snapchat', name: 'Snapchat', bgColor: 'bg-yellow-500/20', textColor: 'text-yellow-400' },
-                  { key: 'tiktok', name: 'TikTok', bgColor: 'bg-pink-500/20', textColor: 'text-pink-400' },
-                  { key: 'meta', name: 'Meta (Facebook/Instagram)', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' },
-                  { key: 'google', name: 'Google Ads', bgColor: 'bg-red-500/20', textColor: 'text-red-400' },
+                  { key: 'snapchat', name: 'Snapchat', bgColor: 'bg-yellow-500/10 border border-yellow-500/30', cardBg: 'bg-yellow-500/10 border-yellow-500/30', textColor: 'text-yellow-400', field: 'snapchat_account', datasource: 'snapchat', datasourceAlt: ['snapchat', 'snap', 'snapchat_marketing'], icon: (
+                    <svg className="w-6 h-6" viewBox="0 0 512 512" fill="currentColor">
+                      <path d="M496.926,366.6c-3.373-9.176-9.8-14.086-17.112-18.153-1.376-.806-2.641-1.451-3.72-1.947-2.182-1.128-4.414-2.22-6.634-3.373-22.8-12.09-40.609-27.341-52.959-45.42a102.889,102.889,0,0,1-9.089-16.269c-1.054-2.766-.992-4.377-.065-5.954a11.249,11.249,0,0,1,3.088-2.818c2.766-1.8,5.669-3.373,8.2-4.7,4.7-2.5,8.5-4.5,10.9-5.954,7.287-4.477,12.5-9.4,15.5-14.629a24.166,24.166,0,0,0,1.863-22.031c-4.328-12.266-17.9-19.263-28.263-19.263a35.007,35.007,0,0,0-9.834,1.376c-.124.037-.236.074-.347.111,0-1.451.024-2.915.024-4.377,0-22.92-2.508-46.152-10.9-67.615C378.538,91.727,341.063,56.7,286.741,50.6a118.907,118.907,0,0,0-12.293-.621h-36.9a118.907,118.907,0,0,0-12.293.621c-54.31,6.1-91.785,41.127-110.839,84.168-8.4,21.463-10.9,44.7-10.9,67.615,0,1.462.012,2.926.024,4.377-.111-.037-.223-.074-.347-.111a35.007,35.007,0,0,0-9.834-1.376c-10.362,0-23.935,7-28.263,19.263a24.166,24.166,0,0,0,1.863,22.031c3,5.233,8.213,10.152,15.5,14.629,2.4,1.451,6.2,3.46,10.9,5.954,2.52,1.327,5.418,2.9,8.181,4.7a11.3,11.3,0,0,1,3.088,2.818c.927,1.576.989,3.187-.065,5.954a102.889,102.889,0,0,1-9.089,16.269c-12.35,18.079-30.161,33.33-52.959,45.42-2.22,1.153-4.452,2.245-6.634,3.373-1.079.5-2.344,1.141-3.72,1.947-7.312,4.067-13.739,8.977-17.112,18.153-3.6,9.834-1.044,20.882,7.6,32.838,8.7,12.017,20.018,18.4,33.787,19.016,4.278.2,8.7-.161,13.168-.533,3.9-.322,7.9-.657,11.778-.657a53.666,53.666,0,0,1,9.725.806,51.1,51.1,0,0,1,3.249.818c.682,1.054,1.376,2.182,2.108,3.4,4.7,7.823,11.168,18.54,24.077,29.2,13.8,11.4,32.018,21.041,57.271,28.489a12.478,12.478,0,0,1,3.633,1.54,11.5,11.5,0,0,1,1.985,1.985c3.088,4.278,8.083,7.947,15.259,11.242,8.362,3.844,18.8,6.746,31.1,8.635a245.762,245.762,0,0,0,37.238,2.817c12.8,0,25.371-.918,37.238-2.817,12.3-1.889,22.738-4.791,31.1-8.635,7.176-3.3,12.171-6.964,15.259-11.242a11.5,11.5,0,0,1,1.985-1.985,12.478,12.478,0,0,1,3.633-1.54c25.253-7.448,43.469-17.087,57.271-28.489,12.909-10.659,19.375-21.376,24.077-29.2.732-1.215,1.426-2.344,2.108-3.4a51.1,51.1,0,0,1,3.249-.818,53.666,53.666,0,0,1,9.725-.806c3.879,0,7.882.335,11.778.657,4.465.372,8.89.731,13.168.533,13.769-.62,25.091-7,33.787-19.016C497.97,387.482,500.526,376.434,496.926,366.6Z"/>
+                    </svg>
+                  )},
+                  { key: 'tiktok', name: 'TikTok', bgColor: 'bg-white/10 border border-white/30', cardBg: 'bg-gray-800/30 border-gray-600/30', textColor: 'text-white', field: 'tiktok_account', datasource: 'tiktok', icon: (
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+                    </svg>
+                  )},
+                  { key: 'meta', name: 'Meta', bgColor: 'bg-indigo-500/10 border border-indigo-500/30', cardBg: 'bg-blue-500/10 border-blue-500/30', textColor: 'text-indigo-400', field: 'meta_account', datasource: 'facebook', icon: (
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/>
+                    </svg>
+                  )},
+                  { key: 'google', name: 'Google Ads', bgColor: 'bg-green-500/10 border border-green-500/30', cardBg: 'bg-green-500/10 border-green-500/30', textColor: 'text-green-400', field: 'google_account', datasource: 'google_ads', icon: (
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  )},
                 ].map(platform => {
-                  const isConnected = !!platformTokens[platform.key];
+                  const linkedAccount = storeData?.[platform.field as keyof StoreFullData] as string | undefined;
+                  const isConnected = !!linkedAccount;
+                  const isExpanded = expandedPlatforms.has(platform.key);
+                  const campaigns = platformCampaigns[platform.key] || [];
+                  const totals = platformTotals[platform.key] || { spend: 0, clicks: 0, impressions: 0, conversions: 0, revenue: 0 };
+                  
                   return (
-                    <div key={platform.key} className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl ${platform.bgColor} flex items-center justify-center`}>
-                            <span className={`text-lg font-bold ${platform.textColor}`}>{platform.name[0]}</span>
+                    <div key={platform.key} className={`rounded-xl border overflow-hidden ${platform.cardBg}`}>
+                      {/* رأس المنصة */}
+                      <div 
+                        className={`p-4 flex items-center justify-between cursor-pointer hover:bg-purple-900/30 transition-colors ${isConnected ? '' : 'cursor-default'}`}
+                        onClick={() => {
+                          if (isConnected) {
+                            if (!isExpanded) {
+                              fetchPlatformCampaigns(platform.key, platform.datasource);
+                            }
+                            setExpandedPlatforms(prev => {
+                              const newSet = new Set(prev);
+                              if (isExpanded) {
+                                newSet.delete(platform.key);
+                              } else {
+                                newSet.add(platform.key);
+                              }
+                              return newSet;
+                            });
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-3 min-w-[220px]">
+                          <div className={`w-10 h-10 rounded-xl ${platform.bgColor} flex items-center justify-center flex-shrink-0 ${platform.textColor}`}>
+                            {platform.icon}
                           </div>
                           <div>
                             <p className="text-white font-medium">{platform.name}</p>
-                            <p className="text-xs text-purple-400">
-                              {isConnected ? `Account: ${platformTokens[platform.key].accountId}` : 'غير مرتبط'}
+                            <p className="text-xs text-purple-400 truncate max-w-[150px]" title={linkedAccount || 'غير مرتبط'}>
+                              {isConnected ? `Account: ${linkedAccount}` : 'غير مرتبط'}
                             </p>
                           </div>
                         </div>
+                        
+                        {/* إجمالي المنصة */}
+                        {isConnected && totals.spend > 0 && (
+                          <div className="flex items-center text-xs" dir="ltr">
+                            <div className="text-center w-[70px]">
+                              <p className="text-purple-400">الطلبات</p>
+                              <p className="text-green-400 font-bold">{totals.conversions.toLocaleString()}</p>
+                            </div>
+                            <div className="text-center w-[80px]">
+                              <p className="text-purple-400">المبيعات</p>
+                              <p className="text-blue-400 font-bold">{totals.revenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                            </div>
+                            <div className="text-center w-[80px]">
+                              <p className="text-purple-400">الصرف</p>
+                              <p className="text-orange-400 font-bold">{totals.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                            </div>
+                            <div className="text-center w-[60px]">
+                              <p className="text-purple-400">ROAS</p>
+                              <p className={`font-bold ${totals.spend > 0 && (totals.revenue / totals.spend) < 1 ? 'text-red-400' : 'text-purple-400'}`}>
+                                {totals.spend > 0 ? (totals.revenue / totals.spend).toFixed(2) : '0.00'}x
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-center gap-2">
                           {isConnected ? (
                             <>
                               <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">مرتبط</span>
                               <button
-                                onClick={() => disconnectPlatform(platform.key)}
+                                onClick={(e) => { e.stopPropagation(); handleAdAccountChange(platform.field, ''); }}
                                 className="px-3 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
                               >
                                 إلغاء
                               </button>
+                              <svg className={`w-5 h-5 text-purple-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
                             </>
                           ) : (
                             <button
-                              onClick={() => {
-                                setShowPlatformTokenModal(platform.key);
-                                setPlatformTokenForm({ accessToken: '', accountId: '' });
-                              }}
+                              onClick={(e) => { e.stopPropagation(); openWindsorAccountModal(platform.key); }}
                               className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
                             >
                               ربط
@@ -1217,6 +1524,140 @@ function StoreDetailsContent() {
                           )}
                         </div>
                       </div>
+                      
+                      {/* تفاصيل الحملات */}
+                      {isConnected && isExpanded && (
+                        <div className="border-t border-purple-500/10 p-4 bg-purple-900/10">
+                          {campaigns.length > 0 ? (() => {
+                            // تجميع الحملات حسب اسم الحملة مع الإعلانات
+                            const groupedCampaigns = campaigns.reduce((acc: any, c: any) => {
+                              const name = c.campaign || 'غير محدد';
+                              if (!acc[name]) {
+                                acc[name] = { campaign: name, clicks: 0, impressions: 0, spend: 0, conversions: 0, revenue: 0, ads: {} };
+                              }
+                              acc[name].clicks += c.clicks || 0;
+                              acc[name].impressions += c.impressions || 0;
+                              acc[name].spend += c.spend || 0;
+                              acc[name].conversions += c.conversions || c.purchases || c.purchase || 0;
+                              acc[name].revenue += c.revenue || c.purchase_value || 0;
+                              // تجميع الإعلانات داخل الحملة
+                              const adName = c.ad_name || 'إعلان غير محدد';
+                              if (!acc[name].ads[adName]) {
+                                acc[name].ads[adName] = { ad_name: adName, ad_id: c.ad_id, clicks: 0, impressions: 0, spend: 0, conversions: 0, revenue: 0 };
+                              }
+                              acc[name].ads[adName].clicks += c.clicks || 0;
+                              acc[name].ads[adName].impressions += c.impressions || 0;
+                              acc[name].ads[adName].spend += c.spend || 0;
+                              acc[name].ads[adName].conversions += c.conversions || c.purchases || c.purchase || 0;
+                              acc[name].ads[adName].revenue += c.revenue || c.purchase_value || 0;
+                              return acc;
+                            }, {});
+                            const uniqueCampaigns = Object.values(groupedCampaigns);
+                            
+                            return (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-purple-400 text-xs">
+                                    <th className="text-right pb-2 pr-2">الحملة</th>
+                                    <th className="text-center pb-2">النقرات</th>
+                                    <th className="text-center pb-2">المشاهدات</th>
+                                    <th className="text-center pb-2">الطلبات</th>
+                                    <th className="text-center pb-2">المبيعات</th>
+                                    <th className="text-center pb-2">الصرف</th>
+                                    <th className="text-center pb-2">ROAS</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {uniqueCampaigns.slice(0, 5).map((campaign: any, idx: number) => {
+                                    const roas = campaign.spend > 0 ? (campaign.revenue / campaign.spend) : 0;
+                                    const isLowRoas = roas < 1;
+                                    const campaignKey = `${platform.key}-${campaign.campaign}`;
+                                    const isCampaignExpanded = expandedCampaigns.has(campaignKey);
+                                    const ads = Object.values(campaign.ads || {});
+                                    return (
+                                    <React.Fragment key={idx}>
+                                    <tr 
+                                      className="border-t border-purple-500/10 text-white cursor-pointer hover:bg-purple-900/20"
+                                      onClick={() => {
+                                        setExpandedCampaigns(prev => {
+                                          const newSet = new Set(prev);
+                                          if (isCampaignExpanded) {
+                                            newSet.delete(campaignKey);
+                                          } else {
+                                            newSet.add(campaignKey);
+                                          }
+                                          return newSet;
+                                        });
+                                      }}
+                                    >
+                                      <td className="py-2 pr-2 text-right truncate max-w-[200px]" title={campaign.campaign}>
+                                        <span className="flex items-center gap-1">
+                                          <svg className={`w-4 h-4 text-purple-400 transition-transform ${isCampaignExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                          </svg>
+                                          {campaign.campaign || '-'}
+                                        </span>
+                                      </td>
+                                      <td className="py-2 text-center">{(campaign.clicks || 0).toLocaleString()}</td>
+                                      <td className="py-2 text-center">{(campaign.impressions || 0).toLocaleString()}</td>
+                                      <td className="py-2 text-center text-green-400">{(campaign.conversions || 0).toLocaleString()}</td>
+                                      <td className="py-2 text-center text-blue-400">{(campaign.revenue || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س</td>
+                                      <td className="py-2 text-center text-orange-400">{(campaign.spend || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س</td>
+                                      <td className={`py-2 text-center ${isLowRoas ? 'text-red-400' : 'text-purple-400'}`}>
+                                        {isLowRoas && <span className="mr-1">⚠️</span>}
+                                        {roas.toFixed(2)}x
+                                      </td>
+                                    </tr>
+                                    {/* الإعلانات داخل الحملة */}
+                                    {isCampaignExpanded && ads.map((ad: any, adIdx: number) => {
+                                      const adRoas = ad.spend > 0 ? (ad.revenue / ad.spend) : 0;
+                                      const isAdLowRoas = adRoas < 1;
+                                      return (
+                                        <tr key={`ad-${adIdx}`} className="bg-purple-900/30 text-purple-200 text-xs">
+                                          <td className="py-1.5 pr-6 text-right max-w-[200px]" title={ad.ad_name}>
+                                            <span className="truncate">↳ {ad.ad_name || '-'}</span>
+                                          </td>
+                                          <td className="py-1.5 text-center">{(ad.clicks || 0).toLocaleString()}</td>
+                                          <td className="py-1.5 text-center">{(ad.impressions || 0).toLocaleString()}</td>
+                                          <td className="py-1.5 text-center text-green-400/70">{(ad.conversions || 0).toLocaleString()}</td>
+                                          <td className="py-1.5 text-center text-blue-400/70">{(ad.revenue || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س</td>
+                                          <td className="py-1.5 text-center text-orange-400/70">{(ad.spend || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س</td>
+                                          <td className={`py-1.5 text-center ${isAdLowRoas ? 'text-red-400/70' : 'text-purple-400/70'}`}>
+                                            {adRoas.toFixed(2)}x
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                    </React.Fragment>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="border-t-2 border-purple-500/30 text-white font-bold bg-purple-900/30">
+                                    <td className="py-3 pr-2 text-right">الإجمالي</td>
+                                    <td className="py-3 text-center text-green-400">
+                                      {totals.clicks.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 text-center text-blue-400">
+                                      {totals.impressions.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 text-center text-green-400">-</td>
+                                    <td className="py-3 text-center text-blue-400">-</td>
+                                    <td className="py-3 text-center text-orange-400">
+                                      {totals.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 })} ر.س
+                                    </td>
+                                    <td className="py-3 text-center text-purple-400">-</td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                            );
+                          })() : (
+                            <p className="text-center text-purple-400 text-sm py-4">لا توجد بيانات حملات متاحة</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1226,18 +1667,18 @@ function StoreDetailsContent() {
         </div>
       </div>
 
-      {/* نافذة إدخال Access Token للمنصة */}
-      {showPlatformTokenModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowPlatformTokenModal(null)}>
+      {/* نافذة اختيار حساب Windsor */}
+      {showWindsorAccountModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowWindsorAccountModal(null)}>
           <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">
-                ربط {showPlatformTokenModal === 'snapchat' ? 'Snapchat' : 
-                     showPlatformTokenModal === 'tiktok' ? 'TikTok' : 
-                     showPlatformTokenModal === 'meta' ? 'Meta' : 'Google Ads'}
+                ربط {showWindsorAccountModal === 'snapchat' ? 'Snapchat' : 
+                     showWindsorAccountModal === 'tiktok' ? 'TikTok' : 
+                     showWindsorAccountModal === 'meta' ? 'Meta' : 'Google Ads'}
               </h3>
               <button
-                onClick={() => setShowPlatformTokenModal(null)}
+                onClick={() => setShowWindsorAccountModal(null)}
                 className="text-purple-400 hover:text-white transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1247,43 +1688,78 @@ function StoreDetailsContent() {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">Account ID / Ad Account ID</label>
-                <input
-                  type="text"
-                  value={platformTokenForm.accountId}
-                  onChange={e => setPlatformTokenForm(prev => ({ ...prev, accountId: e.target.value }))}
-                  placeholder="أدخل معرف الحساب الإعلاني"
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  dir="ltr"
-                />
-              </div>
+              {loadingWindsorAccounts ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <>
+                  {/* إدخال اسم الحساب يدوياً */}
+                  <div>
+                    <label className="block text-sm text-purple-300 mb-2">أدخل اسم الحساب الإعلاني</label>
+                    <input
+                      type="text"
+                      value={selectedWindsorAccount}
+                      onChange={(e) => setSelectedWindsorAccount(e.target.value)}
+                      placeholder="مثال: My Snapchat Ads Account"
+                      className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-purple-400/70 mt-2">
+                      أدخل اسم الحساب كما يظهر في Windsor.ai
+                    </p>
+                  </div>
 
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">Access Token</label>
-                <textarea
-                  value={platformTokenForm.accessToken}
-                  onChange={e => setPlatformTokenForm(prev => ({ ...prev, accessToken: e.target.value }))}
-                  placeholder="أدخل Access Token من المنصة"
-                  rows={4}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none resize-none font-mono text-xs"
-                  dir="ltr"
-                />
-              </div>
+                  {/* عرض الحسابات المتاحة من Windsor إن وجدت */}
+                  {windsorAccounts.length > 0 && (
+                    <div>
+                      <label className="block text-sm text-purple-300 mb-2">أو اختر من الحسابات المتاحة</label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {windsorAccounts.map((account, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedWindsorAccount(account.account_name)}
+                            className={`w-full p-3 rounded-xl text-right transition-all ${
+                              selectedWindsorAccount === account.account_name
+                                ? 'bg-purple-500/30 border-2 border-purple-500 text-white'
+                                : 'bg-purple-900/30 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {selectedWindsorAccount === account.account_name && (
+                                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium">{account.account_name}</p>
+                                <p className="text-xs text-purple-400/70">{account.datasource}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                <p className="text-xs text-blue-300">
-                  للحصول على Access Token، قم بزيارة لوحة تحكم المطورين للمنصة المعنية وأنشئ تطبيق Marketing API.
-                </p>
-              </div>
+                  {/* رسالة توضيحية */}
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
+                    <p className="text-xs text-blue-300">
+                      💡 اسم الحساب يجب أن يتطابق مع الاسم في Windsor.ai لجلب البيانات تلقائياً
+                    </p>
+                  </div>
 
-              <button
-                onClick={savePlatformToken}
-                disabled={savingPlatformToken || !platformTokenForm.accessToken || !platformTokenForm.accountId}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-medium hover:from-purple-500 hover:to-purple-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingPlatformToken ? 'جاري الحفظ...' : 'حفظ وربط'}
-              </button>
+                  <button
+                    onClick={linkWindsorAccount}
+                    disabled={!selectedWindsorAccount.trim()}
+                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-medium hover:from-purple-500 hover:to-purple-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ربط الحساب
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1569,6 +2045,7 @@ function StoreDetailsContent() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
