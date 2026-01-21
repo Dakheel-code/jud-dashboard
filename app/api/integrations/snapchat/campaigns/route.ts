@@ -121,23 +121,20 @@ export async function GET(request: NextRequest) {
 
     console.log('Found campaigns:', allCampaigns.length);
 
-    // فلترة الحملات النشطة فقط (ACTIVE أو PAUSED)
-    const activeCampaigns = allCampaigns.filter((c: any) => {
-      const status = c.campaign?.status;
-      return status === 'ACTIVE' || status === 'PAUSED';
-    });
-    
-    // الحملات غير النشطة (للعرض عند الطلب)
-    const inactiveCampaigns = allCampaigns.filter((c: any) => {
-      const status = c.campaign?.status;
-      return status !== 'ACTIVE' && status !== 'PAUSED';
+    // ترتيب الحملات حسب تاريخ التحديث (الأحدث أولاً)
+    const sortedCampaigns = allCampaigns.sort((a: any, b: any) => {
+      const dateA = new Date(a.campaign?.updated_at || a.campaign?.created_at || 0);
+      const dateB = new Date(b.campaign?.updated_at || b.campaign?.created_at || 0);
+      return dateB.getTime() - dateA.getTime();
     });
 
-    console.log('Active campaigns:', activeCampaigns.length);
-    console.log('Inactive campaigns:', inactiveCampaigns.length);
+    // أخذ آخر 5 حملات فقط (بغض النظر عن الحالة)
+    const latestCampaigns = sortedCampaigns.slice(0, 5);
 
-    // جلب إحصائيات الحملات النشطة فقط
-    const campaignIds = activeCampaigns.map((c: any) => c.campaign?.id).filter(Boolean);
+    console.log('Latest 5 campaigns:', latestCampaigns.map((c: any) => c.campaign?.name));
+
+    // جلب IDs الحملات لجلب الإحصائيات
+    const campaignIds = latestCampaigns.map((c: any) => c.campaign?.id).filter(Boolean);
     
     if (campaignIds.length === 0) {
       return NextResponse.json({
@@ -147,7 +144,30 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // جلب إحصائيات الحساب الإعلاني مباشرة (أبسط وأسرع)
+    // جلب إحصائيات كل حملة على حدة
+    const campaignStatsMap: Record<string, any> = {};
+    
+    for (const campaignId of campaignIds) {
+      try {
+        const statsResponse = await fetch(
+          `${SNAPCHAT_API_URL}/campaigns/${campaignId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          const stats = statsData.total_stats?.[0]?.stats || {};
+          campaignStatsMap[campaignId] = stats;
+          console.log(`Stats for campaign ${campaignId}:`, stats);
+        }
+      } catch (err) {
+        console.error(`Error fetching stats for campaign ${campaignId}:`, err);
+      }
+    }
+
+    // جلب إحصائيات الحساب الإعلاني للإجماليات
     const accountStatsResponse = await fetch(
       `${SNAPCHAT_API_URL}/adaccounts/${adAccountId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
       {
@@ -162,18 +182,25 @@ export async function GET(request: NextRequest) {
       accountStats = accountStatsData.total_stats?.[0]?.stats || {};
     }
 
-    // تجميع البيانات للحملات
-    const processedCampaigns = activeCampaigns.map((c: any) => {
+    // تجميع البيانات للحملات مع إحصائياتها
+    const processedCampaigns = latestCampaigns.map((c: any) => {
       const campaign = c.campaign;
+      const stats = campaignStatsMap[campaign?.id] || {};
+      
+      const spend = (stats.spend || 0) / 1000000;
+      const revenue = (stats.conversion_purchases_value || stats.total_conversion_value || 0) / 1000000;
+      const roas = spend > 0 ? revenue / spend : 0;
+      
       return {
         campaign: campaign?.name || 'Unknown',
         campaign_id: campaign?.id,
         status: campaign?.status,
-        impressions: 0,
-        clicks: 0,
-        spend: 0,
-        conversions: 0,
-        revenue: 0,
+        impressions: stats.impressions || 0,
+        clicks: stats.swipes || stats.clicks || 0,
+        spend: spend,
+        conversions: stats.conversion_purchases || stats.purchases || 0,
+        revenue: revenue,
+        roas: roas,
         ads: [],
       };
     });
@@ -187,30 +214,13 @@ export async function GET(request: NextRequest) {
       revenue: (accountStats.conversion_purchases_value || accountStats.total_conversion_value || 0) / 1000000,
     };
 
-    // معالجة الحملات غير النشطة أيضاً للعرض عند الطلب
-    const processedInactiveCampaigns = inactiveCampaigns.map((c: any) => {
-      const campaign = c.campaign;
-      return {
-        campaign: campaign?.name || 'Unknown',
-        campaign_id: campaign?.id,
-        status: campaign?.status,
-        impressions: 0,
-        clicks: 0,
-        spend: 0,
-        conversions: 0,
-        revenue: 0,
-      };
-    });
-
     return NextResponse.json({
       success: true,
       campaigns: processedCampaigns,
-      inactiveCampaigns: processedInactiveCampaigns,
       totals,
       dateRange,
       counts: {
-        active: processedCampaigns.length,
-        inactive: processedInactiveCampaigns.length,
+        showing: processedCampaigns.length,
         total: allCampaigns.length,
       },
     });
