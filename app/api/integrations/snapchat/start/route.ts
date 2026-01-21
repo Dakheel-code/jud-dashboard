@@ -25,10 +25,13 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const storeId = searchParams.get('storeId');
+    const forceLogin = searchParams.get('force') === 'true';
 
     if (!storeId) {
       return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
     }
+
+    console.log('=== Snapchat OAuth Start ===', { storeId, forceLogin });
 
     // التحقق من المتغيرات البيئية
     const clientId = process.env.SNAPCHAT_CLIENT_ID;
@@ -81,6 +84,7 @@ export async function GET(request: NextRequest) {
       redirectUri,
       state,
       clientId,
+      forceLogin, // إجبار تسجيل دخول جديد عند الحاجة
     });
 
     // إعادة التوجيه إلى Snapchat

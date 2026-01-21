@@ -295,7 +295,7 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                 <h3 className="text-lg font-bold text-white mb-2">انتهت صلاحية الربط</h3>
                 <p className="text-sm text-orange-400/70 mb-4">يرجى إعادة ربط حساب Snapchat</p>
                 <button
-                  onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`}
+                  onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`}
                   className="px-6 py-3 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-400 transition-colors"
                 >
                   🔄 إعادة الربط
@@ -342,7 +342,7 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                       تغيير الحساب
                     </button>
                     <button
-                      onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`}
+                      onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`}
                       className="px-3 py-1.5 text-xs rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors"
                     >
                       إعادة الربط

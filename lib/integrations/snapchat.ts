@@ -37,10 +37,12 @@ export function getAuthUrl({
   redirectUri,
   state,
   clientId,
+  forceLogin = false,
 }: {
   redirectUri: string;
   state: string;
   clientId: string;
+  forceLogin?: boolean;
 }): string {
   const params = new URLSearchParams({
     client_id: clientId,
@@ -49,6 +51,11 @@ export function getAuthUrl({
     scope: 'snapchat-marketing-api',
     state: state,
   });
+
+  // إجبار تسجيل دخول جديد عند إعادة الربط
+  if (forceLogin) {
+    params.set('prompt', 'login');
+  }
 
   return `${SNAPCHAT_AUTH_URL}?${params.toString()}`;
 }
