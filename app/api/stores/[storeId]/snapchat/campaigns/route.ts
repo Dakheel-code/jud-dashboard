@@ -13,6 +13,9 @@ export const dynamic = 'force-dynamic';
 
 const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
 
+// سعر صرف الدولار إلى الريال السعودي
+const USD_TO_SAR = 3.75;
+
 /**
  * تطبيع إلى بداية اليوم UTC
  */
@@ -283,6 +286,11 @@ export async function GET(
     }
 
     // ========== الخطوة 3: دمج الحملات مع الإحصائيات ==========
+    // تحديد معامل التحويل - إذا العملة USD نحولها لـ SAR
+    const accountCurrency = integration.currency || 'USD';
+    const conversionRate = accountCurrency === 'USD' ? USD_TO_SAR : 1;
+    const displayCurrency = 'SAR'; // دائماً نعرض بالريال
+
     const campaignsWithStats = campaignsList.map((campaign) => {
       const stats = campaignStatsMap[campaign.campaign_id] || {
         spend: 0,
@@ -292,25 +300,29 @@ export async function GET(
         sales: 0,
       };
 
+      // تحويل المبالغ إلى الريال إذا كانت بالدولار
+      const spendSAR = (stats.spend || 0) * conversionRate;
+      const salesSAR = (stats.sales || 0) * conversionRate;
+
       const cpa =
         stats.orders > 0
-          ? Math.round((stats.spend / stats.orders) * 100) / 100
+          ? Math.round((spendSAR / stats.orders) * 100) / 100
           : 0;
 
       const roas =
-        stats.spend > 0
-          ? Math.round((stats.sales / stats.spend) * 100) / 100
+        spendSAR > 0
+          ? Math.round((salesSAR / spendSAR) * 100) / 100
           : 0;
 
       return {
         campaign_id: campaign.campaign_id,
         campaign_name: campaign.campaign_name,
         status: campaign.status,
-        spend: Math.round((stats.spend || 0) * 100) / 100,
+        spend: Math.round(spendSAR * 100) / 100,
         impressions: stats.impressions || 0,
         swipes: stats.swipes || 0,
         orders: stats.orders || 0,
-        sales: Math.round((stats.sales || 0) * 100) / 100,
+        sales: Math.round(salesSAR * 100) / 100,
         cpa,
         roas,
       };
@@ -350,7 +362,9 @@ export async function GET(
     // بناء الاستجابة
     const response: any = {
       success: true,
-      currency: integration.currency || 'SAR',
+      currency: displayCurrency, // دائماً SAR
+      original_currency: accountCurrency, // العملة الأصلية من الحساب
+      conversion_rate: conversionRate, // معامل التحويل المستخدم
       time: {
         start: normalizedStart,
         end: normalizedEnd,
@@ -373,10 +387,15 @@ export async function GET(
         ad_account_id: adAccountId,
         fields_used: fields,
         campaigns_count: campaignsList.length,
-        stats_rows: Object.keys(campaignStatsMap).length, // ✅ الآن سيصبح 6 (أو أكثر) بدل 1
+        stats_rows: Object.keys(campaignStatsMap).length,
         stats_url: statsUrl,
         raw_stats: statsData,
         sample_mapped_campaign_ids: Object.keys(campaignStatsMap).slice(0, 10),
+        currency_conversion: {
+          from: accountCurrency,
+          to: displayCurrency,
+          rate: conversionRate,
+        },
       };
     }
 
