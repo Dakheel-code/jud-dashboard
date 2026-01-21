@@ -89,6 +89,8 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
 
+    console.log('=== OAuth Callback Success ===', { storeId, baseUrl });
+
     // جلب الحسابات الإعلانية تلقائياً
     try {
       const { adAccounts } = await listAdAccounts({ accessToken: tokens.access_token });
@@ -103,15 +105,16 @@ export async function GET(request: NextRequest) {
           organizationId: account.organization_id,
         });
         console.log('Auto-selected single ad account:', account.name);
-        // إعادة التوجيه مباشرة لصفحة المتجر
-        return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}`);
+        // إعادة التوجيه مباشرة لصفحة المتجر مع علامة نجاح
+        return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}?snapchat=connected`);
       }
     } catch (err) {
       console.error('Error fetching ad accounts after OAuth:', err);
     }
 
-    // إعادة التوجيه إلى صفحة اختيار الحساب إذا كان هناك أكثر من حساب
-    return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}/integrations?platform=snapchat&step=select-account`);
+    // إعادة التوجيه إلى صفحة اختيار الحساب الجديدة
+    console.log('Redirecting to select account page:', `${baseUrl}/admin/integrations/snapchat/select?storeId=${storeId}`);
+    return NextResponse.redirect(`${baseUrl}/admin/integrations/snapchat/select?storeId=${storeId}`);
   } catch (error) {
     console.error('Snapchat OAuth callback error:', error);
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';

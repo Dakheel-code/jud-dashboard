@@ -28,13 +28,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('=== Fetching Ad Accounts ===', { storeId });
+
     // جلب الحسابات الإعلانية
     const { adAccounts } = await listAdAccounts({ accessToken });
 
-    // إرجاع البيانات الأساسية فقط
-    const accounts = adAccounts.map((acc) => ({
-      ad_account_id: acc.id,
-      ad_account_name: acc.name,
+    console.log('Found ad accounts:', adAccounts.length);
+
+    // إرجاع البيانات بالتنسيق المتوقع من الواجهة
+    const formattedAccounts = adAccounts.map((acc) => ({
+      id: acc.id,
+      name: acc.name,
       organization_id: acc.organization_id,
       currency: acc.currency,
       status: acc.status,
@@ -42,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      accounts,
+      adAccounts: formattedAccounts,
     });
   } catch (error) {
     console.error('Snapchat ad accounts error:', error);
