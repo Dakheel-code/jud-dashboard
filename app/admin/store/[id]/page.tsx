@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TasksByCategory } from '@/types';
 import AdminAuth from '@/components/AdminAuth';
+import SnapchatCampaignsSection from '@/components/SnapchatCampaignsSection';
 
 interface StoreFullData {
   id: string;
@@ -1358,8 +1359,11 @@ function StoreDetailsContent() {
           )}
         </div>
 
-        {/* قسم الحملات الإعلانية */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        {/* قسم الحملات الإعلانية - الجديد */}
+        <SnapchatCampaignsSection storeId={storeId} directIntegrations={directIntegrations} />
+
+        {/* قسم الحملات الإعلانية القديم - مخفي */}
+        <div className="hidden bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
           {/* Header - قابل للنقر */}
           <button
             onClick={() => setIsCampaignsCollapsed(!isCampaignsCollapsed)}
