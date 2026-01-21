@@ -9,10 +9,11 @@ interface Store {
 }
 
 interface AdAccount {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   organization_id?: string;
   organization_name?: string;
+  [key: string]: any;
 }
 
 interface TestResult {
@@ -370,9 +371,9 @@ export default function SnapchatDiagnosticsPage() {
                   ? '-- اضغط Organizations أولاً --' 
                   : `-- اختر حساب إعلاني (${adAccounts.length}) --`}
               </option>
-              {adAccounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} - ID: {acc.id?.substring(0, 8)}...
+              {adAccounts.map((acc, index) => (
+                <option key={acc.id || `acc-${index}`} value={acc.id || ''}>
+                  {acc.name || 'Unknown'} {acc.id ? `- ID: ${String(acc.id).substring(0, 8)}...` : ''}
                 </option>
               ))}
             </select>
