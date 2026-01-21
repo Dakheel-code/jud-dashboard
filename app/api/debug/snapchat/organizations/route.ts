@@ -52,11 +52,22 @@ export async function GET(request: NextRequest) {
     const organizations = responseData.organizations || [];
     const allAdAccounts: any[] = [];
     
+    // Debug: طباعة هيكل البيانات
+    console.log('Debug: Organizations count:', organizations.length);
+    if (organizations.length > 0) {
+      console.log('Debug: First org structure:', JSON.stringify(organizations[0], null, 2).substring(0, 500));
+    }
+    
     organizations.forEach((org: any) => {
       const orgData = org.organization;
+      console.log('Debug: Org data:', orgData?.id, orgData?.name, 'ad_accounts:', orgData?.ad_accounts?.length);
+      
       if (orgData?.ad_accounts) {
         orgData.ad_accounts.forEach((acc: any) => {
-          const adAccount = acc.ad_account;
+          // قد يكون الـ ad_account مباشرة أو داخل wrapper
+          const adAccount = acc.ad_account || acc;
+          console.log('Debug: Ad account raw:', JSON.stringify(acc, null, 2).substring(0, 200));
+          
           if (adAccount && adAccount.id) {
             allAdAccounts.push({
               id: adAccount.id,
@@ -74,6 +85,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Debug: طباعة أول ad account للتحقق
+    console.log('Debug: Total ad accounts extracted:', allAdAccounts.length);
     if (allAdAccounts.length > 0) {
       console.log('Debug: First ad account extracted:', {
         id: allAdAccounts[0].id,
@@ -98,6 +110,11 @@ export async function GET(request: NextRequest) {
       diagnosis.push('Data is paginated. You are only seeing first page.');
     }
 
+    // إذا لم نجد ad accounts، نضيف تشخيص إضافي
+    if (allAdAccounts.length === 0 && organizations.length > 0) {
+      diagnosis.push('Organizations found but no ad_accounts inside. Check full_response for data structure.');
+    }
+
     return NextResponse.json({
       success: response.ok,
       request_status: responseData.request_status || (response.ok ? 'SUCCESS' : 'ERROR'),
@@ -109,6 +126,12 @@ export async function GET(request: NextRequest) {
       ad_accounts_count: allAdAccounts.length,
       organizations: organizations,
       ad_accounts: allAdAccounts,
+      
+      // Debug info
+      debug_extraction: {
+        first_org_keys: organizations.length > 0 ? Object.keys(organizations[0]?.organization || organizations[0] || {}) : [],
+        first_org_has_ad_accounts: organizations.length > 0 ? !!(organizations[0]?.organization?.ad_accounts) : false,
+      },
       
       // Pagination
       has_paging: hasPaging,
