@@ -76,10 +76,11 @@ export async function GET(
     }
 
     // connected = لديه access_token أو refresh_token ولم يكن status=needs_reauth
-    const connected = (hasAccessToken || hasRefreshToken) && !statusNeedsReauth && !tokenExpired;
+    // ملاحظة: إذا كان لديه refresh_token، يعتبر connected لأن النظام سيجدد التوكن تلقائياً
+    const connected = (hasAccessToken || hasRefreshToken) && !statusNeedsReauth;
     
-    // needs_reauth = status=needs_reauth أو التوكن منتهي بدون refresh
-    const needsReauth = statusNeedsReauth || (tokenExpired && !hasRefreshToken);
+    // needs_reauth = status=needs_reauth أو (التوكن منتهي وليس لديه refresh token)
+    const needsReauth = statusNeedsReauth || (tokenExpired && !hasRefreshToken && !hasAccessToken);
 
     const response = {
       connected,
