@@ -111,7 +111,8 @@ function StoreDetailsContent() {
   const [showDailyUpdateModal, setShowDailyUpdateModal] = useState(false);
   const [dailyUpdateForm, setDailyUpdateForm] = useState({
     sales: '',
-    revenue: '',
+    orders: '',
+    roas: '',
     spend: ''
   });
   const [dailyUpdateTemplate, setDailyUpdateTemplate] = useState('');
@@ -209,7 +210,8 @@ function StoreDetailsContent() {
       .replace('{owner_name}', storeData?.owner_name || '')
       .replace('{account_manager}', storeData?.account_manager?.name || '')
       .replace('{sales}', dailyUpdateForm.sales || '0')
-      .replace('{revenue}', dailyUpdateForm.revenue || '0')
+      .replace('{revenue}', dailyUpdateForm.roas || '0')
+      .replace('{orders}', dailyUpdateForm.orders || '0')
       .replace('{spend}', dailyUpdateForm.spend || '0')
       .replace('{day}', dayName)
       .replace('{date}', dateStr)
@@ -219,7 +221,7 @@ function StoreDetailsContent() {
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
     setShowDailyUpdateModal(false);
-    setDailyUpdateForm({ sales: '', revenue: '', spend: '' });
+    setDailyUpdateForm({ sales: '', orders: '', roas: '', spend: '' });
   };
 
   const toggleCategory = (category: string) => {
@@ -888,7 +890,8 @@ function StoreDetailsContent() {
                 if (snapchatSummary) {
                   setDailyUpdateForm({
                     sales: snapchatSummary.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }),
-                    revenue: snapchatSummary.orders.toLocaleString('en-US'),
+                    orders: snapchatSummary.orders.toLocaleString('en-US'),
+                    roas: snapchatSummary.roas.toFixed(2),
                     spend: snapchatSummary.spend.toLocaleString('en-US', { maximumFractionDigits: 0 })
                   });
                 }
@@ -2227,11 +2230,23 @@ function StoreDetailsContent() {
 
               {/* العائد */}
               <div>
-                <label className="block text-sm text-purple-300 mb-2">العائد</label>
+                <label className="block text-sm text-purple-300 mb-2">الطلبات</label>
                 <input
                   type="text"
-                  value={dailyUpdateForm.revenue}
-                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, revenue: e.target.value }))}
+                  value={dailyUpdateForm.orders}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, orders: e.target.value }))}
+                  placeholder="أدخل عدد الطلبات"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                />
+              </div>
+
+              {/* العائد ROAS */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">العائد (ROAS)</label>
+                <input
+                  type="text"
+                  value={dailyUpdateForm.roas}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, roas: e.target.value }))}
                   placeholder="أدخل قيمة العائد"
                   className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
                 />
