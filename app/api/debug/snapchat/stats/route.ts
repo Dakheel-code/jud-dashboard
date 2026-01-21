@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const storeId = searchParams.get('storeId');
     const adAccountId = searchParams.get('adAccountId') || '';
     const granularity = searchParams.get('granularity') || 'TOTAL';
+    const level = searchParams.get('level') || 'AD_ACCOUNT';
     
     // تواريخ افتراضية: آخر 7 أيام
     const now = new Date();
@@ -56,6 +57,13 @@ export async function GET(request: NextRequest) {
     // تطبيع الأوقات - Snapchat يتطلب أن تكون على رأس الساعة
     const normalizedStartTime = normalizeToStartOfDay(startDate);
     const normalizedEndTime = normalizeEndToNextDay(endDate);
+    
+    // تحديد الحقول حسب المستوى
+    // AD_ACCOUNT يدعم فقط spend
+    // باقي المستويات تدعم كل الحقول
+    const fieldsForLevel = level === 'AD_ACCOUNT' 
+      ? 'spend'
+      : 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value,video_views';
 
     if (!storeId) {
       return NextResponse.json({
@@ -97,8 +105,8 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // الحقول المطلوبة
-    const fields = 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value,video_views,screen_time_millis';
+    // استخدام الحقول المناسبة للمستوى
+    const fields = fieldsForLevel;
     
     // بناء URL باستخدام الدالة الموحدة (مع الأوقات المطبّعة)
     const urlResult = buildSnapchatUrl(`adaccounts/${encodeURIComponent(adAccountId)}/stats`, {
@@ -160,12 +168,14 @@ export async function GET(request: NextRequest) {
         raw_response_body: rawResponseBody,
         request_info: {
           ad_account_id: adAccountId,
+          level: level,
           start_date: startDate,
           end_date: endDate,
           normalized_start_time: normalizedStartTime,
           normalized_end_time: normalizedEndTime,
           granularity: granularity,
           fields_requested: fields,
+          fields_note: level === 'AD_ACCOUNT' ? 'AD_ACCOUNT level only supports spend field' : 'Full fields supported',
         },
         diagnosis: [`API returned error: HTTP ${httpStatus}`],
         full_response: responseData,
@@ -240,12 +250,14 @@ export async function GET(request: NextRequest) {
       // معلومات الطلب
       request_info: {
         ad_account_id: adAccountId,
+        level: level,
         start_date: startDate,
         end_date: endDate,
         normalized_start_time: normalizedStartTime,
         normalized_end_time: normalizedEndTime,
         granularity: granularity,
         fields_requested: fields,
+        fields_note: level === 'AD_ACCOUNT' ? 'AD_ACCOUNT level only supports spend field' : 'Full fields supported',
       },
       
       // الإحصائيات المعالجة

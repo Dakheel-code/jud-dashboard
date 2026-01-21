@@ -41,6 +41,7 @@ export default function SnapchatDiagnosticsPage() {
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [statsLevel, setStatsLevel] = useState<string>('AD_ACCOUNT');
 
   // جلب المتاجر من API
   useEffect(() => {
@@ -407,6 +408,36 @@ export default function SnapchatDiagnosticsPage() {
           </div>
         </div>
 
+        {/* Stats Level Selection */}
+        <div className="mb-8 p-4 bg-gray-800 rounded-lg">
+          <label className="block text-sm font-bold mb-2">📊 Stats Level (Test 5):</label>
+          <div className="grid grid-cols-4 gap-2">
+            {['AD_ACCOUNT', 'CAMPAIGN', 'AD_SQUAD', 'AD'].map((level) => (
+              <button
+                key={level}
+                onClick={() => setStatsLevel(level)}
+                className={`p-3 rounded-lg font-bold transition ${
+                  statsLevel === level
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                }`}
+              >
+                {level.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+          {statsLevel === 'AD_ACCOUNT' && (
+            <p className="text-yellow-400 text-sm mt-2">
+              ⚠️ AD_ACCOUNT level supports only <strong>spend</strong> field
+            </p>
+          )}
+          {statsLevel !== 'AD_ACCOUNT' && (
+            <p className="text-blue-400 text-sm mt-2">
+              ℹ️ {statsLevel} level supports: impressions, swipes, spend, conversions...
+            </p>
+          )}
+        </div>
+
         {/* Test Buttons */}
         <div className="grid md:grid-cols-5 gap-4 mb-8">
           <button
@@ -446,12 +477,13 @@ export default function SnapchatDiagnosticsPage() {
               adAccountId: selectedAdAccount,
               startDate,
               endDate,
-              granularity: 'TOTAL'
+              granularity: 'TOTAL',
+              level: statsLevel
             })}
             disabled={!selectedAdAccount || loading === 'stats'}
             className="p-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded-lg font-bold transition"
           >
-            {loading === 'stats' ? '⏳' : '📈'} Stats
+            {loading === 'stats' ? '⏳' : '📈'} Stats ({statsLevel.replace('_', ' ')})
           </button>
         </div>
 
