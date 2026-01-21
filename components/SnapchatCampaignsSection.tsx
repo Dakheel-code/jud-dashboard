@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 interface SnapchatCampaignsSectionProps {
   storeId: string | null;
   directIntegrations: Record<string, { status: string; ad_account_id?: string; ad_account_name?: string }>;
+  onDataLoaded?: (summary: { spend: number; orders: number; sales: number; roas: number } | null) => void;
 }
 
 interface Campaign {
@@ -68,7 +69,7 @@ interface SnapchatStatus {
   organization_id: string | null;
 }
 
-export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsSectionProps) {
+export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: SnapchatCampaignsSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [loading, setLoading] = useState(false);
@@ -214,6 +215,10 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
       if (result.success) {
         setData(result);
         setError(null);
+        // تمرير البيانات للصفحة الرئيسية
+        if (onDataLoaded && result.summary) {
+          onDataLoaded(result.summary);
+        }
       } else if (result.needs_reauth) {
         setStatus(prev => ({ ...prev, needs_reauth: true }));
         setError('انتهت صلاحية الربط');

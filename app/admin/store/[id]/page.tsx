@@ -115,6 +115,7 @@ function StoreDetailsContent() {
     spend: ''
   });
   const [dailyUpdateTemplate, setDailyUpdateTemplate] = useState('');
+  const [snapchatSummary, setSnapchatSummary] = useState<{ spend: number; orders: number; sales: number; roas: number } | null>(null);
   const [showWindsorAccountModal, setShowWindsorAccountModal] = useState<string | null>(null);
   const [windsorAccounts, setWindsorAccounts] = useState<{account_name: string; datasource: string}[]>([]);
   const [loadingWindsorAccounts, setLoadingWindsorAccounts] = useState(false);
@@ -882,7 +883,17 @@ function StoreDetailsContent() {
               )}
             </div>
             <button
-              onClick={() => setShowDailyUpdateModal(true)}
+              onClick={() => {
+                // تعبئة البيانات من الحملات الإعلانية تلقائياً
+                if (snapchatSummary) {
+                  setDailyUpdateForm({
+                    sales: snapchatSummary.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+                    revenue: snapchatSummary.orders.toLocaleString('en-US'),
+                    spend: snapchatSummary.spend.toLocaleString('en-US', { maximumFractionDigits: 0 })
+                  });
+                }
+                setShowDailyUpdateModal(true);
+              }}
               className="p-3 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-xl transition-all"
               title="التحديث اليومي"
             >
@@ -1360,7 +1371,11 @@ function StoreDetailsContent() {
         </div>
 
         {/* قسم الحملات الإعلانية - الجديد */}
-        <SnapchatCampaignsSection storeId={storeId} directIntegrations={directIntegrations} />
+        <SnapchatCampaignsSection 
+          storeId={storeId} 
+          directIntegrations={directIntegrations} 
+          onDataLoaded={(summary) => setSnapchatSummary(summary)}
+        />
 
         {/* قسم الحملات الإعلانية القديم - مخفي */}
         <div className="hidden bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
