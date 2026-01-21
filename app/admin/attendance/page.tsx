@@ -190,13 +190,38 @@ function AttendanceContent() {
   const handleCheckIn = async () => {
     setActionLoading(true);
     setMessage(null);
+    
+    // الحصول على موقع المستخدم
+    const getUserLocation = (): Promise<{latitude: number, longitude: number} | null> => {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+          },
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    };
+
     try {
+      const userLocation = await getUserLocation();
+      
       const response = await fetch('/api/admin/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           device_info: navigator.userAgent,
-          user_id: currentUser?.id 
+          user_id: currentUser?.id,
+          user_latitude: userLocation?.latitude,
+          user_longitude: userLocation?.longitude
         })
       });
       const data = await response.json();
@@ -204,7 +229,11 @@ function AttendanceContent() {
         setMessage({ type: 'success', text: data.message || 'تم تسجيل الحضور بنجاح' });
         if (currentUser?.id) fetchAttendanceWithUser(currentUser.id);
       } else {
-        setMessage({ type: 'error', text: data.error || 'فشل في تسجيل الحضور' });
+        if (data.requires_location && !userLocation) {
+          setMessage({ type: 'error', text: 'يجب تفعيل خدمة الموقع للتسجيل. يرجى السماح بالوصول للموقع وإعادة المحاولة.' });
+        } else {
+          setMessage({ type: 'error', text: data.error || 'فشل في تسجيل الحضور' });
+        }
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'حدث خطأ في الاتصال' });

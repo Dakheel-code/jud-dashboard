@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { ssr: false });
 
 interface AttendanceRecord {
   id: string;
@@ -42,7 +45,8 @@ function AttendanceManageContent() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('daily');
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear().toString());
+  const [viewMode, setViewMode] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [workSettings, setWorkSettings] = useState({
     workStartTime: '09:00',
@@ -92,7 +96,7 @@ function AttendanceManageContent() {
     fetchWorkSettings();
     fetchLeaveRequests();
     fetchAllLeaveRequests();
-  }, [selectedDate, selectedMonth, viewMode]);
+  }, [selectedDate, selectedMonth, selectedYear, viewMode]);
 
   const fetchLeaveRequests = async () => {
     try {
@@ -165,7 +169,14 @@ function AttendanceManageContent() {
   const fetchAllAttendance = async () => {
     setLoading(true);
     try {
-      const params = viewMode === 'daily' ? `date=${selectedDate}` : `month=${selectedMonth}`;
+      let params = '';
+      if (viewMode === 'daily') {
+        params = `date=${selectedDate}`;
+      } else if (viewMode === 'monthly') {
+        params = `month=${selectedMonth}`;
+      } else {
+        params = `year=${selectedYear}`;
+      }
       const response = await fetch(`/api/admin/attendance?${params}`);
       const data = await response.json();
       setRecords(data.records || []);
@@ -385,18 +396,7 @@ function AttendanceManageContent() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-400">{stats.total}</p>
-                <p className="text-blue-400/70 text-xs">إجمالي السجلات</p>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
@@ -430,32 +430,10 @@ function AttendanceManageContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-cyan-400">{stats.totalHours.toFixed(1)}</p>
-                <p className="text-cyan-400/70 text-xs">إجمالي الساعات</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Leave & Permission Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-yellow-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-yellow-400">{leaveStats.totalLeaves}</p>
-                <p className="text-yellow-400/70 text-xs">إجمالي الإجازات</p>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-green-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
@@ -470,22 +448,11 @@ function AttendanceManageContent() {
           <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-fuchsia-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-fuchsia-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-5 h-5 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               </div>
               <div>
-                <p className="text-2xl font-bold text-fuchsia-400">{leaveStats.totalPermissions}</p>
-                <p className="text-fuchsia-400/70 text-xs">إجمالي الاستئذان</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-emerald-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-emerald-400">{leaveStats.approvedPermissions}</p>
-                <p className="text-emerald-400/70 text-xs">استئذان معتمد</p>
+                <p className="text-2xl font-bold text-fuchsia-400">{leaveStats.approvedPermissions}</p>
+                <p className="text-fuchsia-400/70 text-xs">استئذان معتمد</p>
               </div>
             </div>
           </div>
@@ -506,22 +473,40 @@ function AttendanceManageContent() {
             >
               شهري
             </button>
+            <button
+              onClick={() => setViewMode('yearly')}
+              className={`px-4 py-2 rounded-xl transition-all ${viewMode === 'yearly' ? 'bg-purple-500 text-white' : 'bg-purple-950/40 text-purple-300 border border-purple-500/20'}`}
+            >
+              سنوي
+            </button>
           </div>
           
-          {viewMode === 'daily' ? (
+          {viewMode === 'daily' && (
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="px-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
             />
-          ) : (
+          )}
+          {viewMode === 'monthly' && (
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="px-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
             />
+          )}
+          {viewMode === 'yearly' && (
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="px-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
           )}
         </div>
 
@@ -777,7 +762,11 @@ function AttendanceManageContent() {
             className="w-full px-6 py-4 border-b border-purple-500/20 flex items-center justify-between hover:bg-purple-500/5 transition-colors"
           >
             <h2 className="text-lg font-semibold text-white">
-              {viewMode === 'daily' ? `سجل الحضور - ${new Date(selectedDate).toLocaleDateString('ar-SA')}` : `سجل الحضور - ${selectedMonth}`} ({records.length})
+              {viewMode === 'daily' 
+                ? `سجل الحضور - ${new Date(selectedDate).toLocaleDateString('ar-SA')}` 
+                : viewMode === 'monthly' 
+                  ? `سجل الحضور - ${selectedMonth}` 
+                  : `سجل الحضور - ${selectedYear}`} ({records.length})
             </h2>
             <svg className={`w-5 h-5 text-purple-400 transition-transform ${collapsedSections.attendanceRecords ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
@@ -964,12 +953,40 @@ function AttendanceManageContent() {
               <div>
                 <label className="block text-sm text-purple-300 mb-2">الموقع على الخريطة</label>
                 <div className="bg-purple-900/30 rounded-xl border border-purple-500/30 overflow-hidden">
-                  <iframe
-                    width="100%"
-                    height="250"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${officeForm.latitude},${officeForm.longitude}&zoom=15`}
+                  {/* Location Button */}
+                  <div className="p-3 border-b border-purple-500/20">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (navigator.geolocation) {
+                          navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                              setOfficeForm({
+                                ...officeForm,
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude
+                              });
+                            },
+                            (error) => {
+                              alert('تعذر الحصول على الموقع الحالي: ' + error.message);
+                            },
+                            { enableHighAccuracy: true }
+                          );
+                        } else {
+                          alert('المتصفح لا يدعم تحديد الموقع');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-all text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      تحديد موقعي الحالي
+                    </button>
+                  </div>
+                  {/* Interactive Map with Draggable Pin */}
+                  <LocationPicker
+                    latitude={officeForm.latitude}
+                    longitude={officeForm.longitude}
+                    onLocationChange={(lat, lng) => setOfficeForm({...officeForm, latitude: lat, longitude: lng})}
                   />
                   <div className="p-3 border-t border-purple-500/20">
                     <div className="grid grid-cols-2 gap-3">
@@ -996,9 +1013,6 @@ function AttendanceManageContent() {
                         />
                       </div>
                     </div>
-                    <p className="text-purple-400/60 text-xs mt-2">
-                      💡 للحصول على الإحداثيات: افتح Google Maps، اضغط بزر الماوس الأيمن على الموقع، ثم انسخ الإحداثيات
-                    </p>
                   </div>
                 </div>
               </div>
