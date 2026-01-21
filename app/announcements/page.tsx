@@ -1,0 +1,262 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import AdminAuth from '@/components/AdminAuth';
+
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: 'normal' | 'urgent' | 'scheduled' | 'conditional';
+  priority: 'low' | 'normal' | 'high' | 'critical';
+  created_at: string;
+  sent_at: string;
+  read_at: string | null;
+  creator?: { id: string; name: string; avatar: string };
+}
+
+const TYPE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
+  normal: { label: 'عادي', color: 'bg-blue-500/20 text-blue-400', icon: '📋' },
+  urgent: { label: 'عاجل', color: 'bg-red-500/20 text-red-400', icon: '🚨' },
+  scheduled: { label: 'مجدول', color: 'bg-yellow-500/20 text-yellow-400', icon: '⏰' },
+  conditional: { label: 'مشروط', color: 'bg-purple-500/20 text-purple-400', icon: '⚙️' }
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  low: 'border-l-gray-400',
+  normal: 'border-l-blue-400',
+  high: 'border-l-orange-400',
+  critical: 'border-l-red-500'
+};
+
+function AnnouncementsListContent() {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('admin_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUser(user);
+      fetchAnnouncements(user.id);
+    }
+  }, []);
+
+  const fetchAnnouncements = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/announcements/my?user_id=${userId}`);
+      const data = await response.json();
+      setAnnouncements(data.announcements || []);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (announcementId: string) => {
+    if (!currentUser) return;
+
+    try {
+      await fetch(`/api/announcements/${announcementId}/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id })
+      });
+
+      setAnnouncements(prev =>
+        prev.map(a => a.id === announcementId ? { ...a, read_at: new Date().toISOString() } : a)
+      );
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
+
+  const openAnnouncement = (announcement: Announcement) => {
+    setSelectedAnnouncement(announcement);
+    if (!announcement.read_at) {
+      markAsRead(announcement.id);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const filteredAnnouncements = announcements.filter(a => {
+    if (filter === 'unread') return !a.read_at;
+    if (filter === 'read') return !!a.read_at;
+    return true;
+  });
+
+  const unreadCount = announcements.filter(a => !a.read_at).length;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">التعاميم</h1>
+            <p className="text-purple-300">
+              {unreadCount > 0 ? `لديك ${unreadCount} تعميم غير مقروء` : 'جميع التعاميم مقروءة'}
+            </p>
+          </div>
+          <Link href="/admin" className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 transition-all">
+            ← العودة للوحة التحكم
+          </Link>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-xl transition-all ${filter === 'all' ? 'bg-purple-500 text-white' : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'}`}
+          >
+            الكل ({announcements.length})
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`px-4 py-2 rounded-xl transition-all ${filter === 'unread' ? 'bg-purple-500 text-white' : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'}`}
+          >
+            غير مقروء ({unreadCount})
+          </button>
+          <button
+            onClick={() => setFilter('read')}
+            className={`px-4 py-2 rounded-xl transition-all ${filter === 'read' ? 'bg-purple-500 text-white' : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'}`}
+          >
+            مقروء ({announcements.length - unreadCount})
+          </button>
+        </div>
+
+        {/* Announcements List */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 text-center">
+              <p className="text-purple-400">جاري التحميل...</p>
+            </div>
+          ) : filteredAnnouncements.length === 0 ? (
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 text-center">
+              <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <p className="text-purple-400">لا توجد تعاميم</p>
+            </div>
+          ) : (
+            filteredAnnouncements.map((announcement) => (
+              <div
+                key={announcement.id}
+                onClick={() => openAnnouncement(announcement)}
+                className={`bg-white/5 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden cursor-pointer hover:bg-purple-900/30 transition-all border-l-4 ${PRIORITY_COLORS[announcement.priority]} ${!announcement.read_at ? 'ring-2 ring-purple-500/30' : ''}`}
+              >
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {!announcement.read_at && (
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                        )}
+                        <h3 className={`font-bold text-lg ${!announcement.read_at ? 'text-white' : 'text-purple-200'}`}>
+                          {announcement.title}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${TYPE_LABELS[announcement.type]?.color}`}>
+                          {TYPE_LABELS[announcement.type]?.icon} {TYPE_LABELS[announcement.type]?.label}
+                        </span>
+                      </div>
+                      <p className="text-purple-300 line-clamp-2">{announcement.content}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-purple-500/10">
+                    <div className="flex items-center gap-2 text-purple-400 text-sm">
+                      {announcement.creator?.avatar ? (
+                        <img src={announcement.creator.avatar} alt="" className="w-6 h-6 rounded-full" />
+                      ) : (
+                        <div className="w-6 h-6 bg-purple-500/30 rounded-full flex items-center justify-center text-xs">
+                          {announcement.creator?.name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <span>{announcement.creator?.name || 'الإدارة'}</span>
+                    </div>
+                    <span className="text-purple-500 text-sm">
+                      {formatDate(announcement.sent_at || announcement.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Announcement Detail Modal */}
+        {selectedAnnouncement && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className={`p-4 border-b border-purple-500/20 ${selectedAnnouncement.type === 'urgent' ? 'bg-red-500/10' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-sm ${TYPE_LABELS[selectedAnnouncement.type]?.color}`}>
+                      {TYPE_LABELS[selectedAnnouncement.type]?.icon} {TYPE_LABELS[selectedAnnouncement.type]?.label}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAnnouncement(null)}
+                    className="p-2 text-purple-400 hover:bg-purple-500/20 rounded-lg"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-white mb-4">{selectedAnnouncement.title}</h2>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-purple-200 whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.content}</p>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-purple-500/20 bg-purple-900/20">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-purple-400">
+                    {selectedAnnouncement.creator?.avatar ? (
+                      <img src={selectedAnnouncement.creator.avatar} alt="" className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <div className="w-8 h-8 bg-purple-500/30 rounded-full flex items-center justify-center">
+                        {selectedAnnouncement.creator?.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <span>{selectedAnnouncement.creator?.name || 'الإدارة'}</span>
+                  </div>
+                  <span className="text-purple-500">
+                    {formatDate(selectedAnnouncement.sent_at || selectedAnnouncement.created_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function AnnouncementsListPage() {
+  return (
+    <AdminAuth>
+      <AnnouncementsListContent />
+    </AdminAuth>
+  );
+}

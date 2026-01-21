@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AnnouncementBell from './AnnouncementBell';
 
 interface UserInfo {
   id?: string;
@@ -87,6 +88,15 @@ const menuItems: MenuItem[] = [
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/announcements',
+    label: 'التعاميم',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
       </svg>
     ),
   },
@@ -303,14 +313,17 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                   <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
                 </div>
               </div>
-              <button 
-                onClick={onClose}
-                className="lg:hidden p-2 text-purple-400 hover:bg-purple-500/10 rounded-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <AnnouncementBell />
+                <button 
+                  onClick={onClose}
+                  className="lg:hidden p-2 text-purple-400 hover:bg-purple-500/10 rounded-lg"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             {/* Collapse Toggle Button - على طرف القائمة مع سهم */}
             <button
