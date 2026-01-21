@@ -312,6 +312,39 @@ export async function PUT(request: Request) {
   }
 }
 
+// حذف سجل حضور
+export async function DELETE(request: Request) {
+  try {
+    const supabase = getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    const recordId = searchParams.get('id');
+
+    if (!recordId) {
+      return NextResponse.json({ error: 'معرف السجل مطلوب' }, { status: 400 });
+    }
+
+    // حذف السجل
+    const { error } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('id', recordId);
+
+    if (error) {
+      console.error('Error deleting attendance:', error);
+      return NextResponse.json({ error: 'فشل في حذف السجل' }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'تم حذف السجل بنجاح'
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
+  }
+}
+
 // دوال مساعدة لتحديد نوع الجهاز والمتصفح
 function getDeviceType(userAgent: string | null): string {
   if (!userAgent) return 'unknown';

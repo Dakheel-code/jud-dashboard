@@ -829,9 +829,31 @@ function AttendanceManageContent() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs ${record.check_out_time ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                            {record.check_out_time ? 'مكتمل' : 'قيد العمل'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${record.check_out_time ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                              {record.check_out_time ? 'مكتمل' : 'قيد العمل'}
+                            </span>
+                            <button
+                              onClick={async () => {
+                                if (confirm(`هل أنت متأكد من حذف سجل حضور ${record.user?.name || 'هذا الموظف'}؟`)) {
+                                  try {
+                                    const response = await fetch(`/api/admin/attendance?id=${record.id}`, { method: 'DELETE' });
+                                    if (response.ok) {
+                                      fetchAllAttendance();
+                                    } else {
+                                      alert('فشل في حذف السجل');
+                                    }
+                                  } catch (err) {
+                                    alert('حدث خطأ');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                              title="حذف السجل"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
