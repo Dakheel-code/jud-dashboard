@@ -172,11 +172,42 @@ export default function SnapchatDiagnosticsPage() {
           </div>
         </div>
 
+        {/* Error Details - عرض الخطأ الفعلي */}
+        {result.request_status === 'ERROR' && (
+          <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg">
+            <h4 className="font-bold mb-2 text-red-400">❌ تفاصيل الخطأ:</h4>
+            <div className="space-y-2 text-sm">
+              {result.error && (
+                <p><span className="text-gray-400">Error:</span> <span className="text-red-300">{result.error}</span></p>
+              )}
+              {result.error_code && (
+                <p><span className="text-gray-400">Error Code:</span> <span className="text-red-300">{result.error_code}</span></p>
+              )}
+              {result.debug_message && (
+                <p><span className="text-gray-400">Debug Message:</span> <span className="text-yellow-300">{result.debug_message}</span></p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Debug Info - معلومات URL */}
+        {result.debug_info && (
+          <div className="p-4 bg-purple-900/30 border border-purple-500 rounded-lg">
+            <h4 className="font-bold mb-2 text-purple-400">🔗 Debug Info (URL):</h4>
+            <div className="space-y-1 text-sm font-mono">
+              <p><span className="text-gray-400">Final URL:</span> <span className="text-green-300 break-all">{result.debug_info.final_url}</span></p>
+              <p><span className="text-gray-400">Base URL:</span> {result.debug_info.computed_base_url}</p>
+              <p><span className="text-gray-400">Path:</span> {result.debug_info.computed_path}</p>
+              <p><span className="text-gray-400">Ad Account ID:</span> {result.debug_info.ad_account_id_used}</p>
+            </div>
+          </div>
+        )}
+
         {/* Diagnosis */}
         <div className="p-4 bg-gray-800 rounded-lg">
           <h4 className="font-bold mb-2 text-yellow-400">🔍 التشخيص:</h4>
           <ul className="space-y-1">
-            {result.diagnosis.map((d, i) => (
+            {result.diagnosis?.map((d: string, i: number) => (
               <li key={i} className="text-sm flex items-start gap-2">
                 <span>•</span>
                 <span>{d}</span>
