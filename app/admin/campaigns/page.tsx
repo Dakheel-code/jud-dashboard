@@ -65,6 +65,7 @@ function CampaignsContent() {
 
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [campaignSearch, setCampaignSearch] = useState('');
+  const [visibleCampaigns, setVisibleCampaigns] = useState(5);
 
   // Load stores
   useEffect(() => {
@@ -420,11 +421,10 @@ function CampaignsContent() {
                             <th className="text-center py-3 px-2">الطلبات</th>
                             <th className="text-center py-3 px-2">المبيعات</th>
                             <th className="text-center py-3 px-2">ROAS</th>
-                            <th className="text-center py-3 px-2">CPA</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredCampaigns.map((campaign) => (
+                          {filteredCampaigns.slice(0, visibleCampaigns).map((campaign) => (
                             <tr key={campaign.campaign_id} className="border-t border-purple-500/10 text-white hover:bg-purple-900/20">
                               <td className="py-3 px-4 text-right">
                                 <div className="truncate max-w-[200px]" title={campaign.campaign_name}>
@@ -458,19 +458,23 @@ function CampaignsContent() {
                               <td className={`py-3 px-2 text-center ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
                                 {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
                               </td>
-                              <td className="py-3 px-2 text-center">
-                                {campaign.cpa > 0 ? campaign.cpa.toFixed(0) : '-'}
-                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
 
-                    {/* عدد الحملات */}
-                    <div className="p-4 text-center border-t border-purple-500/20 text-xs text-purple-400/70">
-                      إجمالي الحملات: {filteredCampaigns.length}
-                    </div>
+                    {/* زر المزيد */}
+                    {filteredCampaigns.length > visibleCampaigns && (
+                      <div className="p-4 text-center border-t border-purple-500/20">
+                        <button
+                          onClick={() => setVisibleCampaigns(prev => prev + 5)}
+                          className="px-6 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors text-sm"
+                        >
+                          عرض المزيد ({filteredCampaigns.length - visibleCampaigns} حملة متبقية)
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
