@@ -102,18 +102,28 @@ function AnnouncementsListContent() {
   const unreadCount = announcements.filter(a => !a.read_at).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
+        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">التعاميم</h1>
-            <p className="text-purple-300">
-              {unreadCount > 0 ? `لديك ${unreadCount} تعميم غير مقروء` : 'جميع التعاميم مقروءة'}
-            </p>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+            <div>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>التعاميم</h1>
+              <p className="text-purple-300/80 text-xs sm:text-sm">
+                {unreadCount > 0 ? `لديك ${unreadCount} تعميم غير مقروء` : 'جميع التعاميم مقروءة'}
+              </p>
+            </div>
           </div>
-          <Link href="/admin" className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 transition-all">
-            ← العودة للوحة التحكم
+          <Link href="/admin" className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-500/30 hover:bg-purple-500/30 transition-all">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
+            لوحة التحكم
           </Link>
         </div>
 
