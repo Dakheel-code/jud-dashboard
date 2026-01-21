@@ -144,51 +144,121 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // جلب إحصائيات كل حملة على حدة
+    // الحقول المطلوبة للإحصائيات
+    const statsFields = 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value';
+    
+    // جلب إحصائيات وإعلانات كل حملة
     const campaignStatsMap: Record<string, any> = {};
+    const campaignAdsMap: Record<string, any[]> = {};
     
     for (const campaignId of campaignIds) {
       try {
-        const statsResponse = await fetch(
-          `${SNAPCHAT_API_URL}/campaigns/${campaignId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+        // جلب إحصائيات الحملة
+        const statsUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}/stats?granularity=TOTAL&fields=${statsFields}&start_time=${dateRange.start}T00:00:00.000-00:00&end_time=${dateRange.end}T23:59:59.999-00:00`;
+        console.log('Fetching campaign stats:', statsUrl);
+        
+        const statsResponse = await fetch(statsUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
         
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
-          const stats = statsData.total_stats?.[0]?.stats || {};
+          console.log(`Campaign ${campaignId} stats response:`, JSON.stringify(statsData, null, 2));
+          
+          // Snapchat يرجع الإحصائيات في timeseries_stats أو total_stats
+          const stats = statsData.timeseries_stats?.[0]?.timeseries?.[0]?.stats 
+                     || statsData.total_stats?.[0]?.stats 
+                     || {};
           campaignStatsMap[campaignId] = stats;
-          console.log(`Stats for campaign ${campaignId}:`, stats);
+        } else {
+          const errorText = await statsResponse.text();
+          console.error(`Campaign ${campaignId} stats error:`, errorText);
+        }
+
+        // جلب الإعلانات (Ads) تحت الحملة
+        const adsResponse = await fetch(
+          `${SNAPCHAT_API_URL}/campaigns/${campaignId}/ads`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        
+        if (adsResponse.ok) {
+          const adsData = await adsResponse.json();
+          const ads = adsData.ads || [];
+          console.log(`Campaign ${campaignId} has ${ads.length} ads`);
+          
+          // جلب إحصائيات كل إعلان
+          const processedAds = [];
+          for (const adItem of ads.slice(0, 5)) { // أول 5 إعلانات فقط
+            const ad = adItem.ad;
+            if (!ad?.id) continue;
+            
+            try {
+              const adStatsUrl = `${SNAPCHAT_API_URL}/ads/${ad.id}/stats?granularity=TOTAL&fields=${statsFields}&start_time=${dateRange.start}T00:00:00.000-00:00&end_time=${dateRange.end}T23:59:59.999-00:00`;
+              const adStatsResponse = await fetch(adStatsUrl, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              });
+              
+              let adStats: any = {};
+              if (adStatsResponse.ok) {
+                const adStatsData = await adStatsResponse.json();
+                adStats = adStatsData.timeseries_stats?.[0]?.timeseries?.[0]?.stats 
+                       || adStatsData.total_stats?.[0]?.stats 
+                       || {};
+              }
+              
+              const adSpend = (adStats.spend || 0) / 1000000;
+              const adRevenue = (adStats.conversion_purchases_value || 0) / 1000000;
+              
+              processedAds.push({
+                ad_name: ad.name || 'Unknown Ad',
+                ad_id: ad.id,
+                status: ad.status,
+                impressions: adStats.impressions || 0,
+                clicks: adStats.swipes || 0,
+                spend: adSpend,
+                conversions: adStats.conversion_purchases || 0,
+                revenue: adRevenue,
+                roas: adSpend > 0 ? adRevenue / adSpend : 0,
+              });
+            } catch (adErr) {
+              console.error(`Error fetching ad ${ad.id} stats:`, adErr);
+            }
+          }
+          campaignAdsMap[campaignId] = processedAds;
         }
       } catch (err) {
-        console.error(`Error fetching stats for campaign ${campaignId}:`, err);
+        console.error(`Error fetching data for campaign ${campaignId}:`, err);
       }
     }
 
     // جلب إحصائيات الحساب الإعلاني للإجماليات
-    const accountStatsResponse = await fetch(
-      `${SNAPCHAT_API_URL}/adaccounts/${adAccountId}/stats?granularity=TOTAL&start_time=${dateRange.start}T00:00:00.000Z&end_time=${dateRange.end}T23:59:59.999Z`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
+    const accountStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${adAccountId}/stats?granularity=TOTAL&fields=${statsFields}&start_time=${dateRange.start}T00:00:00.000-00:00&end_time=${dateRange.end}T23:59:59.999-00:00`;
+    console.log('Fetching account stats:', accountStatsUrl);
+    
+    const accountStatsResponse = await fetch(accountStatsUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     let accountStats: any = {};
     if (accountStatsResponse.ok) {
       const accountStatsData = await accountStatsResponse.json();
       console.log('Account stats response:', JSON.stringify(accountStatsData, null, 2));
-      accountStats = accountStatsData.total_stats?.[0]?.stats || {};
+      accountStats = accountStatsData.timeseries_stats?.[0]?.timeseries?.[0]?.stats 
+                  || accountStatsData.total_stats?.[0]?.stats 
+                  || {};
+    } else {
+      const errorText = await accountStatsResponse.text();
+      console.error('Account stats error:', errorText);
     }
 
-    // تجميع البيانات للحملات مع إحصائياتها
+    // تجميع البيانات للحملات مع إحصائياتها وإعلاناتها
     const processedCampaigns = latestCampaigns.map((c: any) => {
       const campaign = c.campaign;
       const stats = campaignStatsMap[campaign?.id] || {};
+      const ads = campaignAdsMap[campaign?.id] || [];
       
       const spend = (stats.spend || 0) / 1000000;
-      const revenue = (stats.conversion_purchases_value || stats.total_conversion_value || 0) / 1000000;
+      const revenue = (stats.conversion_purchases_value || 0) / 1000000;
       const roas = spend > 0 ? revenue / spend : 0;
       
       return {
@@ -196,12 +266,12 @@ export async function GET(request: NextRequest) {
         campaign_id: campaign?.id,
         status: campaign?.status,
         impressions: stats.impressions || 0,
-        clicks: stats.swipes || stats.clicks || 0,
+        clicks: stats.swipes || 0,
         spend: spend,
-        conversions: stats.conversion_purchases || stats.purchases || 0,
+        conversions: stats.conversion_purchases || 0,
         revenue: revenue,
         roas: roas,
-        ads: [],
+        ads: ads,
       };
     });
 
@@ -209,9 +279,9 @@ export async function GET(request: NextRequest) {
     const totals = {
       spend: (accountStats.spend || 0) / 1000000,
       impressions: accountStats.impressions || 0,
-      clicks: accountStats.swipes || accountStats.clicks || 0,
-      conversions: accountStats.conversion_purchases || accountStats.purchases || 0,
-      revenue: (accountStats.conversion_purchases_value || accountStats.total_conversion_value || 0) / 1000000,
+      clicks: accountStats.swipes || 0,
+      conversions: accountStats.conversion_purchases || 0,
+      revenue: (accountStats.conversion_purchases_value || 0) / 1000000,
     };
 
     return NextResponse.json({
