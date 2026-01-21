@@ -219,14 +219,27 @@ export async function GET(request: NextRequest) {
 
     // التشخيص التلقائي المحسّن
     const diagnosis: string[] = [];
+    const daysDiff = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
     
-    // إذا كل القيم صفر
+    // إذا فيه spend (حتى لو impressions = 0 في AD_ACCOUNT level)
+    if (processedStats.spend > 0) {
+      diagnosis.push(`✅ Spend found: ${processedStats.spend.toFixed(2)} (${daysDiff} days)`);
+      if (level === 'AD_ACCOUNT') {
+        diagnosis.push('ℹ️ AD_ACCOUNT level only returns spend. Use AD level for impressions/clicks.');
+      }
+    }
+    
+    // إذا كل القيم صفر (بما فيها spend)
     if (processedStats.impressions === 0 && processedStats.spend === 0) {
       diagnosis.push('⚠️ No stats data found for this date range.');
       diagnosis.push('💡 Possible reasons:');
       diagnosis.push('   1. No delivery in selected range - Try 30 or 90 days');
       diagnosis.push('   2. Reporting level mismatch - Use AD level for detailed stats');
       diagnosis.push('   3. Ads may be paused or not running');
+      
+      if (daysDiff <= 7) {
+        diagnosis.push('📅 Try extending date range to 30 or 90 days for more data.');
+      }
     }
     
     // إذا فيه impressions بس ما فيه conversions
@@ -235,16 +248,10 @@ export async function GET(request: NextRequest) {
       diagnosis.push('💡 Conversions need Pixel/CAPI setup to track purchases.');
     }
 
-    // إذا فيه spend بس ما فيه revenue
-    if (processedStats.spend > 0 && processedStats.revenue === 0) {
+    // إذا فيه spend بس ما فيه revenue (وليس AD_ACCOUNT level)
+    if (processedStats.spend > 0 && processedStats.revenue === 0 && level !== 'AD_ACCOUNT') {
       diagnosis.push('💰 Spend exists but no revenue tracked.');
       diagnosis.push('💡 Check conversion tracking and Pixel configuration.');
-    }
-
-    // اقتراح تغيير الفترة إذا كانت 7 أيام وما فيه بيانات
-    const daysDiff = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
-    if (daysDiff <= 7 && processedStats.spend === 0) {
-      diagnosis.push('📅 Try extending date range to 30 or 90 days for more data.');
     }
 
     const hasPaging = !!responseData.paging?.next_link;
@@ -252,7 +259,7 @@ export async function GET(request: NextRequest) {
       diagnosis.push('📄 Data is paginated.');
     }
     
-    // إذا نجح بدون مشاكل
+    // إذا نجح بدون مشاكل ولم نضف أي تشخيص
     if (diagnosis.length === 0) {
       diagnosis.push('✅ Stats retrieved successfully!');
     }

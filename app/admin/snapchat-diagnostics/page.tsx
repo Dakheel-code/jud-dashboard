@@ -304,6 +304,62 @@ export default function SnapchatDiagnosticsPage() {
           </div>
         )}
 
+        {/* Total Stats for Ads-Stats endpoint */}
+        {result.total_stats && (
+          <div className="p-4 bg-gradient-to-r from-pink-900/30 to-purple-900/30 border border-pink-500 rounded-lg">
+            <h4 className="font-bold mb-2 text-pink-400">📊 إجمالي الإحصائيات (Ads Level):</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-2 bg-gray-800 rounded">
+                <p className="text-2xl font-bold text-green-400">{result.total_stats.impressions?.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">Impressions</p>
+              </div>
+              <div className="text-center p-2 bg-gray-800 rounded">
+                <p className="text-2xl font-bold text-blue-400">{result.total_stats.clicks?.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">Clicks</p>
+              </div>
+              <div className="text-center p-2 bg-gray-800 rounded">
+                <p className="text-2xl font-bold text-yellow-400">{result.total_stats.spend?.toFixed(2)}</p>
+                <p className="text-xs text-gray-400">Spend</p>
+              </div>
+              <div className="text-center p-2 bg-gray-800 rounded">
+                <p className="text-2xl font-bold text-purple-400">{result.total_stats.video_views?.toLocaleString()}</p>
+                <p className="text-xs text-gray-400">Video Views</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Ads Table */}
+        {result.top_ads && result.top_ads.length > 0 && (
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <h4 className="font-bold mb-2 text-yellow-400">🏆 Top 10 Ads (by Spend):</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left p-2">#</th>
+                    <th className="text-left p-2">Name</th>
+                    <th className="text-right p-2">Impressions</th>
+                    <th className="text-right p-2">Clicks</th>
+                    <th className="text-right p-2">Spend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.top_ads.map((ad: any, i: number) => (
+                    <tr key={ad.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                      <td className="p-2 text-gray-400">{i + 1}</td>
+                      <td className="p-2 truncate max-w-[200px]" title={ad.name}>{ad.name}</td>
+                      <td className="p-2 text-right">{ad.stats?.impressions?.toLocaleString() || 0}</td>
+                      <td className="p-2 text-right">{ad.stats?.clicks?.toLocaleString() || 0}</td>
+                      <td className="p-2 text-right text-yellow-400">{ad.stats?.spend?.toFixed(2) || '0.00'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Status Breakdown */}
         {result.status_breakdown && Object.keys(result.status_breakdown).length > 0 && (
           <div className="p-4 bg-gray-800 rounded-lg">
@@ -535,8 +591,8 @@ export default function SnapchatDiagnosticsPage() {
 
         </div>
 
-        {/* Stats Tests - 5A & 5B */}
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
+        {/* Stats Tests - 5A, 5B & 6 */}
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
           <button
             onClick={() => runTest('statsAccount', 'stats', { 
               adAccountId: selectedAdAccount,
@@ -562,7 +618,19 @@ export default function SnapchatDiagnosticsPage() {
             disabled={!selectedAdAccount || loading === 'statsAds'}
             className="p-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-bold transition"
           >
-            {loading === 'statsAds' ? '⏳' : '📊'} 5B: Ads Reporting
+            {loading === 'statsAds' ? '⏳' : '📊'} 5B: AD Level
+          </button>
+
+          <button
+            onClick={() => runTest('adsStats', 'ads-stats', { 
+              adAccountId: selectedAdAccount,
+              startDate,
+              endDate,
+            })}
+            disabled={!selectedAdAccount || loading === 'adsStats'}
+            className="p-4 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 disabled:bg-gray-600 rounded-lg font-bold transition"
+          >
+            {loading === 'adsStats' ? '⏳' : '🎯'} 6: Ads Stats (Top 10)
           </button>
         </div>
 
