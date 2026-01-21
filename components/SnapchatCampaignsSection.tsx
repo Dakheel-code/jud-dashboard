@@ -50,13 +50,47 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
   const [data, setData] = useState<CampaignsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    isConnected: boolean;
+    needsReauth: boolean;
+    adAccountName: string | null;
+    checking: boolean;
+  }>({ isConnected: false, needsReauth: false, adAccountName: null, checking: true });
 
+  // جلب حالة الربط من API مباشرة
+  const checkConnection = async () => {
+    if (!storeId) return;
+    
+    try {
+      const response = await fetch(`/api/integrations/status?storeId=${storeId}`);
+      const result = await response.json();
+      
+      if (result.success && result.integrations?.snapchat) {
+        const snap = result.integrations.snapchat;
+        setConnectionStatus({
+          isConnected: snap.status === 'connected' && !!snap.ad_account_id,
+          needsReauth: snap.status === 'needs_reauth',
+          adAccountName: snap.ad_account_name || null,
+          checking: false,
+        });
+      } else {
+        setConnectionStatus({ isConnected: false, needsReauth: false, adAccountName: null, checking: false });
+      }
+    } catch (err) {
+      console.error('Error checking connection:', err);
+      setConnectionStatus({ isConnected: false, needsReauth: false, adAccountName: null, checking: false });
+    }
+  };
+
+  // أيضاً استخدم props كـ fallback
   const snapchatIntegration = directIntegrations?.snapchat;
-  const isConnected = snapchatIntegration?.status === 'connected' && !!snapchatIntegration?.ad_account_id;
-  const needsReauth = snapchatIntegration?.status === 'needs_reauth';
+  const isConnectedFromProps = snapchatIntegration?.status === 'connected' && !!snapchatIntegration?.ad_account_id;
+  const isConnected = connectionStatus.isConnected || isConnectedFromProps;
+  const needsReauth = connectionStatus.needsReauth || snapchatIntegration?.status === 'needs_reauth';
+  const adAccountName = connectionStatus.adAccountName || snapchatIntegration?.ad_account_name;
 
   const fetchCampaigns = async () => {
-    if (!storeId || !isConnected) return;
+    if (!storeId) return;
     
     setLoading(true);
     setError(null);
@@ -67,10 +101,17 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
       
       if (result.success) {
         setData(result);
+        // إذا نجح الجلب، فالربط موجود
+        if (!connectionStatus.isConnected) {
+          setConnectionStatus(prev => ({ ...prev, isConnected: true, checking: false }));
+        }
       } else {
         setError(result.error || 'Failed to fetch campaigns');
         if (result.needs_reauth) {
-          setError('Token expired. Please reconnect Snapchat.');
+          setConnectionStatus(prev => ({ ...prev, needsReauth: true, isConnected: false }));
+          setError('انتهت صلاحية الربط. يرجى إعادة ربط Snapchat.');
+        } else if (result.needs_connection) {
+          setConnectionStatus(prev => ({ ...prev, isConnected: false, checking: false }));
         }
       }
     } catch (err: any) {
@@ -81,10 +122,16 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
   };
 
   useEffect(() => {
-    if (isConnected && !isCollapsed) {
+    if (storeId) {
+      checkConnection();
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    if (storeId && !isCollapsed && !connectionStatus.checking) {
       fetchCampaigns();
     }
-  }, [storeId, isConnected, range, isCollapsed]);
+  }, [storeId, range, isCollapsed, connectionStatus.checking]);
 
   return (
     <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
@@ -119,13 +166,15 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
                 <div>
                   <h3 className="text-lg font-bold text-white">Snapchat Ads</h3>
                   <p className="text-xs text-yellow-400/70">
-                    {isConnected ? snapchatIntegration?.ad_account_name || 'Connected' : needsReauth ? 'يحتاج إعادة ربط' : 'غير مرتبط'}
+                    {connectionStatus.checking ? 'جاري التحقق...' : isConnected ? (adAccountName || 'Connected') : needsReauth ? 'يحتاج إعادة ربط' : 'غير مرتبط'}
                   </p>
                 </div>
               </div>
               
               {/* Connection Status */}
-              {isConnected ? (
+              {connectionStatus.checking ? (
+                <div className="w-5 h-5 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+              ) : isConnected ? (
                 <span className="px-3 py-1 rounded-full text-xs bg-green-500/20 text-green-400">مرتبط ✓</span>
               ) : needsReauth ? (
                 <Link
@@ -144,7 +193,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
               )}
             </div>
 
-            {isConnected && (
+            {/* عرض المحتوى دائماً - سيتم التحقق من الربط داخلياً */}
+            {(isConnected || connectionStatus.checking) && (
               <>
                 {/* Range Selector */}
                 <div className="flex items-center gap-2 mb-4">
