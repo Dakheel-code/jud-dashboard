@@ -1,6 +1,6 @@
 /**
  * GET /api/stores/[storeId]/snapchat/campaigns
- * 
+ *
  * Endpoint نظيف لجلب حملات Snapchat مع الإحصائيات
  * يستخدم Campaign-level reporting
  */
@@ -47,14 +47,13 @@ export async function GET(
   { params }: { params: { storeId: string } }
 ) {
   const startTime = Date.now();
-  
+
   try {
     const storeId = params.storeId;
     const searchParams = request.nextUrl.searchParams;
     const range = searchParams.get('range') || '30d';
     const debug = searchParams.get('debug') === 'true';
 
-    // Logging للتشخيص
     console.log('=== Snapchat Campaigns Route Hit ===', { storeId, range });
 
     // التحقق من المتغيرات البيئية
@@ -62,10 +61,13 @@ export async function GET(
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({
-        success: false,
-        error: 'Database not configured',
-      }, { status: 503 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Database not configured',
+        },
+        { status: 503 }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -78,39 +80,48 @@ export async function GET(
       .eq('platform', 'snapchat')
       .single();
 
-    console.log('Campaigns: Integration query result:', { 
-      storeId, 
-      found: !!integration, 
+    console.log('Campaigns: Integration query result:', {
+      storeId,
+      found: !!integration,
       error: integrationError?.message,
       hasAdAccount: !!integration?.ad_account_id,
     });
 
     if (integrationError || !integration) {
-      return NextResponse.json({
-        success: false,
-        error: 'Snapchat not connected',
-        needs_connection: true,
-        debug: { storeId, error: integrationError?.message },
-      }, { status: 200 }); // 200 بدلاً من 404 لتجنب الخطأ في الواجهة
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Snapchat not connected',
+          needs_connection: true,
+          debug: { storeId, error: integrationError?.message },
+        },
+        { status: 200 } // 200 بدلاً من 404 لتجنب الخطأ في الواجهة
+      );
     }
 
     const adAccountId = integration.ad_account_id;
     if (!adAccountId) {
-      return NextResponse.json({
-        success: false,
-        error: 'No ad account selected',
-        needs_account_selection: true,
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No ad account selected',
+          needs_account_selection: true,
+        },
+        { status: 400 }
+      );
     }
 
     // جلب توكن صالح (مع refresh تلقائي)
     const accessToken = await getValidAccessToken(storeId, 'snapchat');
     if (!accessToken) {
-      return NextResponse.json({
-        success: false,
-        error: 'Token expired or invalid',
-        needs_reauth: true,
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Token expired or invalid',
+          needs_reauth: true,
+        },
+        { status: 401 }
+      );
     }
 
     const headers = { Authorization: `Bearer ${accessToken}` };
@@ -122,17 +133,22 @@ export async function GET(
     const normalizedEnd = normalizeToStartOfHour(now);
 
     // ========== الخطوة 1: جلب الحملات ==========
-    const campaignsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/campaigns?limit=100`;
+    const campaignsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(
+      adAccountId
+    )}/campaigns?limit=100`;
     const campaignsResponse = await fetch(campaignsUrl, { headers });
-    
+
     if (!campaignsResponse.ok) {
-      const errorData = await campaignsResponse.json();
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to fetch campaigns',
-        http_status: campaignsResponse.status,
-        snapchat_error: errorData,
-      }, { status: campaignsResponse.status });
+      const errorData = await campaignsResponse.json().catch(() => ({}));
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch campaigns',
+          http_status: campaignsResponse.status,
+          snapchat_error: errorData,
+        },
+        { status: campaignsResponse.status }
+      );
     }
 
     const campaignsData = await campaignsResponse.json();
@@ -171,52 +187,81 @@ export async function GET(
     }
 
     // ========== الخطوة 2: جلب Stats على مستوى Campaign ==========
-    const fields = 'spend,impressions,swipes,conversion_purchases,conversion_purchases_value';
-    const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${fields}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
+    const fields =
+      'spend,impressions,swipes,conversion_purchases,conversion_purchases_value';
+
+    const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(
+      adAccountId
+    )}/stats?granularity=TOTAL&fields=${encodeURIComponent(
+      fields
+    )}&start_time=${encodeURIComponent(
+      normalizedStart
+    )}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
 
     const statsResponse = await fetch(statsUrl, { headers });
-    const statsData = await statsResponse.json();
+    const statsData = await statsResponse.json().catch(() => ({}));
 
     // معالجة الإحصائيات
     const campaignStatsMap: Record<string, any> = {};
     let finalizedDataEndTime: string | null = null;
 
     if (statsResponse.ok) {
-      // محاولة استخراج من breakdown_stats
-      const breakdownStats = statsData.breakdown_stats?.breakdown_stat || [];
-      if (breakdownStats.length > 0) {
-        breakdownStats.forEach((item: any) => {
-          const dimension = item.dimension;
-          const stats = item.stats || {};
-          if (dimension?.campaign_id) {
-            campaignStatsMap[dimension.campaign_id] = {
-              spend: (stats.spend || 0) / 1000000,
-              impressions: stats.impressions || 0,
-              swipes: stats.swipes || 0,
-              orders: stats.conversion_purchases || 0,
-              sales: (stats.conversion_purchases_value || 0) / 1000000,
-            };
-          }
+      /**
+       * ✅ الشكل الحقيقي اللي رجع عندك:
+       * statsData.total_stats[0].total_stat.breakdown_stats.campaign = [{ id, stats: {...} }]
+       */
+      const campaignRows =
+        statsData?.total_stats?.[0]?.total_stat?.breakdown_stats?.campaign || [];
+
+      if (campaignRows.length > 0) {
+        campaignRows.forEach((row: any) => {
+          const campaignId = row?.id;
+          const s = row?.stats || {};
+          if (!campaignId) return;
+
+          campaignStatsMap[campaignId] = {
+            spend: (s.spend || 0) / 1_000_000,
+            impressions: s.impressions || 0,
+            swipes: s.swipes || 0,
+            orders: s.conversion_purchases || 0,
+            sales: (s.conversion_purchases_value || 0) / 1_000_000,
+          };
         });
+
+        finalizedDataEndTime =
+          statsData?.total_stats?.[0]?.total_stat?.finalized_data_end_time ||
+          null;
       }
 
-      // محاولة استخراج من timeseries_stats
+      /**
+       * ✅ fallback إضافي (لو Snapchat رجّع شكل مختلف)
+       * - timeseries_stats
+       * - total_stats بدون breakdown (حسب بعض الحالات)
+       */
       if (Object.keys(campaignStatsMap).length === 0 && statsData.timeseries_stats) {
         statsData.timeseries_stats.forEach((item: any) => {
           const timeseriesStat = item.timeseries_stat;
           const campaignId = timeseriesStat?.id;
           const timeseries = timeseriesStat?.timeseries || [];
-          
+
           if (campaignId && timeseries.length > 0) {
-            let totalStats = { spend: 0, impressions: 0, swipes: 0, orders: 0, sales: 0 };
+            let totalStats = {
+              spend: 0,
+              impressions: 0,
+              swipes: 0,
+              orders: 0,
+              sales: 0,
+            };
+
             timeseries.forEach((t: any) => {
               const s = t.stats || {};
-              totalStats.spend += (s.spend || 0) / 1000000;
+              totalStats.spend += (s.spend || 0) / 1_000_000;
               totalStats.impressions += s.impressions || 0;
               totalStats.swipes += s.swipes || 0;
               totalStats.orders += s.conversion_purchases || 0;
-              totalStats.sales += (s.conversion_purchases_value || 0) / 1000000;
+              totalStats.sales += (s.conversion_purchases_value || 0) / 1_000_000;
             });
+
             campaignStatsMap[campaignId] = totalStats;
           }
 
@@ -226,23 +271,10 @@ export async function GET(
         });
       }
 
-      // محاولة استخراج من total_stats
       if (Object.keys(campaignStatsMap).length === 0 && statsData.total_stats) {
+        // بعض الأحيان يرجع إجمالي بدون breakdown
         statsData.total_stats.forEach((item: any) => {
           const totalStat = item.total_stat;
-          const campaignId = totalStat?.id;
-          const stats = totalStat?.stats || {};
-          
-          if (campaignId) {
-            campaignStatsMap[campaignId] = {
-              spend: (stats.spend || 0) / 1000000,
-              impressions: stats.impressions || 0,
-              swipes: stats.swipes || 0,
-              orders: stats.conversion_purchases || 0,
-              sales: (stats.conversion_purchases_value || 0) / 1000000,
-            };
-          }
-
           if (totalStat?.finalized_data_end_time) {
             finalizedDataEndTime = totalStat.finalized_data_end_time;
           }
@@ -251,40 +283,57 @@ export async function GET(
     }
 
     // ========== الخطوة 3: دمج الحملات مع الإحصائيات ==========
-    const campaignsWithStats = campaignsList.map(campaign => {
+    const campaignsWithStats = campaignsList.map((campaign) => {
       const stats = campaignStatsMap[campaign.campaign_id] || {
-        spend: 0, impressions: 0, swipes: 0, orders: 0, sales: 0,
+        spend: 0,
+        impressions: 0,
+        swipes: 0,
+        orders: 0,
+        sales: 0,
       };
 
-      const cpa = stats.orders > 0 ? Math.round((stats.spend / stats.orders) * 100) / 100 : 0;
-      const roas = stats.spend > 0 ? Math.round((stats.sales / stats.spend) * 100) / 100 : 0;
+      const cpa =
+        stats.orders > 0
+          ? Math.round((stats.spend / stats.orders) * 100) / 100
+          : 0;
+
+      const roas =
+        stats.spend > 0
+          ? Math.round((stats.sales / stats.spend) * 100) / 100
+          : 0;
 
       return {
         campaign_id: campaign.campaign_id,
         campaign_name: campaign.campaign_name,
-        spend: Math.round(stats.spend * 100) / 100,
-        impressions: stats.impressions,
-        swipes: stats.swipes,
-        orders: stats.orders,
-        sales: Math.round(stats.sales * 100) / 100,
+        status: campaign.status,
+        spend: Math.round((stats.spend || 0) * 100) / 100,
+        impressions: stats.impressions || 0,
+        swipes: stats.swipes || 0,
+        orders: stats.orders || 0,
+        sales: Math.round((stats.sales || 0) * 100) / 100,
         cpa,
         roas,
       };
     });
 
     // ترتيب حسب الصرف
-    campaignsWithStats.sort((a, b) => b.spend - a.spend);
+    campaignsWithStats.sort((a, b) => (b.spend || 0) - (a.spend || 0));
 
     // ========== الخطوة 4: حساب Summary ==========
-    const summary = campaignsWithStats.reduce((acc, c) => ({
-      spend: acc.spend + c.spend,
-      orders: acc.orders + c.orders,
-      sales: acc.sales + c.sales,
-    }), { spend: 0, orders: 0, sales: 0 });
+    const summary = campaignsWithStats.reduce(
+      (acc, c) => ({
+        spend: acc.spend + (c.spend || 0),
+        orders: acc.orders + (c.orders || 0),
+        sales: acc.sales + (c.sales || 0),
+      }),
+      { spend: 0, orders: 0, sales: 0 }
+    );
 
     summary.spend = Math.round(summary.spend * 100) / 100;
     summary.sales = Math.round(summary.sales * 100) / 100;
-    const summaryRoas = summary.spend > 0 ? Math.round((summary.sales / summary.spend) * 100) / 100 : 0;
+
+    const summaryRoas =
+      summary.spend > 0 ? Math.round((summary.sales / summary.spend) * 100) / 100 : 0;
 
     // حساب effective_end
     let effectiveEnd = normalizedEnd;
@@ -324,9 +373,10 @@ export async function GET(
         ad_account_id: adAccountId,
         fields_used: fields,
         campaigns_count: campaignsList.length,
-        stats_rows: Object.keys(campaignStatsMap).length,
+        stats_rows: Object.keys(campaignStatsMap).length, // ✅ الآن سيصبح 6 (أو أكثر) بدل 1
         stats_url: statsUrl,
         raw_stats: statsData,
+        sample_mapped_campaign_ids: Object.keys(campaignStatsMap).slice(0, 10),
       };
     }
 
@@ -336,12 +386,14 @@ export async function GET(
     }
 
     return NextResponse.json(response);
-
   } catch (error: any) {
     console.error('Snapchat campaigns error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Internal server error',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Internal server error',
+      },
+      { status: 500 }
+    );
   }
 }
