@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
 interface Store {
   id: string;
@@ -33,6 +32,7 @@ export default function SnapchatDiagnosticsPage() {
   const [selectedAdAccount, setSelectedAdAccount] = useState<string>('');
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, TestResult | null>>({});
+  const [storesLoading, setStoresLoading] = useState(true);
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -40,22 +40,25 @@ export default function SnapchatDiagnosticsPage() {
   });
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  // جلب المتاجر
+  // جلب المتاجر من API
   useEffect(() => {
     async function fetchStores() {
-      const { data } = await supabase
-        .from('stores')
-        .select('id, name')
-        .order('name');
-      if (data) setStores(data);
+      try {
+        const res = await fetch('/api/admin/stores');
+        const data = await res.json();
+        if (data.stores) {
+          setStores(data.stores);
+        } else if (Array.isArray(data)) {
+          setStores(data);
+        }
+      } catch (error) {
+        console.error('Error fetching stores:', error);
+      } finally {
+        setStoresLoading(false);
+      }
     }
     fetchStores();
-  }, [supabase]);
+  }, []);
 
   // اختبار Organizations عند اختيار متجر
   const testOrganizations = async () => {
@@ -306,15 +309,20 @@ export default function SnapchatDiagnosticsPage() {
                 setSelectedAdAccount('');
                 setResults({});
               }}
-              className="w-full p-3 bg-gray-700 rounded-lg"
+              className="w-full p-3 bg-gray-700 rounded-lg text-white"
             >
-              <option value="">-- اختر متجر --</option>
+              <option value="">
+                {storesLoading ? '⏳ جاري التحميل...' : `-- اختر متجر (${stores.length}) --`}
+              </option>
               {stores.map((store) => (
                 <option key={store.id} value={store.id}>
                   {store.name}
                 </option>
               ))}
             </select>
+            {stores.length === 0 && !storesLoading && (
+              <p className="text-red-400 text-sm mt-1">⚠️ لم يتم العثور على متاجر</p>
+            )}
           </div>
 
           <div>
@@ -322,13 +330,17 @@ export default function SnapchatDiagnosticsPage() {
             <select
               value={selectedAdAccount}
               onChange={(e) => setSelectedAdAccount(e.target.value)}
-              className="w-full p-3 bg-gray-700 rounded-lg"
+              className="w-full p-3 bg-gray-700 rounded-lg text-white"
               disabled={adAccounts.length === 0}
             >
-              <option value="">-- اختر حساب إعلاني --</option>
+              <option value="">
+                {adAccounts.length === 0 
+                  ? '-- اضغط Organizations أولاً --' 
+                  : `-- اختر حساب إعلاني (${adAccounts.length}) --`}
+              </option>
               {adAccounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.organization_name})
+                  {acc.name} {acc.organization_name ? `(${acc.organization_name})` : ''}
                 </option>
               ))}
             </select>
