@@ -62,7 +62,7 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
   const [data, setData] = useState<CampaignsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
-  const [visibleCampaigns, setVisibleCampaigns] = useState(10); // عدد الحملات المعروضة
+  // تم إزالة حد الحملات المعروضة - نعرض الكل
   
   // حالة الربط
   const [status, setStatus] = useState<SnapchatStatus>({
@@ -361,7 +361,7 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                   ].map(option => (
                     <button
                       key={option.value}
-                      onClick={() => { setRange(option.value as '7d' | '30d' | '90d'); setVisibleCampaigns(10); }}
+                      onClick={() => { setRange(option.value as '7d' | '30d' | '90d'); }}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                         range === option.value
                           ? 'bg-yellow-500 text-black font-bold'
@@ -401,17 +401,17 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                       <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
                         <p className="text-xs text-orange-400 mb-1">الصرف</p>
-                        <p className="text-2xl font-bold text-white">{data.summary.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold text-white">{data.summary.spend.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                         <p className="text-xs text-orange-400/70">ر.س</p>
                       </div>
                       <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
                         <p className="text-xs text-green-400 mb-1">الطلبات</p>
-                        <p className="text-2xl font-bold text-white">{data.summary.orders.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-white">{data.summary.orders.toLocaleString('en-US')}</p>
                         <p className="text-xs text-green-400/70">طلب</p>
                       </div>
                       <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
                         <p className="text-xs text-blue-400 mb-1">المبيعات</p>
-                        <p className="text-2xl font-bold text-white">{data.summary.sales.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold text-white">{data.summary.sales.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                         <p className="text-xs text-blue-400/70">ر.س</p>
                       </div>
                       <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
@@ -441,16 +441,16 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                               </tr>
                             </thead>
                             <tbody>
-                              {data.campaigns.slice(0, visibleCampaigns).map((campaign) => (
+                              {data.campaigns.map((campaign) => (
                                 <tr key={campaign.campaign_id} className="border-t border-yellow-500/10 text-white hover:bg-yellow-900/20">
                                   <td className="py-2 pr-2 text-right truncate max-w-[200px]" title={campaign.campaign_name}>
                                     {campaign.campaign_name}
                                   </td>
-                                  <td className="py-2 text-center text-orange-400">{campaign.spend > 0 ? campaign.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '-'}</td>
-                                  <td className="py-2 text-center">{campaign.impressions > 0 ? campaign.impressions.toLocaleString() : '-'}</td>
-                                  <td className="py-2 text-center">{campaign.swipes > 0 ? campaign.swipes.toLocaleString() : '-'}</td>
-                                  <td className="py-2 text-center text-green-400">{campaign.orders > 0 ? campaign.orders.toLocaleString() : '-'}</td>
-                                  <td className="py-2 text-center text-blue-400">{campaign.sales > 0 ? campaign.sales.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '-'}</td>
+                                  <td className="py-2 text-center text-orange-400">{campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
+                                  <td className="py-2 text-center">{campaign.impressions > 0 ? campaign.impressions.toLocaleString('en-US') : '-'}</td>
+                                  <td className="py-2 text-center">{campaign.swipes > 0 ? campaign.swipes.toLocaleString('en-US') : '-'}</td>
+                                  <td className="py-2 text-center text-green-400">{campaign.orders > 0 ? campaign.orders.toLocaleString('en-US') : '-'}</td>
+                                  <td className="py-2 text-center text-blue-400">{campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
                                   <td className="py-2 text-center">{campaign.cpa > 0 ? campaign.cpa.toFixed(0) : '-'}</td>
                                   <td className={`py-2 text-center ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
                                     {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
@@ -461,17 +461,10 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                           </table>
                         </div>
                         
-                        {/* زر المزيد */}
-                        {data.campaigns.length > visibleCampaigns && (
-                          <div className="text-center mt-4">
-                            <button
-                              onClick={() => setVisibleCampaigns(prev => prev + 10)}
-                              className="px-6 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors text-sm"
-                            >
-                              عرض المزيد ({data.campaigns.length - visibleCampaigns} حملة متبقية)
-                            </button>
-                          </div>
-                        )}
+                        {/* عرض عدد الحملات */}
+                        <div className="text-center mt-4 text-xs text-yellow-400/70">
+                          إجمالي الحملات: {data.campaigns.length}
+                        </div>
                       </>
                     ) : (
                       <div className="text-center py-8 text-yellow-400/70">
