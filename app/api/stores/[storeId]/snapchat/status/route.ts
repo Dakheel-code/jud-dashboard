@@ -2,6 +2,7 @@
  * GET /api/stores/[storeId]/snapchat/status
  * 
  * يرجع حالة ربط Snapchat للمتجر
+ * المصدر الوحيد للحقيقة: جدول ad_platform_accounts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,37 +10,43 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase configuration missing');
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { storeId: string } }
 ) {
   try {
     const storeId = params.storeId;
-    console.log('=== Snapchat Status Route Hit ===', { storeId });
+    console.log('=== Snapchat Status Route ===', { storeId });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = getSupabaseAdmin();
 
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({
-        connected: false,
-        needs_reauth: false,
-        ad_account_selected: false,
-        ad_account_name: null,
-        ad_account_id: null,
-        error: 'Database not configured',
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // جلب بيانات الربط من قاعدة البيانات
+    // جلب بيانات الربط من جدول ad_platform_accounts (نفس الجدول الذي يستخدمه token-manager)
     const { data: integration, error: integrationError } = await supabase
-      .from('platform_tokens')
+      .from('ad_platform_accounts')
       .select('*')
       .eq('store_id', storeId)
       .eq('platform', 'snapchat')
       .single();
+
+    console.log('Status query result:', { 
+      storeId, 
+      found: !!integration, 
+      error: integrationError?.message,
+      status: integration?.status,
+      hasAccessToken: !!integration?.access_token_enc,
+      hasAdAccount: !!integration?.ad_account_id,
+    });
 
     if (integrationError || !integration) {
       // لا يوجد ربط
@@ -50,30 +57,50 @@ export async function GET(
         ad_account_name: null,
         ad_account_id: null,
         organization_id: null,
+        debug: { error: integrationError?.message, storeId },
       });
     }
 
-    // التحقق من حالة الربط
-    const hasAccessToken = !!integration.access_token;
+    // التحقق من حالة الربط بناءً على DB فقط
+    const hasAccessToken = !!integration.access_token_enc;
+    const hasRefreshToken = !!integration.refresh_token_enc;
     const hasAdAccount = !!integration.ad_account_id;
-    const needsReauth = integration.status === 'needs_reauth' || !hasAccessToken;
+    const statusIsConnected = integration.status === 'connected';
+    const statusNeedsReauth = integration.status === 'needs_reauth';
 
-    // التحقق من صلاحية التوكن (إذا انتهى)
+    // التحقق من صلاحية التوكن
     let tokenExpired = false;
-    if (integration.expires_at) {
-      const expiresAt = new Date(integration.expires_at);
+    if (integration.token_expires_at) {
+      const expiresAt = new Date(integration.token_expires_at);
       tokenExpired = expiresAt < new Date();
     }
 
-    return NextResponse.json({
-      connected: hasAccessToken && !tokenExpired,
-      needs_reauth: needsReauth || tokenExpired,
+    // connected = لديه access_token أو refresh_token ولم يكن status=needs_reauth
+    const connected = (hasAccessToken || hasRefreshToken) && !statusNeedsReauth && !tokenExpired;
+    
+    // needs_reauth = status=needs_reauth أو التوكن منتهي بدون refresh
+    const needsReauth = statusNeedsReauth || (tokenExpired && !hasRefreshToken);
+
+    const response = {
+      connected,
+      needs_reauth: needsReauth,
       ad_account_selected: hasAdAccount,
       ad_account_name: integration.ad_account_name || null,
       ad_account_id: integration.ad_account_id || null,
       organization_id: integration.organization_id || null,
       status: integration.status,
-    });
+      debug: {
+        storeId,
+        hasAccessToken,
+        hasRefreshToken,
+        hasAdAccount,
+        tokenExpired,
+        dbStatus: integration.status,
+      },
+    };
+
+    console.log('Status response:', response);
+    return NextResponse.json(response);
 
   } catch (error: any) {
     console.error('Snapchat status error:', error);

@@ -13,7 +13,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { storeId, ad_account_id, ad_account_name, organization_id } = body;
 
+    console.log('=== Select Account Request ===', { 
+      storeId, 
+      ad_account_id, 
+      ad_account_name, 
+      organization_id 
+    });
+
     if (!storeId || !ad_account_id || !ad_account_name) {
+      console.error('Missing required fields:', { storeId, ad_account_id, ad_account_name });
       return NextResponse.json(
         { error: 'storeId, ad_account_id, and ad_account_name are required' },
         { status: 400 }
@@ -27,14 +35,20 @@ export async function POST(request: NextRequest) {
       organizationId: organization_id,
     });
 
+    console.log('=== Select Account Success ===', { storeId, ad_account_id });
+
     return NextResponse.json({
       success: true,
       message: 'Ad account selected successfully',
+      redirect: `/admin/store/${storeId}`,
     });
   } catch (error) {
     console.error('Snapchat select account error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to select ad account' },
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to select ad account' 
+      },
       { status: 500 }
     );
   }
