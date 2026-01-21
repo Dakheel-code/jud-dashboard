@@ -66,6 +66,12 @@ function CampaignsContent() {
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [campaignSearch, setCampaignSearch] = useState('');
   const [visibleCampaigns, setVisibleCampaigns] = useState(5);
+  
+  // التحكم في الحملات
+  const [updatingCampaign, setUpdatingCampaign] = useState<string | null>(null);
+  const [showBudgetModal, setShowBudgetModal] = useState<string | null>(null);
+  const [budgetValue, setBudgetValue] = useState('');
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Load stores
   useEffect(() => {
@@ -147,6 +153,73 @@ function CampaignsContent() {
     setShowStoreDropdown(false);
     setStoreSearch('');
     router.push(`/admin/campaigns?storeId=${store.id}`);
+  };
+
+  // إيقاف/استئناف الحملة
+  const toggleCampaignStatus = async (campaignId: string, currentStatus: string) => {
+    if (!selectedStoreId) return;
+    
+    setUpdatingCampaign(campaignId);
+    setActionMessage(null);
+    
+    try {
+      const action = currentStatus === 'ACTIVE' ? 'pause' : 'resume';
+      const response = await fetch(`/api/admin/campaigns/${campaignId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: selectedStoreId, action })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setActionMessage({ type: 'success', text: result.message });
+        // تحديث الحملات
+        fetchCampaigns();
+      } else {
+        setActionMessage({ type: 'error', text: result.error || 'فشل في تحديث الحملة' });
+      }
+    } catch (err) {
+      setActionMessage({ type: 'error', text: 'خطأ في الاتصال' });
+    } finally {
+      setUpdatingCampaign(null);
+      setTimeout(() => setActionMessage(null), 3000);
+    }
+  };
+
+  // تحديث ميزانية الحملة
+  const updateCampaignBudget = async () => {
+    if (!selectedStoreId || !showBudgetModal || !budgetValue) return;
+    
+    setUpdatingCampaign(showBudgetModal);
+    setActionMessage(null);
+    
+    try {
+      // تحويل الميزانية إلى micro (× 1,000,000)
+      const budgetMicro = parseFloat(budgetValue) * 1000000;
+      
+      const response = await fetch(`/api/admin/campaigns/${showBudgetModal}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: selectedStoreId, daily_budget_micro: budgetMicro })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setActionMessage({ type: 'success', text: 'تم تحديث الميزانية بنجاح' });
+        setShowBudgetModal(null);
+        setBudgetValue('');
+        fetchCampaigns();
+      } else {
+        setActionMessage({ type: 'error', text: result.error || 'فشل في تحديث الميزانية' });
+      }
+    } catch (err) {
+      setActionMessage({ type: 'error', text: 'خطأ في الاتصال' });
+    } finally {
+      setUpdatingCampaign(null);
+      setTimeout(() => setActionMessage(null), 3000);
+    }
   };
 
   const selectedStore = stores.find(s => s.id === selectedStoreId);
@@ -421,6 +494,7 @@ function CampaignsContent() {
                             <th className="text-center py-3 px-2">الطلبات</th>
                             <th className="text-center py-3 px-2">المبيعات</th>
                             <th className="text-center py-3 px-2">ROAS</th>
+                            <th className="text-center py-3 px-2">الإجراءات</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -457,6 +531,47 @@ function CampaignsContent() {
                               </td>
                               <td className={`py-3 px-2 text-center ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
                                 {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
+                              </td>
+                              <td className="py-3 px-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {/* زر إيقاف/استئناف */}
+                                  <button
+                                    onClick={() => toggleCampaignStatus(campaign.campaign_id, campaign.status)}
+                                    disabled={updatingCampaign === campaign.campaign_id}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                      campaign.status === 'ACTIVE' 
+                                        ? 'text-yellow-400 hover:bg-yellow-500/20' 
+                                        : 'text-green-400 hover:bg-green-500/20'
+                                    } disabled:opacity-50`}
+                                    title={campaign.status === 'ACTIVE' ? 'إيقاف الحملة' : 'استئناف الحملة'}
+                                  >
+                                    {updatingCampaign === campaign.campaign_id ? (
+                                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                      </svg>
+                                    ) : campaign.status === 'ACTIVE' ? (
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  {/* زر تعديل الميزانية */}
+                                  <button
+                                    onClick={() => setShowBudgetModal(campaign.campaign_id)}
+                                    className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-colors"
+                                    title="تعديل الميزانية"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -496,6 +611,76 @@ function CampaignsContent() {
             </div>
           </>
         )}
+
+      {/* رسالة الإشعار */}
+      {actionMessage && (
+        <div className={`fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-96 p-4 rounded-xl shadow-lg z-50 ${
+          actionMessage.type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
+        } text-white`}>
+          <div className="flex items-center gap-3">
+            {actionMessage.type === 'success' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{actionMessage.text}</span>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة تعديل الميزانية */}
+      {showBudgetModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">تعديل الميزانية اليومية</h3>
+              <button
+                onClick={() => { setShowBudgetModal(null); setBudgetValue(''); }}
+                className="text-purple-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">الميزانية اليومية (ر.س)</label>
+                <input
+                  type="number"
+                  value={budgetValue}
+                  onChange={(e) => setBudgetValue(e.target.value)}
+                  placeholder="أدخل الميزانية اليومية"
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                  min="0"
+                  step="1"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={updateCampaignBudget}
+                  disabled={!budgetValue || updatingCampaign === showBudgetModal}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-fuchsia-500 transition-all disabled:opacity-50"
+                >
+                  {updatingCampaign === showBudgetModal ? 'جاري التحديث...' : 'حفظ'}
+                </button>
+                <button
+                  onClick={() => { setShowBudgetModal(null); setBudgetValue(''); }}
+                  className="px-6 py-3 border border-purple-500/30 text-purple-300 rounded-xl hover:bg-purple-500/10 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
