@@ -35,14 +35,45 @@ function normalizeToStartOfHour(date: Date): string {
 }
 
 /**
- * حساب تاريخ البداية حسب الفترة
+ * حساب تاريخ البداية والنهاية حسب الفترة
+ * الفترات 7d/30d/90d تستثني اليوم الحالي (من أمس للخلف)
+ * today = اليوم الحالي فقط
+ * yesterday = أمس فقط
  */
-function getStartDate(range: string): Date {
+function getDateRange(range: string): { start: Date; end: Date } {
   const now = new Date();
+  
+  if (range === 'today') {
+    // اليوم: من بداية اليوم إلى الآن
+    const start = new Date(now);
+    start.setUTCHours(0, 0, 0, 0);
+    return { start, end: now };
+  }
+  
+  if (range === 'yesterday') {
+    // أمس: من بداية أمس إلى نهاية أمس
+    const start = new Date(now);
+    start.setDate(start.getDate() - 1);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setUTCHours(23, 59, 59, 999);
+    return { start, end };
+  }
+  
+  // باقي الفترات: تستثني اليوم الحالي
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
-  const start = new Date(now);
-  start.setDate(start.getDate() - days);
-  return start;
+  
+  // النهاية = نهاية أمس (23:59:59)
+  const end = new Date(now);
+  end.setDate(end.getDate() - 1);
+  end.setUTCHours(23, 59, 59, 999);
+  
+  // البداية = قبل X أيام من أمس
+  const start = new Date(end);
+  start.setDate(start.getDate() - days + 1);
+  start.setUTCHours(0, 0, 0, 0);
+  
+  return { start, end };
 }
 
 export async function GET(
@@ -130,10 +161,9 @@ export async function GET(
     const headers = { Authorization: `Bearer ${accessToken}` };
 
     // حساب التواريخ
-    const now = new Date();
-    const startDate = getStartDate(range);
+    const { start: startDate, end: endDate } = getDateRange(range);
     const normalizedStart = normalizeToStartOfDay(startDate);
-    const normalizedEnd = normalizeToStartOfHour(now);
+    const normalizedEnd = normalizeToStartOfHour(endDate);
 
     // ========== الخطوة 1: جلب الحملات ==========
     const campaignsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(

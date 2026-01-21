@@ -57,7 +57,7 @@ interface SnapchatStatus {
 
 export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CampaignsData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -352,16 +352,18 @@ export default function SnapchatCampaignsSection({ storeId }: SnapchatCampaignsS
                 </div>
 
                 {/* Range Selector */}
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
                   <span className="text-sm text-yellow-300">الفترة:</span>
                   {[
+                    { value: 'today', label: 'اليوم' },
+                    { value: 'yesterday', label: 'أمس' },
                     { value: '7d', label: '7 أيام' },
                     { value: '30d', label: '30 يوم' },
                     { value: '90d', label: '90 يوم' },
                   ].map(option => (
                     <button
                       key={option.value}
-                      onClick={() => { setRange(option.value as '7d' | '30d' | '90d'); }}
+                      onClick={() => { setRange(option.value as 'today' | 'yesterday' | '7d' | '30d' | '90d'); }}
                       className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                         range === option.value
                           ? 'bg-yellow-500 text-black font-bold'

@@ -63,9 +63,8 @@ function CampaignsContent() {
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
 
-  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [campaignSearch, setCampaignSearch] = useState('');
-  const [visibleCampaigns, setVisibleCampaigns] = useState(10);
 
   // Load stores
   useEffect(() => {
@@ -303,13 +302,15 @@ function CampaignsContent() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-purple-300">الفترة:</span>
                     {[
+                      { value: 'today', label: 'اليوم' },
+                      { value: 'yesterday', label: 'أمس' },
                       { value: '7d', label: '7 أيام' },
                       { value: '30d', label: '30 يوم' },
                       { value: '90d', label: '90 يوم' },
                     ].map(option => (
                       <button
                         key={option.value}
-                        onClick={() => { setRange(option.value as '7d' | '30d' | '90d'); setVisibleCampaigns(10); }}
+                        onClick={() => { setRange(option.value as 'today' | 'yesterday' | '7d' | '30d' | '90d'); }}
                         className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                           range === option.value
                             ? 'bg-purple-500 text-white font-bold'
@@ -423,7 +424,7 @@ function CampaignsContent() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredCampaigns.slice(0, visibleCampaigns).map((campaign) => (
+                          {filteredCampaigns.map((campaign) => (
                             <tr key={campaign.campaign_id} className="border-t border-purple-500/10 text-white hover:bg-purple-900/20">
                               <td className="py-3 px-4 text-right">
                                 <div className="truncate max-w-[200px]" title={campaign.campaign_name}>
@@ -440,19 +441,19 @@ function CampaignsContent() {
                                 </span>
                               </td>
                               <td className="py-3 px-2 text-center text-orange-400">
-                                {campaign.spend > 0 ? campaign.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '-'}
+                                {campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}
                               </td>
                               <td className="py-3 px-2 text-center">
-                                {campaign.impressions > 0 ? campaign.impressions.toLocaleString() : '-'}
+                                {campaign.impressions > 0 ? campaign.impressions.toLocaleString('en-US') : '-'}
                               </td>
                               <td className="py-3 px-2 text-center">
-                                {campaign.swipes > 0 ? campaign.swipes.toLocaleString() : '-'}
+                                {campaign.swipes > 0 ? campaign.swipes.toLocaleString('en-US') : '-'}
                               </td>
                               <td className="py-3 px-2 text-center text-green-400">
-                                {campaign.orders > 0 ? campaign.orders.toLocaleString() : '-'}
+                                {campaign.orders > 0 ? campaign.orders.toLocaleString('en-US') : '-'}
                               </td>
                               <td className="py-3 px-2 text-center text-emerald-400">
-                                {campaign.sales > 0 ? campaign.sales.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '-'}
+                                {campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}
                               </td>
                               <td className={`py-3 px-2 text-center ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
                                 {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
@@ -466,17 +467,10 @@ function CampaignsContent() {
                       </table>
                     </div>
 
-                    {/* Load More */}
-                    {filteredCampaigns.length > visibleCampaigns && (
-                      <div className="p-4 text-center border-t border-purple-500/20">
-                        <button
-                          onClick={() => setVisibleCampaigns(prev => prev + 10)}
-                          className="px-6 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors text-sm"
-                        >
-                          عرض المزيد ({filteredCampaigns.length - visibleCampaigns} حملة متبقية)
-                        </button>
-                      </div>
-                    )}
+                    {/* عدد الحملات */}
+                    <div className="p-4 text-center border-t border-purple-500/20 text-xs text-purple-400/70">
+                      إجمالي الحملات: {filteredCampaigns.length}
+                    </div>
                   </>
                 )}
               </div>
