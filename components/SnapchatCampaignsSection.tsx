@@ -550,14 +550,72 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
                     {/* Campaigns Table */}
                     {data.campaigns.length > 0 ? (
                       <>
-                        <div className="overflow-x-auto -mx-2 px-2">
-                          <table className="w-full text-xs sm:text-sm min-w-[500px]">
+                        {/* Mobile: Card View */}
+                        <div className="block sm:hidden space-y-2">
+                          {data.campaigns.slice(0, visibleCampaigns).map((campaign) => (
+                            <div 
+                              key={campaign.campaign_id}
+                              className="bg-yellow-900/20 rounded-xl p-3 border border-yellow-500/20"
+                              onClick={() => fetchCampaignAds(campaign.campaign_id)}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-white text-sm font-medium truncate max-w-[200px]">{campaign.campaign_name}</span>
+                                <svg className={`w-4 h-4 text-yellow-400 transition-transform flex-shrink-0 ${expandedCampaign === campaign.campaign_id ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-center">
+                                <div>
+                                  <p className="text-[10px] text-orange-400">الصرف</p>
+                                  <p className="text-xs text-white font-bold">{campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-green-400">الطلبات</p>
+                                  <p className="text-xs text-white font-bold">{campaign.orders > 0 ? campaign.orders : '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-blue-400">المبيعات</p>
+                                  <p className="text-xs text-white font-bold">{campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-purple-400">ROAS</p>
+                                  <p className={`text-xs font-bold ${campaign.roas < 1 ? 'text-red-400' : 'text-white'}`}>{campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}</p>
+                                </div>
+                              </div>
+                              {/* الإعلانات الفرعية للجوال */}
+                              {expandedCampaign === campaign.campaign_id && (
+                                <div className="mt-3 pt-3 border-t border-yellow-500/20">
+                                  {loadingAds === campaign.campaign_id ? (
+                                    <div className="flex items-center justify-center py-2">
+                                      <div className="w-5 h-5 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                                    </div>
+                                  ) : campaignAds[campaign.campaign_id]?.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {campaignAds[campaign.campaign_id].map((ad) => (
+                                        <div key={ad.id} className="bg-black/20 rounded-lg p-2 text-xs">
+                                          <p className="text-white truncate">{ad.name}</p>
+                                          <span className={`text-[10px] ${ad.status === 'ACTIVE' ? 'text-green-400' : 'text-yellow-400'}`}>{ad.status}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-yellow-400/70 text-xs text-center">لا توجد إعلانات</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Desktop: Table View */}
+                        <div className="hidden sm:block overflow-x-auto -mx-2 px-2">
+                          <table className="w-full text-xs sm:text-sm">
                             <thead>
                               <tr className="text-yellow-400 text-[10px] sm:text-xs border-b border-yellow-500/20">
                                 <th className="text-right pb-2 pr-2">الحملة</th>
                                 <th className="text-center pb-2">الصرف</th>
-                                <th className="text-center pb-2 hidden sm:table-cell">الظهور</th>
-                                <th className="text-center pb-2 hidden sm:table-cell">الضغطات</th>
+                                <th className="text-center pb-2">الظهور</th>
+                                <th className="text-center pb-2">الضغطات</th>
                                 <th className="text-center pb-2">الطلبات</th>
                                 <th className="text-center pb-2">المبيعات</th>
                                 <th className="text-center pb-2">ROAS</th>
@@ -570,22 +628,22 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
                                     className="border-t border-yellow-500/10 text-white hover:bg-yellow-900/20 cursor-pointer"
                                     onClick={() => fetchCampaignAds(campaign.campaign_id)}
                                   >
-                                    <td className="py-2 pr-2 text-right text-[10px] sm:text-xs">
+                                    <td className="py-2 pr-2 text-right text-xs">
                                       <div className="flex items-center gap-2">
                                         <svg className={`w-4 h-4 text-yellow-400 transition-transform ${expandedCampaign === campaign.campaign_id ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
-                                        <span className="truncate max-w-[80px] sm:max-w-[180px]" title={campaign.campaign_name}>
+                                        <span className="truncate max-w-[180px]" title={campaign.campaign_name}>
                                           {campaign.campaign_name}
                                         </span>
                                       </div>
                                     </td>
-                                    <td className="py-2 text-center text-orange-400 text-[10px] sm:text-xs">{campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
-                                    <td className="py-2 text-center hidden sm:table-cell">{campaign.impressions > 0 ? campaign.impressions.toLocaleString('en-US') : '-'}</td>
-                                    <td className="py-2 text-center hidden sm:table-cell">{campaign.swipes > 0 ? campaign.swipes.toLocaleString('en-US') : '-'}</td>
-                                    <td className="py-2 text-center text-green-400 text-[10px] sm:text-xs">{campaign.orders > 0 ? campaign.orders.toLocaleString('en-US') : '-'}</td>
-                                    <td className="py-2 text-center text-blue-400 text-[10px] sm:text-xs">{campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
-                                    <td className={`py-2 text-center text-[10px] sm:text-xs ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
+                                    <td className="py-2 text-center text-orange-400 text-xs">{campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
+                                    <td className="py-2 text-center">{campaign.impressions > 0 ? campaign.impressions.toLocaleString('en-US') : '-'}</td>
+                                    <td className="py-2 text-center">{campaign.swipes > 0 ? campaign.swipes.toLocaleString('en-US') : '-'}</td>
+                                    <td className="py-2 text-center text-green-400 text-xs">{campaign.orders > 0 ? campaign.orders.toLocaleString('en-US') : '-'}</td>
+                                    <td className="py-2 text-center text-blue-400 text-xs">{campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}</td>
+                                    <td className={`py-2 text-center text-xs ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
                                       {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
                                     </td>
                                   </tr>
