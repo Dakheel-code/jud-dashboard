@@ -105,9 +105,11 @@ const menuItems: MenuItem[] = [
 interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -253,20 +255,33 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
       <aside 
         className={`
-          fixed top-0 right-0 h-screen w-72 bg-[#0a0118] border-l border-purple-500/20 z-50
-          transform transition-transform duration-300 ease-in-out
+          fixed top-0 right-0 h-screen bg-[#0a0118] border-l border-purple-500/20 z-50
+          transform transition-all duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           lg:translate-x-0 lg:static lg:z-auto
+          ${isCollapsed ? 'lg:w-20' : 'w-72'}
         `}
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className="p-6 border-b border-purple-500/20">
+          <div className={`p-6 border-b border-purple-500/20 ${isCollapsed ? 'lg:p-4' : ''}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
-                <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
-                <div>
+              <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+                <img src="/logo.png" alt="Logo" className={`object-contain ${isCollapsed ? 'lg:w-10 lg:h-10 w-12 h-12' : 'w-12 h-12'}`} />
+                {!isCollapsed && (
+                  <>
+                    <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden lg:block"></div>
+                    <div className="hidden lg:block">
+                      <h2 className="text-white text-lg uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</h2>
+                      <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
+                    </div>
+                  </>
+                )}
+                {/* Mobile: always show name */}
+                <div className="lg:hidden">
+                  <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+                </div>
+                <div className="lg:hidden">
                   <h2 className="text-white text-lg uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</h2>
                   <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
                 </div>
@@ -280,17 +295,29 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 </svg>
               </button>
             </div>
+            {/* Collapse Toggle Button - Desktop Only */}
+            <button
+              onClick={onToggleCollapse}
+              className="hidden lg:flex absolute left-0 top-8 -translate-x-1/2 w-6 h-6 bg-purple-600 hover:bg-purple-500 rounded-full items-center justify-center text-white shadow-lg transition-all z-10"
+              title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
+            >
+              <svg className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
 
-          <nav className="flex-1 p-4 overflow-y-auto">
+          <nav className={`flex-1 overflow-y-auto ${isCollapsed ? 'lg:p-2 p-4' : 'p-4'}`}>
             {menuItems.map((item, index) => {
               const isActive = checkActive(item.href);
               return (
                 <button
                   key={index}
                   onClick={(e) => handleNavClick(e, item.href)}
+                  title={isCollapsed ? item.label : undefined}
                   className={`
-                    w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all text-right
+                    w-full flex items-center gap-3 mb-1 rounded-xl transition-all text-right
+                    ${isCollapsed ? 'lg:justify-center lg:px-2 lg:py-3 px-4 py-3' : 'px-4 py-3'}
                     ${isActive 
                       ? 'bg-gradient-to-r from-purple-600/30 to-fuchsia-600/30 text-white border border-purple-500/30' 
                       : 'text-purple-300 hover:bg-purple-500/10 hover:text-white border border-transparent'
@@ -298,45 +325,57 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   `}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
+                  {!isCollapsed && <span className="font-medium">{item.label}</span>}
+                  {isCollapsed && <span className="font-medium lg:hidden">{item.label}</span>}
                 </button>
               );
             })}
           </nav>
 
           {/* User Profile & Logout - Fixed at Bottom */}
-          <div className="mt-auto p-4 border-t border-purple-500/20 bg-[#0a0118]">
+          <div className={`mt-auto border-t border-purple-500/20 bg-[#0a0118] ${isCollapsed ? 'lg:p-2 p-4' : 'p-4'}`}>
             {/* Profile Section */}
             <button
               onClick={() => setShowProfileModal(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 bg-purple-900/30 hover:bg-purple-500/20 rounded-xl transition-all text-right border border-purple-500/20 mb-3"
+              title={isCollapsed ? user?.name || 'الملف الشخصي' : undefined}
+              className={`w-full flex items-center gap-3 bg-purple-900/30 hover:bg-purple-500/20 rounded-xl transition-all text-right border border-purple-500/20 mb-3 ${isCollapsed ? 'lg:justify-center lg:px-2 lg:py-3 px-4 py-3' : 'px-4 py-3'}`}
             >
               {user?.avatar ? (
                 <img 
                   src={user.avatar} 
                   alt={user.name} 
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-purple-500/30"
+                  className={`rounded-full object-cover flex-shrink-0 border-2 border-purple-500/30 ${isCollapsed ? 'lg:w-8 lg:h-8 w-10 h-10' : 'w-10 h-10'}`}
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                <div className={`rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold flex-shrink-0 ${isCollapsed ? 'lg:w-8 lg:h-8 lg:text-sm w-10 h-10 text-lg' : 'w-10 h-10 text-lg'}`}>
                   {user?.name?.charAt(0) || 'م'}
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
-                <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
-              </div>
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
+                  <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
+                </div>
+              )}
+              {isCollapsed && (
+                <div className="flex-1 min-w-0 lg:hidden">
+                  <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
+                  <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
+                </div>
+              )}
             </button>
 
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-red-500/20"
+              title={isCollapsed ? 'تسجيل الخروج' : undefined}
+              className={`w-full flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-all border border-red-500/20 ${isCollapsed ? 'lg:px-2 lg:py-3 px-4 py-3' : 'px-4 py-3'}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              <span className="font-medium">تسجيل الخروج</span>
+              {!isCollapsed && <span className="font-medium">تسجيل الخروج</span>}
+              {isCollapsed && <span className="font-medium lg:hidden">تسجيل الخروج</span>}
             </button>
           </div>
         </div>
