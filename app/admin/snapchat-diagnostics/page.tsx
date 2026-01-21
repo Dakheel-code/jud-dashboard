@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 
 interface Store {
   id: string;
-  name: string;
+  name?: string;
+  store_name?: string;
 }
 
 interface AdAccount {
@@ -347,7 +348,7 @@ export default function SnapchatDiagnosticsPage() {
               </option>
               {stores.map((store) => (
                 <option key={store.id} value={store.id}>
-                  {store.name}
+                  {store.store_name || store.name || 'متجر بدون اسم'}
                 </option>
               ))}
             </select>
