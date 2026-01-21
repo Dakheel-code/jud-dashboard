@@ -345,39 +345,39 @@ function CampaignsContent() {
             )}
 
             {/* Summary Cards */}
-            {snapchatStatus?.connected && campaignsData && (
+            {snapchatStatus?.connected && campaignsData?.summary && (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
                   <p className="text-xs text-orange-400 mb-1">الصرف</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.spend || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
                   <p className="text-xs text-orange-400/70">ر.س</p>
                 </div>
                 <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
                   <p className="text-xs text-blue-400 mb-1">الظهور</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.impressions.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.impressions || 0).toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-xl p-4 border border-cyan-500/20">
                   <p className="text-xs text-cyan-400 mb-1">الضغطات</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.swipes.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.swipes || 0).toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
                   <p className="text-xs text-green-400 mb-1">الطلبات</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.orders.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.orders || 0).toLocaleString()}</p>
                 </div>
                 <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl p-4 border border-emerald-500/20">
                   <p className="text-xs text-emerald-400 mb-1">المبيعات</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.sales.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.sales || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
                   <p className="text-xs text-emerald-400/70">ر.س</p>
                 </div>
                 <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
                   <p className="text-xs text-purple-400 mb-1">ROAS</p>
-                  <p className={`text-xl font-bold ${campaignsData.summary.roas < 1 ? 'text-red-400' : 'text-white'}`}>
-                    {campaignsData.summary.roas.toFixed(2)}x
+                  <p className={`text-xl font-bold ${(campaignsData.summary.roas || 0) < 1 ? 'text-red-400' : 'text-white'}`}>
+                    {(campaignsData.summary.roas || 0).toFixed(2)}x
                   </p>
                 </div>
                 <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 rounded-xl p-4 border border-pink-500/20">
                   <p className="text-xs text-pink-400 mb-1">CPA</p>
-                  <p className="text-xl font-bold text-white">{campaignsData.summary.cpa.toFixed(0)}</p>
+                  <p className="text-xl font-bold text-white">{(campaignsData.summary.cpa || 0).toFixed(0)}</p>
                   <p className="text-xs text-pink-400/70">ر.س</p>
                 </div>
               </div>
