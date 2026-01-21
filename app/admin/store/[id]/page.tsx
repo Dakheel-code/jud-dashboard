@@ -471,7 +471,52 @@ function StoreDetailsContent() {
       const isDirectConnected = directIntegration?.status === 'connected' && !!directIntegration?.ad_account_id;
       
       if (isDirectConnected) {
-        // استخدام API الربط المباشر
+        // Snapchat: استخدام endpoint الجديد المحسّن
+        if (platformKey === 'snapchat') {
+          // تحويل datePreset إلى range format
+          let range = '30d';
+          if (datePreset === 'last_7d') range = '7d';
+          else if (datePreset === 'last_30d' || datePreset === 'this_month') range = '30d';
+          else if (datePreset === 'last_14d') range = '30d';
+          else range = '30d';
+          
+          const url = `/api/admin/stores/${storeId}/snapchat-campaigns?range=${range}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          console.log(`Snapchat campaigns response:`, data);
+          
+          if (data.success && data.campaigns) {
+            // تحويل البيانات للتنسيق المتوقع
+            const formattedCampaigns = data.campaigns.map((c: any) => ({
+              campaign: c.campaign_name,
+              campaign_id: c.campaign_id,
+              clicks: c.swipes || 0,
+              impressions: c.impressions || 0,
+              spend: c.spend || 0,
+              conversions: c.orders || 0,
+              revenue: c.sales || 0,
+              status: c.status,
+              cpa: c.cpa || 0,
+              roas: c.roas || 0,
+            }));
+            
+            setPlatformCampaigns(prev => ({ ...prev, [platformKey]: formattedCampaigns }));
+            setPlatformInactiveCampaigns(prev => ({ ...prev, [platformKey]: [] }));
+            setPlatformTotals(prev => ({ 
+              ...prev, 
+              [platformKey]: {
+                spend: data.totals?.spend || 0,
+                clicks: data.totals?.swipes || 0,
+                impressions: data.totals?.impressions || 0,
+                conversions: data.totals?.orders || 0,
+                revenue: data.totals?.sales || 0,
+              }
+            }));
+            return;
+          }
+        }
+        
+        // باقي المنصات: استخدام API الربط المباشر القديم
         let url = `/api/integrations/${platformKey}/campaigns?storeId=${storeId}&datePreset=${datePreset}`;
         if (datePreset === 'custom' && customDateRange.start && customDateRange.end) {
           url += `&startDate=${customDateRange.start}&endDate=${customDateRange.end}`;
