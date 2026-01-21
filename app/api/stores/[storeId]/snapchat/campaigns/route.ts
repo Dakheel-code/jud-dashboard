@@ -70,20 +70,28 @@ export async function GET(
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب بيانات الربط من قاعدة البيانات
+    // جلب بيانات الربط من جدول ad_platform_accounts (نفس الجدول الذي يستخدمه token-manager)
     const { data: integration, error: integrationError } = await supabase
-      .from('platform_tokens')
+      .from('ad_platform_accounts')
       .select('*')
       .eq('store_id', storeId)
       .eq('platform', 'snapchat')
       .single();
+
+    console.log('Campaigns: Integration query result:', { 
+      storeId, 
+      found: !!integration, 
+      error: integrationError?.message,
+      hasAdAccount: !!integration?.ad_account_id,
+    });
 
     if (integrationError || !integration) {
       return NextResponse.json({
         success: false,
         error: 'Snapchat not connected',
         needs_connection: true,
-      }, { status: 404 });
+        debug: { storeId, error: integrationError?.message },
+      }, { status: 200 }); // 200 بدلاً من 404 لتجنب الخطأ في الواجهة
     }
 
     const adAccountId = integration.ad_account_id;
