@@ -130,17 +130,58 @@ export async function POST(request: Request) {
       owner_phone, 
       owner_email, 
       account_manager_id,
+      media_buyer_id,
       priority,
+      status,
       budget,
       notes,
-      client_id 
+      client_id,
+      subscription_start_date,
+      store_group_url,
+      category
     } = body;
 
     // التحقق من الحقول المطلوبة
-    if (!store_name || !store_url || !owner_phone) {
+    if (!store_name || !store_url || !owner_phone || !owner_name) {
       return NextResponse.json({ 
-        error: 'الحقول المطلوبة: اسم المتجر، رابط المتجر، رقم الجوال' 
+        error: 'الحقول المطلوبة: اسم المتجر، رابط المتجر، صاحب المتجر، رقم الجوال' 
       }, { status: 400 });
+    }
+
+    // تنظيف رقم الجوال (إزالة المسافات والرموز)
+    const cleanPhone = owner_phone.replace(/[^0-9+]/g, '');
+
+    // التحقق من وجود عميل بنفس رقم الجوال
+    let finalClientId = client_id || null;
+    
+    const { data: existingClient, error: clientCheckError } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('phone', cleanPhone)
+      .maybeSingle();
+
+    if (!clientCheckError && !existingClient && owner_name) {
+      // إضافة عميل جديد إذا لم يكن رقم الجوال موجوداً
+      const { data: newClient, error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          name: owner_name,
+          phone: cleanPhone,
+          email: owner_email || null
+        })
+        .select('id')
+        .single();
+
+      if (!clientError && newClient) {
+        finalClientId = newClient.id;
+        console.log('✅ New client created:', newClient.id);
+      } else {
+        console.log('⚠️ Could not create client:', clientError?.message);
+      }
+    } else if (existingClient) {
+      // استخدام العميل الموجود
+      finalClientId = existingClient.id;
+      console.log('ℹ️ Using existing client:', existingClient.id);
     }
 
     // تنظيف رابط المتجر - إزالة https:// و http:// و www.
@@ -155,14 +196,19 @@ export async function POST(request: Request) {
       .insert({
         store_name,
         store_url: cleanStoreUrl,
-        owner_name: owner_name || '-',
-        owner_phone,
+        owner_name: owner_name,
+        owner_phone: cleanPhone,
         owner_email: owner_email || null,
         account_manager_id: account_manager_id || null,
+        media_buyer_id: media_buyer_id || null,
         priority: priority || 'medium',
+        status: status || 'new',
         budget: budget || null,
         notes: notes || null,
-        client_id: client_id || null,
+        client_id: finalClientId,
+        subscription_start_date: subscription_start_date || null,
+        store_group_url: store_group_url || null,
+        category: category || null,
         is_active: true
       })
       .select()
@@ -179,7 +225,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       store: newStore,
-      message: 'تم إنشاء المتجر بنجاح'
+      message: 'تم إنشاء المتجر بنجاح',
+      clientCreated: finalClientId && !client_id && !existingClient
     });
 
   } catch (error) {

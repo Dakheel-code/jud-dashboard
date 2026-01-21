@@ -58,7 +58,7 @@ const menuItems: MenuItem[] = [
     label: 'المستخدمين',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
@@ -67,7 +67,7 @@ const menuItems: MenuItem[] = [
     label: 'العملاء',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
       </svg>
     ),
   },
@@ -78,6 +78,15 @@ const menuItems: MenuItem[] = [
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/attendance',
+    label: 'الحضور والانصراف',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
@@ -110,6 +119,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
   const [profileError, setProfileError] = useState('');
   const [profileSuccess, setProfileSuccess] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [pendingLeaveRequests, setPendingLeaveRequests] = useState(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('admin_user');
@@ -138,7 +148,23 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
         setUser({ name: 'مستخدم', role: 'account_manager' });
       }
     }
+    
+    // جلب عدد الطلبات المعلقة
+    fetchPendingLeaveRequests();
+    // تحديث كل 30 ثانية
+    const interval = setInterval(fetchPendingLeaveRequests, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchPendingLeaveRequests = async () => {
+    try {
+      const response = await fetch('/api/admin/leave-requests?status=pending');
+      const data = await response.json();
+      setPendingLeaveRequests(data.requests?.length || 0);
+    } catch (err) {
+      console.error('Failed to fetch pending leave requests:', err);
+    }
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -255,10 +281,10 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
       >
         <div className="flex flex-col h-full">
           {/* Logo Header */}
-          <div className={`p-6 border-b border-purple-500/20 ${isCollapsed ? 'lg:p-4' : ''}`}>
+          <div className="p-6 border-b border-purple-500/20">
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-                <img src="/logo.png" alt="Logo" className={`object-contain ${isCollapsed ? 'lg:w-10 lg:h-10 w-12 h-12' : 'w-12 h-12'}`} />
+                <img src="/logo.png" alt="Logo" className="object-contain w-12 h-12" />
                 {!isCollapsed && (
                   <>
                     <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden lg:block"></div>
@@ -286,10 +312,10 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                 </svg>
               </button>
             </div>
-            {/* Collapse Toggle Button - Desktop Only */}
+            {/* Collapse Toggle Button - على طرف القائمة مع سهم */}
             <button
               onClick={onToggleCollapse}
-              className="hidden lg:flex absolute left-0 top-8 -translate-x-1/2 w-6 h-6 bg-purple-600 hover:bg-purple-500 rounded-full items-center justify-center text-white shadow-lg transition-all z-10"
+              className="hidden lg:flex absolute left-0 top-[4.8rem] -translate-x-1/2 w-8 h-8 bg-purple-600 hover:bg-purple-500 rounded-full items-center justify-center text-white shadow-lg transition-all z-10"
               title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
             >
               <svg className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,25 +324,43 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
             </button>
           </div>
 
-          <nav className={`flex-1 overflow-y-auto ${isCollapsed ? 'lg:p-2 p-4' : 'p-4'}`}>
+          <nav className="flex-1 overflow-y-auto px-2 pt-4">
             {menuItems.map((item, index) => {
               const isActive = checkActive(item.href);
+              const isAttendance = item.href === '/admin/attendance';
+              const showBadge = isAttendance && pendingLeaveRequests > 0;
               return (
                 <button
                   key={index}
                   onClick={(e) => handleNavClick(e, item.href)}
                   title={isCollapsed ? item.label : undefined}
                   className={`
-                    w-full flex items-center gap-3 mb-1 rounded-xl transition-all text-right
-                    ${isCollapsed ? 'lg:justify-center lg:px-2 lg:py-3 px-4 py-3' : 'px-4 py-3'}
+                    w-full flex items-center gap-3 mb-1 rounded-xl text-right px-4 py-3 transition-colors relative
+                    ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
                     ${isActive 
                       ? 'bg-gradient-to-r from-purple-600/30 to-fuchsia-600/30 text-white border border-purple-500/30' 
                       : 'text-purple-300 hover:bg-purple-500/10 hover:text-white border border-transparent'
                     }
                   `}
                 >
-                  <span className="flex-shrink-0">{item.icon}</span>
-                  {!isCollapsed && <span className="font-medium">{item.label}</span>}
+                  <span className="flex-shrink-0 relative">
+                    {item.icon}
+                    {showBadge && isCollapsed && (
+                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                        {pendingLeaveRequests}
+                      </span>
+                    )}
+                  </span>
+                  {!isCollapsed && (
+                    <span className="font-medium flex-1 flex items-center justify-between">
+                      {item.label}
+                      {showBadge && (
+                        <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                          {pendingLeaveRequests}
+                        </span>
+                      )}
+                    </span>
+                  )}
                   {isCollapsed && <span className="font-medium lg:hidden">{item.label}</span>}
                 </button>
               );

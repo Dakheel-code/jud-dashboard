@@ -21,7 +21,7 @@ export async function GET(
     // جلب بيانات المستخدم
     const { data: user, error: userError } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, role, is_active, created_at, last_login')
+      .select('id, username, name, email, role, roles, is_active, created_at, last_login')
       .eq('id', userId)
       .single();
 

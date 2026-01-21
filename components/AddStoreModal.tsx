@@ -23,10 +23,21 @@ interface StoreFormData {
   owner_phone: string;
   owner_email: string;
   account_manager_id: string;
+  media_buyer_id: string;
   priority: 'high' | 'medium' | 'low';
+  status: 'new' | 'active' | 'paused' | 'expired';
+  category: string;
   budget: string;
   notes: string;
   client_id: string;
+  subscription_start_date: string;
+  store_group_url: string;
+}
+
+
+interface MediaBuyer {
+  id: string;
+  name: string;
 }
 
 interface AddStoreModalProps {
@@ -41,9 +52,14 @@ interface AddStoreModalProps {
     owner_phone?: string;
     owner_email?: string;
     account_manager_id?: string;
+    media_buyer_id?: string;
     priority?: 'high' | 'medium' | 'low';
+    status?: 'new' | 'active' | 'paused' | 'expired';
     budget?: string;
     notes?: string;
+    subscription_start_date?: string;
+    store_group_url?: string;
+    category?: string;
   } | null;
 }
 
@@ -54,23 +70,32 @@ const initialFormData: StoreFormData = {
   owner_phone: '',
   owner_email: '',
   account_manager_id: '',
+  media_buyer_id: '',
   priority: 'medium',
+  status: 'new',
+  category: '',
   budget: '',
   notes: '',
-  client_id: ''
+  client_id: '',
+  subscription_start_date: '',
+  store_group_url: ''
 };
 
 export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore }: AddStoreModalProps) {
   const [formData, setFormData] = useState<StoreFormData>(initialFormData);
   const [accountManagers, setAccountManagers] = useState<AccountManager[]>([]);
+  const [mediaBuyers, setMediaBuyers] = useState<MediaBuyer[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [storeCategories, setStoreCategories] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       fetchAccountManagers();
+      fetchMediaBuyers();
       fetchClients();
+      fetchStoreCategories();
       if (editingStore) {
         setFormData({
           store_name: editingStore.store_name || '',
@@ -79,10 +104,15 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
           owner_phone: editingStore.owner_phone || '',
           owner_email: editingStore.owner_email || '',
           account_manager_id: editingStore.account_manager_id || '',
+          media_buyer_id: editingStore.media_buyer_id || '',
           priority: editingStore.priority || 'medium',
+          status: editingStore.status || 'new',
+          category: editingStore.category || '',
           budget: editingStore.budget || '',
           notes: editingStore.notes || '',
-          client_id: (editingStore as any).client_id || ''
+          client_id: (editingStore as any).client_id || '',
+          subscription_start_date: editingStore.subscription_start_date || '',
+          store_group_url: editingStore.store_group_url || ''
         });
       } else {
         setFormData(initialFormData);
@@ -101,6 +131,19 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
     }
   };
 
+  const fetchMediaBuyers = async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+      const buyers = (data.users || []).filter((user: any) => 
+        user.roles?.includes('media_buyer') || user.role === 'media_buyer'
+      );
+      setMediaBuyers(buyers.map((u: any) => ({ id: u.id, name: u.name })));
+    } catch (err) {
+      console.error('Failed to fetch media buyers:', err);
+    }
+  };
+
   const fetchClients = async () => {
     try {
       const response = await fetch('/api/admin/clients', { cache: 'no-store' });
@@ -108,6 +151,16 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       setClients(data.clients || []);
     } catch (err) {
       console.error('Failed to fetch clients:', err);
+    }
+  };
+
+  const fetchStoreCategories = async () => {
+    try {
+      const response = await fetch('/api/admin/settings/store-categories');
+      const data = await response.json();
+      setStoreCategories(data.categories || []);
+    } catch (err) {
+      console.error('Failed to fetch store categories:', err);
     }
   };
 
@@ -217,10 +270,11 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-purple-300 mb-1">صاحب المتجر</label>
+              <label className="block text-sm font-medium text-purple-300 mb-1">صاحب المتجر *</label>
               <input
                 type="text"
                 name="owner_name"
+                required
                 value={formData.owner_name}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
@@ -242,79 +296,129 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-purple-300 mb-1">البريد الإلكتروني</label>
-            <input
-              type="email"
-              name="owner_email"
-              value={formData.owner_email}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-              placeholder="email@example.com"
-              dir="ltr"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-purple-300 mb-1">البريد الإلكتروني</label>
+              <input
+                type="email"
+                name="owner_email"
+                value={formData.owner_email}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                placeholder="email@example.com"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-purple-300 mb-1">تصنيف المتجر</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&>option]:bg-[#1a0a2e]"
+              >
+                <option value="" className="bg-[#1a0a2e]">-- اختر التصنيف --</option>
+                {storeCategories.map((cat: string) => (
+                  <option key={cat} value={cat} className="bg-[#1a0a2e]">{cat}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-purple-300 mb-1">الأولوية *</label>
+              <label className="block text-sm font-medium text-purple-300 mb-1">الأولوية</label>
               <select
                 name="priority"
                 value={formData.priority}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&>option]:bg-[#1a0a2e]"
               >
-                <option value="high">مرتفع</option>
-                <option value="medium">متوسط</option>
-                <option value="low">منخفض</option>
+                <option value="high" className="bg-[#1a0a2e]">مرتفع</option>
+                <option value="medium" className="bg-[#1a0a2e]">متوسط</option>
+                <option value="low" className="bg-[#1a0a2e]">منخفض</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-purple-300 mb-1">ميزانية الصرف</label>
-              <input
-                type="text"
-                name="budget"
-                value={formData.budget}
+              <label className="block text-sm font-medium text-purple-300 mb-1">الحالة</label>
+              <select
+                name="status"
+                value={formData.status}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                placeholder="مثال: 5000 ريال"
-              />
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&>option]:bg-[#1a0a2e]"
+              >
+                <option value="new" className="bg-[#1a0a2e]">جديد</option>
+                <option value="active" className="bg-[#1a0a2e]">نشط</option>
+                <option value="paused" className="bg-[#1a0a2e]">متوقف</option>
+                <option value="expired" className="bg-[#1a0a2e]">منتهي</option>
+              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-purple-300 mb-1">العميل (صاحب المتجر)</label>
-              <select
-                name="client_id"
-                value={formData.client_id}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-              >
-                <option value="">-- اختر العميل --</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name} {client.company_name ? `(${client.company_name})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-purple-300 mb-1">مدير الحساب المسؤول</label>
+              <label className="block text-sm font-medium text-purple-300 mb-1">مدير الحساب</label>
               <select
                 name="account_manager_id"
                 value={formData.account_manager_id}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&>option]:bg-[#1a0a2e]"
               >
-                <option value="">-- اختر مدير الحساب --</option>
+                <option value="" className="bg-[#1a0a2e]">غير محدد</option>
                 {accountManagers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
+                  <option key={manager.id} value={manager.id} className="bg-[#1a0a2e]">
                     {manager.name} ({manager.username})
                   </option>
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-purple-300 mb-1">ميديا باير</label>
+              <select
+                name="media_buyer_id"
+                value={formData.media_buyer_id}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&>option]:bg-[#1a0a2e]"
+              >
+                <option value="" className="bg-[#1a0a2e]">غير محدد</option>
+                {mediaBuyers.map((buyer) => (
+                  <option key={buyer.id} value={buyer.id} className="bg-[#1a0a2e]">
+                    {buyer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-purple-300 mb-1">تاريخ بداية الاشتراك</label>
+            <div className="relative" dir="ltr" lang="en-US">
+              <input
+                type="date"
+                name="subscription_start_date"
+                value={formData.subscription_start_date ? formData.subscription_start_date.split('T')[0] : ''}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert ${!formData.subscription_start_date ? 'text-transparent' : ''}`}
+                style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+                lang="en-US"
+              />
+              {!formData.subscription_start_date && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/70 pointer-events-none text-sm" dir="rtl">تاريخ بداية اطلاق اول حملة</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-purple-300 mb-1">رابط قناة التواصل</label>
+            <input
+              type="url"
+              name="store_group_url"
+              value={formData.store_group_url}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+              placeholder="https://chat.whatsapp.com/..."
+              dir="ltr"
+            />
           </div>
 
           <div>

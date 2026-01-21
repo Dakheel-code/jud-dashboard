@@ -233,14 +233,30 @@ function CampaignsContent() {
   ) || [];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
+        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">📊 الحملات الإعلانية</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+            <div>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
+                الحملات الإعلانية
+              </h1>
+              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة ومتابعة حملات سناب شات الإعلانية</p>
+            </div>
+          </div>
         </div>
 
         {/* Store Selector */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4 mb-6 relative z-[9999]">
           <div className="relative">
             <label className="block text-sm text-purple-300 mb-2">اختر المتجر</label>
             <button
@@ -263,7 +279,7 @@ function CampaignsContent() {
             </button>
 
             {showStoreDropdown && (
-              <div className="absolute z-[100] mt-2 w-full md:w-96 bg-purple-950 border border-purple-500/30 rounded-xl shadow-2xl max-h-80 overflow-hidden">
+              <div className="absolute z-[9999] mt-2 w-full md:w-96 bg-[#1a0a2e] border border-purple-500/30 rounded-xl shadow-2xl max-h-80 overflow-hidden">
                 <div className="p-2 border-b border-purple-500/20">
                   <input
                     type="text"
@@ -297,20 +313,10 @@ function CampaignsContent() {
           </div>
         </div>
 
-        {/* Empty State */}
-        {!selectedStoreId && (
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-12 text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <span className="text-4xl">🏪</span>
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">اختر متجر لعرض الحملات</h2>
-            <p className="text-purple-400">اختر متجر من القائمة أعلاه لعرض حملاته الإعلانية</p>
-          </div>
-        )}
-
+        
         {/* Store Content */}
         {selectedStoreId && (
-          <>
+          <div className="space-y-6">
             {/* Snapchat Status Card */}
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
               <div className="flex items-center justify-between">
@@ -609,7 +615,7 @@ function CampaignsContent() {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
 
       {/* رسالة الإشعار */}
@@ -681,6 +687,7 @@ function CampaignsContent() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

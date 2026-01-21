@@ -34,6 +34,7 @@ interface UserData {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
   is_active: boolean;
   created_at: string;
   last_login: string;
@@ -44,6 +45,10 @@ const ROLE_NAMES: Record<string, string> = {
   admin: 'المسؤول',
   team_leader: 'قائد فريق',
   account_manager: 'مدير حساب',
+  media_buyer: 'ميديا باير',
+  programmer: 'مبرمج',
+  designer: 'مصمم',
+  web_developer: 'مطور ويب',
 };
 
 // دالة لتنظيف رابط المتجر
@@ -56,6 +61,10 @@ const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
   team_leader: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   account_manager: 'bg-green-500/20 text-green-300 border-green-500/30',
+  media_buyer: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  programmer: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  designer: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  web_developer: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
 };
 
 function UserDetailsContent() {
@@ -66,10 +75,17 @@ function UserDetailsContent() {
   const [stores, setStores] = useState<Store[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // إحصائيات النشاط
+  const [activityStats, setActivityStats] = useState({
+    browsing: { total_hours_30_days: 0, sessions_count: 0 },
+    activity: { total_actions: 0, creates: 0, updates: 0, deletes: 0, task_completions: 0 }
+  });
 
   useEffect(() => {
     if (userId) {
       fetchUserData();
+      fetchActivityStats();
     }
   }, [userId]);
 
@@ -87,6 +103,16 @@ function UserDetailsContent() {
       console.error('Failed to fetch user data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActivityStats = async () => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/activity`);
+      const data = await response.json();
+      setActivityStats(data);
+    } catch (err) {
+      console.error('Failed to fetch activity stats:', err);
     }
   };
 
@@ -133,11 +159,13 @@ function UserDetailsContent() {
             </div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-purple-400">@{user.username}</span>
-                <span className={`px-3 py-1 rounded-full text-xs border ${ROLE_COLORS[user.role] || 'bg-gray-500/20 text-gray-300'}`}>
-                  {ROLE_NAMES[user.role] || user.role}
-                </span>
+                {(user.roles || [user.role]).map((role) => (
+                  <span key={role} className={`px-3 py-1 rounded-full text-xs border ${ROLE_COLORS[role] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
+                    {ROLE_NAMES[role] || role}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -181,6 +209,62 @@ function UserDetailsContent() {
             </div>
           </div>
         )}
+
+        {/* Activity Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/10 backdrop-blur-xl rounded-2xl p-4 border border-cyan-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-cyan-400">{activityStats.browsing?.total_hours_30_days || 0}</p>
+                <p className="text-cyan-400/70 text-xs">ساعات التصفح (30 يوم)</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 backdrop-blur-xl rounded-2xl p-4 border border-green-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-400">{activityStats.activity?.total_actions || 0}</p>
+                <p className="text-green-400/70 text-xs">إجمالي العمليات</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-400">{activityStats.activity?.creates || 0}</p>
+                <p className="text-purple-400/70 text-xs">عمليات الإضافة</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-orange-500/20 to-yellow-500/10 backdrop-blur-xl rounded-2xl p-4 border border-orange-500/30">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-orange-400">{activityStats.activity?.updates || 0}</p>
+                <p className="text-orange-400/70 text-xs">عمليات التعديل</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* User Info Card */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-8">
@@ -320,7 +404,6 @@ function UserDetailsContent() {
           )}
         </div>
       </div>
-
     </div>
   );
 }

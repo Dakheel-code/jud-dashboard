@@ -160,3 +160,44 @@ p, span, label, input, textarea {
 .font-bold {
   font-weight: 700 !important;
 }
+
+/* فرض الأرقام الإنجليزية على حقول التاريخ */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  font-family: system-ui, -apple-system, sans-serif !important;
+  font-feature-settings: "tnum" !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  font-family: system-ui, -apple-system, sans-serif !important;
+}
+
+/* إخفاء النص الافتراضي عندما يكون الحقل فارغ */
+input[type="date"].text-transparent::-webkit-datetime-edit {
+  color: transparent !important;
+}
+
+/* فرض الأرقام اللاتينية على جميع العناصر */
+input[type="date"],
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-inner-spin-button {
+  unicode-bidi: plaintext;
+  direction: ltr;
+}
+
+/* تغيير شكل الأرقام للاتينية */
+:root {
+  --date-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+input[type="date"] {
+  font-variant-numeric: lining-nums tabular-nums !important;
+  -webkit-locale: "en_US" !important;
+}

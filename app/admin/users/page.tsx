@@ -48,6 +48,23 @@ function UsersManagementContent() {
   const [resultModalType, setResultModalType] = useState<'success' | 'error'>('success');
   const [resultModalMessage, setResultModalMessage] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  
+  // نظام المكافآت
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [selectedUserForReward, setSelectedUserForReward] = useState<AdminUser | null>(null);
+  const [rewardForm, setRewardForm] = useState({
+    title: '',
+    points: 0,
+    description: '',
+    type: 'recognition' as 'bonus' | 'achievement' | 'recognition'
+  });
+  const [submittingReward, setSubmittingReward] = useState(false);
+
+  const REWARD_TYPES = [
+    { value: 'bonus', label: 'مكافأة مالية', icon: '💰', color: 'green' },
+    { value: 'achievement', label: 'إنجاز', icon: '🏆', color: 'yellow' },
+    { value: 'recognition', label: 'تقدير', icon: '⭐', color: 'purple' },
+  ];
 
   // Form state
   const [formData, setFormData] = useState({
@@ -59,9 +76,42 @@ function UsersManagementContent() {
     permissions: [] as string[],
   });
 
+  // فلترة وبحث
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // فلترة المستخدمين
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !searchQuery || 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = roleFilter === 'all' || 
+      (user.roles || [user.role]).includes(roleFilter);
+    
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && user.is_active) ||
+      (statusFilter === 'inactive' && !user.is_active);
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // إحصائيات
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.is_active).length,
+    inactive: users.filter(u => !u.is_active).length,
+    byRole: ROLES.map(role => ({
+      ...role,
+      count: users.filter(u => (u.roles || [u.role]).includes(role.value)).length
+    }))
+  };
 
   const fetchUsers = async () => {
     try {
@@ -72,6 +122,45 @@ function UsersManagementContent() {
       console.error('Failed to fetch users:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openRewardModal = (user: AdminUser) => {
+    setSelectedUserForReward(user);
+    setRewardForm({ title: '', points: 0, description: '', type: 'recognition' });
+    setShowRewardModal(true);
+  };
+
+  const submitReward = async () => {
+    if (!selectedUserForReward || !rewardForm.title || rewardForm.points <= 0) return;
+    
+    setSubmittingReward(true);
+    try {
+      const response = await fetch(`/api/admin/users/${selectedUserForReward.id}/rewards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rewardForm)
+      });
+      
+      if (response.ok) {
+        setShowRewardModal(false);
+        setSelectedUserForReward(null);
+        setRewardForm({ title: '', points: 0, description: '', type: 'recognition' });
+        setResultModalType('success');
+        setResultModalMessage(`تم منح المكافأة لـ ${selectedUserForReward.name} بنجاح!`);
+        setShowResultModal(true);
+      } else {
+        setResultModalType('error');
+        setResultModalMessage('فشل في منح المكافأة');
+        setShowResultModal(true);
+      }
+    } catch (err) {
+      console.error('Failed to submit reward:', err);
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ أثناء منح المكافأة');
+      setShowResultModal(true);
+    } finally {
+      setSubmittingReward(false);
     }
   };
 
@@ -259,14 +348,140 @@ function UsersManagementContent() {
           </div>
         </div>
 
+        {/* إحصائيات سريعة */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-purple-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{stats.total}</p>
+                <p className="text-purple-400 text-xs">إجمالي المستخدمين</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-green-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-400">{stats.active}</p>
+                <p className="text-green-400/70 text-xs">نشط</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-red-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-red-400">{stats.inactive}</p>
+                <p className="text-red-400/70 text-xs">معطل</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-cyan-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-cyan-400">{ROLES.length}</p>
+                <p className="text-cyan-400/70 text-xs">أدوار متاحة</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* فلترة وبحث */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* بحث */}
+            <div className="flex-1">
+              <div className="relative">
+                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="بحث بالاسم أو اسم المستخدم أو البريد..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pr-10 pl-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400"
+                />
+              </div>
+            </div>
+
+            {/* فلتر الدور */}
+            <div className="w-full lg:w-48">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400 [&>option]:bg-[#1a0a2e]"
+              >
+                <option value="all">جميع الأدوار</option>
+                {ROLES.map(role => (
+                  <option key={role.value} value={role.value}>{role.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* فلتر الحالة */}
+            <div className="w-full lg:w-40">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400 [&>option]:bg-[#1a0a2e]"
+              >
+                <option value="all">جميع الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">معطل</option>
+              </select>
+            </div>
+
+            {/* زر إعادة التعيين */}
+            {(searchQuery || roleFilter !== 'all' || statusFilter !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setRoleFilter('all');
+                  setStatusFilter('all');
+                }}
+                className="px-4 py-3 text-purple-400 border border-purple-500/30 hover:bg-purple-500/10 rounded-xl transition-all flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">إعادة تعيين</span>
+              </button>
+            )}
+          </div>
+
+          {/* عدد النتائج */}
+          <div className="mt-3 text-sm text-purple-400">
+            عرض {filteredUsers.length} من {users.length} مستخدم
+          </div>
+        </div>
+
         {/* Mobile View - Cards */}
         <div className="lg:hidden space-y-4">
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 text-center text-purple-400">
-              لا يوجد مستخدمين
+              {users.length === 0 ? 'لا يوجد مستخدمين' : 'لا توجد نتائج مطابقة للبحث'}
             </div>
           ) : (
-            users.map((user) => (
+            filteredUsers.map((user) => (
               <div key={user.id} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
                 <div className="flex justify-between items-start mb-3">
                   <Link href={`/admin/users/${user.id}`} className="hover:opacity-80 transition-opacity">
@@ -316,6 +531,15 @@ function UsersManagementContent() {
                   </div>
                   <div className="flex gap-2">
                     <button
+                      onClick={() => openRewardModal(user)}
+                      className="p-2 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-lg transition-all"
+                      title="منح مكافأة"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => openEditModal(user)}
                       className="p-2 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-lg transition-all"
                       title="تعديل"
@@ -358,14 +582,14 @@ function UsersManagementContent() {
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center text-purple-400 py-8">
-                      لا يوجد مستخدمين
+                      {users.length === 0 ? 'لا يوجد مستخدمين' : 'لا توجد نتائج مطابقة للبحث'}
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-purple-500/10 hover:bg-purple-900/20">
                       <td className="p-4">
                         <Link href={`/admin/users/${user.id}`} className="block hover:opacity-80 transition-opacity">
@@ -416,6 +640,15 @@ function UsersManagementContent() {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => openRewardModal(user)}
+                            className="p-2 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-lg transition-all"
+                            title="منح مكافأة"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                            </svg>
+                          </button>
                           <Link
                             href={`/admin/users/${user.id}`}
                             className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
@@ -616,6 +849,113 @@ function UsersManagementContent() {
         message={resultModalMessage}
         type={resultModalType}
       />
+
+      {/* Reward Modal */}
+      {showRewardModal && selectedUserForReward && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white">منح مكافأة</h3>
+                <p className="text-purple-400 text-sm mt-1">لـ {selectedUserForReward.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRewardModal(false);
+                  setSelectedUserForReward(null);
+                }}
+                className="text-purple-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Reward Type */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">نوع المكافأة</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {REWARD_TYPES.map((type) => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setRewardForm({ ...rewardForm, type: type.value as 'bonus' | 'achievement' | 'recognition' })}
+                      className={`p-3 rounded-xl border transition-all text-center ${
+                        rewardForm.type === type.value
+                          ? type.color === 'green' ? 'bg-green-500/30 border-green-500/50 text-green-400' :
+                            type.color === 'yellow' ? 'bg-yellow-500/30 border-yellow-500/50 text-yellow-400' :
+                            'bg-purple-500/30 border-purple-500/50 text-purple-400'
+                          : 'bg-purple-900/30 border-purple-500/20 text-purple-300 hover:bg-purple-900/50'
+                      }`}
+                    >
+                      <span className="text-2xl block mb-1">{type.icon}</span>
+                      <span className="text-xs">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">عنوان المكافأة</label>
+                <input
+                  type="text"
+                  value={rewardForm.title}
+                  onChange={(e) => setRewardForm({ ...rewardForm, title: e.target.value })}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
+                  placeholder="مثال: إنجاز متميز في المشروع"
+                />
+              </div>
+
+              {/* Points */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">النقاط</label>
+                <input
+                  type="number"
+                  value={rewardForm.points}
+                  onChange={(e) => setRewardForm({ ...rewardForm, points: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">الوصف (اختياري)</label>
+                <textarea
+                  value={rewardForm.description}
+                  onChange={(e) => setRewardForm({ ...rewardForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400 resize-none"
+                  placeholder="أضف وصف المكافأة..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={submitReward}
+                  disabled={!rewardForm.title || rewardForm.points <= 0 || submittingReward}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:from-green-400 hover:to-emerald-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingReward ? 'جاري المنح...' : 'منح المكافأة'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRewardModal(false);
+                    setSelectedUserForReward(null);
+                  }}
+                  className="px-6 py-3 border border-purple-500/30 text-purple-300 rounded-xl hover:bg-purple-500/10 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

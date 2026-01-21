@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ActivityTracker from './ActivityTracker';
 
 interface AdminAuthProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface AdminAuthProps {
 
 export default function AdminAuth({ children }: AdminAuthProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -28,6 +30,17 @@ export default function AdminAuth({ children }: AdminAuthProps) {
     // إذا وجد token، اعتبره مسجل دخول مباشرة
     // التحقق من الـ API يتم في الخلفية
     setIsAuthenticated(true);
+    
+    // جلب userId من localStorage
+    try {
+      const adminUserStr = localStorage.getItem('admin_user');
+      if (adminUserStr) {
+        const adminUser = JSON.parse(adminUserStr);
+        setUserId(adminUser.id);
+      }
+    } catch (e) {
+      console.error('Error parsing admin user:', e);
+    }
 
     // تحقق في الخلفية (اختياري)
     try {
@@ -65,5 +78,10 @@ export default function AdminAuth({ children }: AdminAuthProps) {
     return null;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <ActivityTracker userId={userId || undefined} />
+      {children}
+    </>
+  );
 }

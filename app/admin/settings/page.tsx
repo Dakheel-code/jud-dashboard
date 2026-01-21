@@ -43,6 +43,12 @@ function SettingsPageContent() {
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [templateForm, setTemplateForm] = useState({ key: '', name: '', content: '', linkedButton: '' });
   const templateTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // تصنيفات المتاجر
+  const [storeCategories, setStoreCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [savingCategories, setSavingCategories] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{index: number; value: string} | null>(null);
 
   const applyFormatting = (prefix: string, suffix: string) => {
     const textarea = templateTextareaRef.current;
@@ -163,7 +169,72 @@ function SettingsPageContent() {
     fetchWebhooks();
     fetchAdAccounts();
     fetchWhatsappTemplates();
+    fetchStoreCategories();
   }, []);
+
+  const fetchStoreCategories = async () => {
+    try {
+      const response = await fetch('/api/admin/settings/store-categories');
+      const data = await response.json();
+      setStoreCategories(data.categories || []);
+    } catch (err) {
+      console.error('Error fetching store categories:', err);
+    }
+  };
+
+  const saveStoreCategories = async (categories: string[]) => {
+    setSavingCategories(true);
+    try {
+      const response = await fetch('/api/admin/settings/store-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories })
+      });
+      
+      if (response.ok) {
+        setStoreCategories(categories);
+        setSuccess('تم حفظ التصنيفات بنجاح');
+        setTimeout(() => setSuccess(''), 3000);
+        return true;
+      } else {
+        setError('فشل في حفظ التصنيفات');
+        setTimeout(() => setError(''), 3000);
+        return false;
+      }
+    } catch (err) {
+      console.error('Error saving categories:', err);
+      setError('فشل في حفظ التصنيفات');
+      setTimeout(() => setError(''), 3000);
+      return false;
+    } finally {
+      setSavingCategories(false);
+    }
+  };
+
+  const addCategory = async () => {
+    if (!newCategory.trim()) return;
+    if (storeCategories.includes(newCategory.trim())) {
+      setError('هذا التصنيف موجود مسبقاً');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    const updated = [...storeCategories, newCategory.trim()];
+    await saveStoreCategories(updated);
+    setNewCategory('');
+  };
+
+  const removeCategory = async (index: number) => {
+    const updated = storeCategories.filter((_, i) => i !== index);
+    await saveStoreCategories(updated);
+  };
+
+  const updateCategory = async () => {
+    if (!editingCategory || !editingCategory.value.trim()) return;
+    const updated = [...storeCategories];
+    updated[editingCategory.index] = editingCategory.value.trim();
+    await saveStoreCategories(updated);
+    setEditingCategory(null);
+  };
 
   const fetchWebhooks = async () => {
     try {
@@ -468,7 +539,7 @@ function SettingsPageContent() {
         <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
       </div>
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -482,23 +553,10 @@ function SettingsPageContent() {
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
                 إعدادات عامة
               </h1>
-              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة الحسابات الإعلانية وربط الإشعارات</p>
+              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة التصنيفات والحسابات الإعلانية وقوالب الرسائل والإشعارات</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => {
-                resetForm();
-                setEditingWebhook(null);
-                setShowAddModal(true);
-              }}
-              className="p-3 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-xl transition-all"
-              title="إضافة ربط جديد"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
             <Link
               href="/admin"
               className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
@@ -581,6 +639,87 @@ function SettingsPageContent() {
           </div>
         </div>
 
+        {/* Store Categories Section */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">تصنيفات المتاجر</h3>
+              <p className="text-purple-300/70 text-sm mb-4">
+                أضف وعدّل تصنيفات المتاجر التي تظهر عند إضافة أو تعديل متجر.
+              </p>
+              
+              {/* Add New Category */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <input
+                  type="text"
+                  placeholder="أدخل تصنيف جديد..."
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addCategory()}
+                  className="flex-1 px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
+                />
+                <button
+                  onClick={addCategory}
+                  disabled={savingCategories || !newCategory.trim()}
+                  className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white rounded-xl transition-colors"
+                >
+                  {savingCategories ? 'جاري الحفظ...' : 'إضافة'}
+                </button>
+              </div>
+
+              {/* Categories List */}
+              {storeCategories.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {storeCategories.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between bg-purple-900/30 rounded-xl p-3 border border-purple-500/20">
+                      {editingCategory?.index === index ? (
+                        <input
+                          type="text"
+                          value={editingCategory.value}
+                          onChange={(e) => setEditingCategory({ index, value: e.target.value })}
+                          onKeyDown={(e) => e.key === 'Enter' && updateCategory()}
+                          onBlur={updateCategory}
+                          autoFocus
+                          className="flex-1 px-2 py-1 bg-purple-900/50 border border-purple-500/30 text-white rounded-lg outline-none"
+                        />
+                      ) : (
+                        <span className="text-white">{category}</span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingCategory({ index, value: category })}
+                          className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                          title="تعديل"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => removeCategory(index)}
+                          className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          title="حذف"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-purple-300/50 text-sm text-center py-4">لا توجد تصنيفات مضافة</p>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* WhatsApp Templates Section */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
           <div className="flex items-start gap-4">
@@ -609,9 +748,12 @@ function SettingsPageContent() {
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{store_name}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{owner_name}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{account_manager}'}</span>
-                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{sales}'}</span>
-                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{revenue}'}</span>
-                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{spend}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{purchase}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{purchase_value}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{cost}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{roas}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{clicks}'}</span>
+                <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{impressions}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{day}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{date}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{store_url}'}</span>
@@ -655,24 +797,26 @@ function SettingsPageContent() {
           </div>
         </div>
 
-        {/* Slack Info */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-[#4A154B] rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-2">ربط Slack</h3>
-              <p className="text-purple-300/70 text-sm mb-3">
-                اربط قنوات Slack لتلقي إشعارات فورية عند تسجيل متاجر جديدة، إكمال المهام، أو طلبات المساعدة.
-              </p>
+        {/* Slack Section */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
+          <div className="p-6 border-b border-purple-500/20">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-[#4A154B] rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-2">ربط Slack</h3>
+                <p className="text-purple-300/70 text-sm">
+                  اربط قنوات Slack لتلقي إشعارات فورية عند تسجيل متاجر جديدة، إكمال المهام، أو طلبات المساعدة.
+                </p>
+              </div>
               <a 
                 href="https://api.slack.com/apps" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-purple-400 hover:text-purple-300 text-sm inline-flex items-center gap-1"
+                className="text-purple-400 hover:text-purple-300 text-sm inline-flex items-center gap-1 shrink-0"
               >
                 إنشاء Slack App
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -680,13 +824,6 @@ function SettingsPageContent() {
                 </svg>
               </a>
             </div>
-          </div>
-        </div>
-
-        {/* Webhooks List */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
-          <div className="p-4 border-b border-purple-500/20">
-            <h2 className="text-lg font-semibold text-white">قنوات Slack المربوطة</h2>
           </div>
 
           {webhooks.length === 0 ? (
@@ -721,21 +858,19 @@ function SettingsPageContent() {
                         </span>
                       </div>
                       {webhook.channel_name && (
-                        <p className="text-purple-300/70 text-sm mb-2">#{webhook.channel_name}</p>
+                        <p className="text-purple-300/70 text-sm">#{webhook.channel_name}</p>
                       )}
-                      <div className="flex flex-wrap gap-2">
-                        {webhook.notify_new_store && (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-lg">متجر جديد</span>
-                        )}
-                        {webhook.notify_store_complete && (
-                          <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg">إكمال 100%</span>
-                        )}
-                        {webhook.notify_milestone && (
-                          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-lg">مراحل</span>
-                        )}
-                      </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEditModal(webhook)}
+                        className="p-2 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400/50 hover:bg-cyan-500/10 rounded-lg transition-all"
+                        title="إعدادات الإشعارات"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => handleTestWebhook(webhook.id)}
                         disabled={testingWebhook === webhook.id || !webhook.is_active}
@@ -769,15 +904,6 @@ function SettingsPageContent() {
                           ) : (
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           )}
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openEditModal(webhook)}
-                        className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
-                        title="تعديل"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
                       <button
@@ -841,39 +967,6 @@ function SettingsPageContent() {
                   className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400"
                   placeholder="مثال: bootcamp-notifications"
                 />
-              </div>
-
-              <div className="border-t border-purple-500/20 pt-4">
-                <label className="block text-purple-300 text-sm mb-3">أنواع الإشعارات</label>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.notify_new_store}
-                      onChange={(e) => setFormData({ ...formData, notify_new_store: e.target.checked })}
-                      className="w-5 h-5 rounded border-purple-500/30 bg-purple-900/30 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-white">متجر جديد سجّل في النظام</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.notify_store_complete}
-                      onChange={(e) => setFormData({ ...formData, notify_store_complete: e.target.checked })}
-                      className="w-5 h-5 rounded border-purple-500/30 bg-purple-900/30 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-white">متجر أكمل 100% من المهام</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.notify_milestone}
-                      onChange={(e) => setFormData({ ...formData, notify_milestone: e.target.checked })}
-                      className="w-5 h-5 rounded border-purple-500/30 bg-purple-900/30 text-purple-500 focus:ring-purple-500"
-                    />
-                    <span className="text-white">متجر وصل لمرحلة 50%</span>
-                  </label>
-                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -1050,9 +1143,12 @@ function SettingsPageContent() {
                               .replace(/\{store_name\}/g, 'متجر النجاح')
                               .replace(/\{owner_name\}/g, 'أحمد محمد')
                               .replace(/\{account_manager\}/g, 'سارة أحمد')
-                              .replace(/\{sales\}/g, '150')
-                              .replace(/\{revenue\}/g, '12,500 ر.س')
-                              .replace(/\{spend\}/g, '3,200 ر.س')
+                              .replace(/\{purchase\}/g, '150')
+                              .replace(/\{purchase_value\}/g, '12,500 ر.س')
+                              .replace(/\{cost\}/g, '3,200 ر.س')
+                              .replace(/\{roas\}/g, '3.9')
+                              .replace(/\{clicks\}/g, '2,450')
+                              .replace(/\{impressions\}/g, '45,000')
                               .replace(/\{day\}/g, 'الإثنين')
                               .replace(/\{date\}/g, new Date().toLocaleDateString('en-US'))
                               .replace(/\{store_url\}/g, 'store.example.com')
@@ -1084,15 +1180,15 @@ function SettingsPageContent() {
                 
                 </div>
 
-              <div className="bg-purple-900/20 rounded-lg p-2">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-[10px] text-purple-400 ml-1">المتغيرات:</span>
-                  {['{store_name}', '{owner_name}', '{account_manager}', '{sales}', '{revenue}', '{spend}', '{day}', '{date}', '{store_url}'].map(v => (
+              <div className="bg-purple-900/20 rounded-lg p-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-purple-400 ml-1">المتغيرات:</span>
+                  {['{store_name}', '{owner_name}', '{account_manager}', '{purchase}', '{purchase_value}', '{cost}', '{roas}', '{clicks}', '{impressions}', '{day}', '{date}', '{store_url}'].map(v => (
                     <button
                       key={v}
                       type="button"
                       onClick={() => insertVariable(v)}
-                      className="px-1.5 py-0.5 bg-purple-900/50 hover:bg-purple-800/50 rounded text-[10px] text-purple-300 transition-colors"
+                      className="px-2 py-1 bg-purple-900/50 hover:bg-purple-800/50 rounded text-xs text-purple-300 transition-colors"
                     >
                       {v.replace(/[{}]/g, '')}
                     </button>

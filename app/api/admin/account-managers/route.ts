@@ -15,11 +15,12 @@ export async function GET() {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب جميع المستخدمين النشطين (يمكن تعيين أي مستخدم كمدير حساب للمتجر)
+    // جلب المستخدمين الذين لديهم دور مدير حساب فقط
     const { data: managers, error } = await supabase
       .from('admin_users')
       .select('id, name, username, email, role')
       .eq('is_active', true)
+      .eq('role', 'account_manager')
       .order('name');
 
     if (error) {
