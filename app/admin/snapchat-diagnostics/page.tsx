@@ -214,6 +214,18 @@ export default function SnapchatDiagnosticsPage() {
                 <span className="text-gray-400">Time Range:</span>
                 <span className="text-cyan-300 ml-2 text-xs">{result.proof.start_time_final} → {result.proof.end_time_final}</span>
               </div>
+              {result.proof.stats_keys && result.proof.stats_keys.length > 0 && (
+                <div className="p-2 bg-gray-800 rounded col-span-2 md:col-span-2">
+                  <span className="text-gray-400">Stats Keys:</span>
+                  <span className="text-green-300 ml-2 text-xs">[{result.proof.stats_keys.join(', ')}]</span>
+                </div>
+              )}
+              {result.proof.finalized_data_end_time && (
+                <div className="p-2 bg-gray-800 rounded col-span-2 md:col-span-1">
+                  <span className="text-gray-400">Finalized:</span>
+                  <span className="text-orange-300 ml-2 text-xs">{result.proof.finalized_data_end_time}</span>
+                </div>
+              )}
             </div>
           </div>
         )}

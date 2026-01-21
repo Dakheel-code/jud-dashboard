@@ -182,11 +182,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // استخراج الإحصائيات
+    // استخراج الإحصائيات - دعم هياكل مختلفة
     let stats: any = {};
     let timeseriesData: any[] = [];
+    let finalizedDataEndTime: string | null = null;
     
-    if (responseData.timeseries_stats) {
+    // محاولة استخراج من total_stats أولاً (الأكثر شيوعاً)
+    if (responseData.total_stats && responseData.total_stats.length > 0) {
+      const totalStat = responseData.total_stats[0]?.total_stat;
+      stats = totalStat?.stats || {};
+      finalizedDataEndTime = totalStat?.finalized_data_end_time || null;
+      console.log('Debug: Extracted from total_stats:', { stats, finalizedDataEndTime });
+    }
+    // محاولة استخراج من timeseries_stats
+    else if (responseData.timeseries_stats) {
       const timeseries = responseData.timeseries_stats[0]?.timeseries || [];
       timeseriesData = timeseries;
       
@@ -200,9 +209,12 @@ export async function GET(request: NextRequest) {
         stats.conversion_purchases_value = (stats.conversion_purchases_value || 0) + (s.conversion_purchases_value || 0);
         stats.video_views = (stats.video_views || 0) + (s.video_views || 0);
       });
-    } else if (responseData.total_stats) {
-      stats = responseData.total_stats[0]?.stats || {};
     }
+    
+    // تحديد ما إذا كان هناك أي بيانات
+    const statsKeys = Object.keys(stats).filter(k => typeof stats[k] === 'number' && stats[k] > 0);
+    const hasAnyStats = statsKeys.length > 0;
+    const hasSpend = typeof stats.spend === 'number' && stats.spend > 0;
 
     // تحويل القيم
     const processedStats = {
@@ -221,47 +233,64 @@ export async function GET(request: NextRequest) {
     const diagnosis: string[] = [];
     const daysDiff = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
     
-    // إذا فيه spend (حتى لو impressions = 0 في AD_ACCOUNT level)
-    if (processedStats.spend > 0) {
-      diagnosis.push(`✅ Spend found: ${processedStats.spend.toFixed(2)} (${daysDiff} days)`);
-      if (level === 'AD_ACCOUNT') {
-        diagnosis.push('ℹ️ AD_ACCOUNT level only returns spend. Use AD level for impressions/clicks.');
+    // منطق التشخيص حسب Level
+    if (level === 'AD_ACCOUNT') {
+      // AD_ACCOUNT level - يدعم spend فقط
+      if (hasAnyStats || hasSpend) {
+        diagnosis.push(`✅ Account stats found (${daysDiff} days)`);
+        if (hasSpend) {
+          diagnosis.push(`💰 Spend: ${processedStats.spend.toFixed(2)}`);
+        }
+        diagnosis.push('ℹ️ AD_ACCOUNT level supports spend only.');
+        diagnosis.push('💡 For impressions/swipes/clicks, use AD or CAMPAIGN reporting.');
+      } else {
+        diagnosis.push('⚠️ No delivery in selected range.');
+        if (daysDiff <= 7) {
+          diagnosis.push('📅 Try extending to 30 or 90 days.');
+        }
       }
-    }
-    
-    // إذا كل القيم صفر (بما فيها spend)
-    if (processedStats.impressions === 0 && processedStats.spend === 0) {
-      diagnosis.push('⚠️ No stats data found for this date range.');
-      diagnosis.push('💡 Possible reasons:');
-      diagnosis.push('   1. No delivery in selected range - Try 30 or 90 days');
-      diagnosis.push('   2. Reporting level mismatch - Use AD level for detailed stats');
-      diagnosis.push('   3. Ads may be paused or not running');
+    } else {
+      // AD, CAMPAIGN, AD_SQUAD levels - يدعم كل الحقول
+      if (hasAnyStats) {
+        diagnosis.push(`✅ Stats found (${daysDiff} days)`);
+        if (processedStats.spend > 0) {
+          diagnosis.push(`💰 Spend: ${processedStats.spend.toFixed(2)}`);
+        }
+        if (processedStats.impressions > 0) {
+          diagnosis.push(`📊 Impressions: ${processedStats.impressions.toLocaleString()}`);
+        }
+        if (processedStats.clicks > 0) {
+          diagnosis.push(`👆 Clicks: ${processedStats.clicks.toLocaleString()}`);
+        }
+      } else {
+        diagnosis.push('⚠️ No delivery in selected range.');
+        diagnosis.push('💡 Possible reasons:');
+        diagnosis.push('   1. Ads may be paused or not running');
+        diagnosis.push('   2. No impressions delivered in this period');
+        if (daysDiff <= 7) {
+          diagnosis.push('📅 Try extending to 30 or 90 days.');
+        }
+      }
       
-      if (daysDiff <= 7) {
-        diagnosis.push('📅 Try extending date range to 30 or 90 days for more data.');
+      // تحذير إذا فيه impressions بس ما فيه conversions
+      if (processedStats.impressions > 0 && processedStats.conversions === 0) {
+        diagnosis.push('📊 Impressions exist but no conversions.');
+        diagnosis.push('💡 Conversions need Pixel/CAPI setup.');
       }
-    }
-    
-    // إذا فيه impressions بس ما فيه conversions
-    if (processedStats.impressions > 0 && processedStats.conversions === 0) {
-      diagnosis.push('📊 Impressions exist but no conversions.');
-      diagnosis.push('💡 Conversions need Pixel/CAPI setup to track purchases.');
     }
 
-    // إذا فيه spend بس ما فيه revenue (وليس AD_ACCOUNT level)
-    if (processedStats.spend > 0 && processedStats.revenue === 0 && level !== 'AD_ACCOUNT') {
-      diagnosis.push('💰 Spend exists but no revenue tracked.');
-      diagnosis.push('💡 Check conversion tracking and Pixel configuration.');
+    // تحذير إذا end_time أكبر من finalized_data_end_time
+    if (finalizedDataEndTime) {
+      const finalizedDate = new Date(finalizedDataEndTime);
+      const requestedEndDate = new Date(normalizedEndTime);
+      if (requestedEndDate > finalizedDate) {
+        diagnosis.push(`⏰ Data finalized only until ${finalizedDataEndTime}. Newer hours may be incomplete.`);
+      }
     }
 
     const hasPaging = !!responseData.paging?.next_link;
     if (hasPaging) {
       diagnosis.push('📄 Data is paginated.');
-    }
-    
-    // إذا نجح بدون مشاكل ولم نضف أي تشخيص
-    if (diagnosis.length === 0) {
-      diagnosis.push('✅ Stats retrieved successfully!');
     }
 
     return NextResponse.json({
@@ -278,9 +307,13 @@ export async function GET(request: NextRequest) {
       proof: {
         stats_level_used: level,
         fields_used: fields,
+        stats_keys: statsKeys,
+        has_any_stats: hasAnyStats,
+        has_spend: hasSpend,
         start_time_final: normalizedStartTime,
         end_time_final: normalizedEndTime,
-        date_range_days: Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)),
+        finalized_data_end_time: finalizedDataEndTime,
+        date_range_days: daysDiff,
       },
       
       // معلومات الطلب
