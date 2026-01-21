@@ -38,14 +38,13 @@ export async function GET(request: Request) {
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;
 
-    // جلب الإجازات المعتمدة للسنة الحالية (الإجازات العادية فقط تخصم من الرصيد)
+    // جلب الإجازات المعتمدة للسنة الحالية
     const { data: approvedLeaves, error } = await supabase
       .from('leave_requests')
       .select('*')
       .eq('user_id', userId)
       .eq('type', 'leave')
       .eq('status', 'approved')
-      .eq('leave_category', 'regular')
       .gte('start_date', yearStart)
       .lte('end_date', yearEnd);
 
@@ -53,10 +52,17 @@ export async function GET(request: Request) {
       console.error('Error fetching leave requests:', error);
     }
 
-    // حساب الأيام المستخدمة
+    console.log('Approved leaves for user', userId, ':', approvedLeaves);
+
+    // حساب الأيام المستخدمة (الإجازات العادية فقط تخصم من الرصيد، المرضية لا تخصم)
     let usedDays = 0;
     if (approvedLeaves) {
       for (const leave of approvedLeaves) {
+        // الإجازة المرضية لا تخصم من الرصيد
+        if (leave.leave_category === 'sick') {
+          continue;
+        }
+        // الإجازة العادية أو بدون تصنيف تخصم من الرصيد
         usedDays += calculateDays(leave.start_date, leave.end_date);
       }
     }

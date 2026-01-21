@@ -65,6 +65,18 @@ function AttendanceContent() {
     }
   }, [selectedMonth]);
 
+  // تحديث الرصيد والطلبات كل 10 ثواني للتحقق من التغييرات
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    
+    const interval = setInterval(() => {
+      fetchLeaveRequests(currentUser.id);
+      fetchLeaveBalance(currentUser.id);
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
+
   const fetchLeaveRequests = async (userId: string) => {
     try {
       const response = await fetch(`/api/admin/leave-requests?user_id=${userId}`);
@@ -668,6 +680,23 @@ function AttendanceContent() {
                       />
                     </div>
                   </div>
+                  
+                  {/* عداد أيام الإجازة */}
+                  {leaveForm.start_date && leaveForm.end_date && (
+                    <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20 text-center">
+                      <p className="text-purple-300 text-sm">مدة الإجازة</p>
+                      <p className="text-2xl font-bold text-white">
+                        {(() => {
+                          const start = new Date(leaveForm.start_date);
+                          const end = new Date(leaveForm.end_date);
+                          const diffTime = end.getTime() - start.getTime();
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                          return diffDays > 0 ? diffDays : 1;
+                        })()}
+                        <span className="text-sm text-purple-400 mr-1">يوم</span>
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
