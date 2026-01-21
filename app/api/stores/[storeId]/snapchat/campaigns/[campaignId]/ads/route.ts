@@ -103,10 +103,21 @@ export async function GET(
                 const creativeData = await creativeResponse.json();
                 const creative = creativeData.creatives?.[0]?.creative;
                 
+                console.log('Creative data:', JSON.stringify(creative, null, 2));
+                
                 if (creative) {
-                  // تحديد نوع الميديا
+                  // أولاً: جرب preview_creative (غالباً يحتوي على صورة مصغرة)
+                  if (creative.preview_creative) {
+                    thumbnailUrl = creative.preview_creative;
+                  }
+                  
+                  // ثانياً: جرب preview_media_url
+                  if (!thumbnailUrl && creative.preview_media_url) {
+                    thumbnailUrl = creative.preview_media_url;
+                  }
+                  
+                  // ثالثاً: جلب الميديا من top_snap_media_id
                   if (creative.top_snap_media_id) {
-                    // جلب الميديا
                     const mediaId = creative.top_snap_media_id;
                     const mediaInfoUrl = `${SNAPCHAT_API_URL}/media/${mediaId}`;
                     const mediaResponse = await fetch(mediaInfoUrl, { headers });
@@ -115,17 +126,37 @@ export async function GET(
                       const mediaData = await mediaResponse.json();
                       const media = mediaData.media?.[0]?.media;
                       
+                      console.log('Media data:', JSON.stringify(media, null, 2));
+                      
                       if (media) {
                         mediaType = media.type; // VIDEO or IMAGE
                         mediaUrl = media.download_link || media.media_url;
-                        thumbnailUrl = media.thumbnail_url;
+                        
+                        // جلب thumbnail من الميديا
+                        if (media.thumbnail_url) {
+                          thumbnailUrl = media.thumbnail_url;
+                        } else if (media.image_url) {
+                          thumbnailUrl = media.image_url;
+                        }
+                        
+                        // للفيديو: جرب جلب thumbnail من preview
+                        if (mediaType === 'VIDEO' && !thumbnailUrl) {
+                          // جرب الحصول على preview من creative
+                          thumbnailUrl = creative.preview_creative || creative.preview_media_url || null;
+                        }
                       }
                     }
                   }
                   
-                  // بديل: استخدام preview_creative
-                  if (!mediaUrl && creative.preview_creative) {
-                    thumbnailUrl = creative.preview_creative;
+                  // رابعاً: جرب web_view_properties
+                  if (!thumbnailUrl && creative.web_view_properties?.url) {
+                    // لا نستخدم الـ URL مباشرة لكن نسجله
+                    console.log('Web view URL:', creative.web_view_properties.url);
+                  }
+                  
+                  // خامساً: للصور، استخدم media_url مباشرة كـ thumbnail
+                  if (!thumbnailUrl && mediaType === 'IMAGE' && mediaUrl) {
+                    thumbnailUrl = mediaUrl;
                   }
                 }
               }
