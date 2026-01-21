@@ -9,6 +9,31 @@ import { buildSnapchatUrl, createDebugInfo, validateAdAccountId } from '@/lib/de
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * تطبيع الوقت إلى بداية الساعة (صفر الدقائق/الثواني/المللي)
+ */
+function normalizeToHour(date: Date): string {
+  const normalized = new Date(date);
+  normalized.setMinutes(0, 0, 0);
+  return normalized.toISOString();
+}
+
+/**
+ * تطبيع إلى بداية اليوم (00:00:00.000Z)
+ */
+function normalizeToStartOfDay(dateStr: string): string {
+  return `${dateStr}T00:00:00.000Z`;
+}
+
+/**
+ * تطبيع end_time إلى بداية اليوم التالي (لتغطية اليوم كاملاً)
+ */
+function normalizeEndToNextDay(dateStr: string): string {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + 1);
+  return `${date.toISOString().split('T')[0]}T00:00:00.000Z`;
+}
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
@@ -21,10 +46,16 @@ export async function GET(request: NextRequest) {
     // تواريخ افتراضية: آخر 7 أيام
     const now = new Date();
     const defaultEnd = now.toISOString().split('T')[0];
-    const defaultStart = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const defaultStart = sevenDaysAgo.toISOString().split('T')[0];
     
     const startDate = searchParams.get('startDate') || defaultStart;
     const endDate = searchParams.get('endDate') || defaultEnd;
+    
+    // تطبيع الأوقات - Snapchat يتطلب أن تكون على رأس الساعة
+    const normalizedStartTime = normalizeToStartOfDay(startDate);
+    const normalizedEndTime = normalizeEndToNextDay(endDate);
 
     if (!storeId) {
       return NextResponse.json({
@@ -69,12 +100,12 @@ export async function GET(request: NextRequest) {
     // الحقول المطلوبة
     const fields = 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value,video_views,screen_time_millis';
     
-    // بناء URL باستخدام الدالة الموحدة (مع صيغة الوقت الصحيحة Z)
+    // بناء URL باستخدام الدالة الموحدة (مع الأوقات المطبّعة)
     const urlResult = buildSnapchatUrl(`adaccounts/${encodeURIComponent(adAccountId)}/stats`, {
       granularity,
       fields,
-      start_time: `${startDate}T00:00:00.000Z`,
-      end_time: `${endDate}T23:59:59.999Z`,
+      start_time: normalizedStartTime,
+      end_time: normalizedEndTime,
     });
     
     // التحقق من صحة URL
@@ -131,6 +162,8 @@ export async function GET(request: NextRequest) {
           ad_account_id: adAccountId,
           start_date: startDate,
           end_date: endDate,
+          normalized_start_time: normalizedStartTime,
+          normalized_end_time: normalizedEndTime,
           granularity: granularity,
           fields_requested: fields,
         },
@@ -209,6 +242,8 @@ export async function GET(request: NextRequest) {
         ad_account_id: adAccountId,
         start_date: startDate,
         end_date: endDate,
+        normalized_start_time: normalizedStartTime,
+        normalized_end_time: normalizedEndTime,
         granularity: granularity,
         fields_requested: fields,
       },
