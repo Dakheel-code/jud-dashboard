@@ -21,6 +21,7 @@ function SelectAccountContent() {
   const [error, setError] = useState<string | null>(null);
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<AdAccount | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!storeId) {
@@ -145,9 +146,28 @@ function SelectAccountContent() {
           </div>
         ) : (
           <>
+            {/* Search Input */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="ابحث عن حساب..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pr-10 rounded-xl bg-purple-900/30 border border-purple-500/30 text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                />
+                <svg className="w-5 h-5 text-purple-400 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
             {/* Ad Accounts List */}
             <div className="space-y-3 mb-6 max-h-80 overflow-y-auto">
-              {adAccounts.map((account) => (
+              {adAccounts.filter(account => 
+                account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                account.id.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map((account) => (
                 <button
                   key={account.id}
                   onClick={() => setSelectedAccount(account)}
