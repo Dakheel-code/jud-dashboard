@@ -190,7 +190,7 @@ function CampaignsContent() {
             </button>
 
             {showStoreDropdown && (
-              <div className="absolute z-50 mt-2 w-full md:w-96 bg-purple-950 border border-purple-500/30 rounded-xl shadow-2xl max-h-80 overflow-hidden">
+              <div className="absolute z-[100] mt-2 w-full md:w-96 bg-purple-950 border border-purple-500/30 rounded-xl shadow-2xl max-h-80 overflow-hidden">
                 <div className="p-2 border-b border-purple-500/20">
                   <input
                     type="text"
