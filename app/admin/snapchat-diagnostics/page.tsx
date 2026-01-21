@@ -193,6 +193,31 @@ export default function SnapchatDiagnosticsPage() {
           </div>
         )}
 
+        {/* Proof - معلومات التحقق */}
+        {result.proof && (
+          <div className="p-4 bg-blue-900/30 border border-blue-500 rounded-lg">
+            <h4 className="font-bold mb-2 text-blue-400">🔐 Proof (معلومات التحقق):</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm font-mono">
+              <div className="p-2 bg-gray-800 rounded">
+                <span className="text-gray-400">Level:</span>
+                <span className="text-green-300 ml-2">{result.proof.stats_level_used}</span>
+              </div>
+              <div className="p-2 bg-gray-800 rounded">
+                <span className="text-gray-400">Days:</span>
+                <span className="text-green-300 ml-2">{result.proof.date_range_days}</span>
+              </div>
+              <div className="p-2 bg-gray-800 rounded col-span-2 md:col-span-1">
+                <span className="text-gray-400">Fields:</span>
+                <span className="text-yellow-300 ml-2 text-xs">{result.proof.fields_used}</span>
+              </div>
+              <div className="p-2 bg-gray-800 rounded col-span-2 md:col-span-3">
+                <span className="text-gray-400">Time Range:</span>
+                <span className="text-cyan-300 ml-2 text-xs">{result.proof.start_time_final} → {result.proof.end_time_final}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Debug Info - معلومات URL */}
         {result.debug_info && (
           <div className="p-4 bg-purple-900/30 border border-purple-500 rounded-lg">
@@ -387,24 +412,60 @@ export default function SnapchatDiagnosticsPage() {
         </div>
 
         {/* Date Range for Stats */}
-        <div className="grid md:grid-cols-2 gap-4 mb-8 p-4 bg-gray-800 rounded-lg">
-          <div>
-            <label className="block text-sm font-bold mb-2">تاريخ البداية:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full p-3 bg-gray-700 rounded-lg"
-            />
+        <div className="mb-8 p-4 bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-4 mb-4">
+            <label className="text-sm font-bold">📅 فترة التقرير:</label>
+            <div className="flex gap-2">
+              {[
+                { label: '7 أيام', days: 7 },
+                { label: '30 يوم', days: 30 },
+                { label: '90 يوم', days: 90 },
+              ].map(({ label, days }) => {
+                const isActive = (() => {
+                  const start = new Date(startDate);
+                  const end = new Date(endDate);
+                  const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                  return diff === days;
+                })();
+                return (
+                  <button
+                    key={days}
+                    onClick={() => {
+                      const end = new Date();
+                      const start = new Date();
+                      start.setDate(start.getDate() - days);
+                      setStartDate(start.toISOString().split('T')[0]);
+                      setEndDate(end.toISOString().split('T')[0]);
+                    }}
+                    className={`px-4 py-2 rounded-lg font-bold transition ${
+                      isActive ? 'bg-blue-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-bold mb-2">تاريخ النهاية:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full p-3 bg-gray-700 rounded-lg"
-            />
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2">تاريخ البداية:</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full p-3 bg-gray-700 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2">تاريخ النهاية:</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full p-3 bg-gray-700 rounded-lg"
+              />
+            </div>
           </div>
         </div>
 
@@ -472,18 +533,36 @@ export default function SnapchatDiagnosticsPage() {
             {loading === 'ads' ? '⏳' : '📢'} Ads
           </button>
 
+        </div>
+
+        {/* Stats Tests - 5A & 5B */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
           <button
-            onClick={() => runTest('stats', 'stats', { 
+            onClick={() => runTest('statsAccount', 'stats', { 
               adAccountId: selectedAdAccount,
               startDate,
               endDate,
               granularity: 'TOTAL',
-              level: statsLevel
+              level: 'AD_ACCOUNT'
             })}
-            disabled={!selectedAdAccount || loading === 'stats'}
+            disabled={!selectedAdAccount || loading === 'statsAccount'}
             className="p-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded-lg font-bold transition"
           >
-            {loading === 'stats' ? '⏳' : '📈'} Stats ({statsLevel.replace('_', ' ')})
+            {loading === 'statsAccount' ? '⏳' : '💰'} 5A: Account Spend
+          </button>
+
+          <button
+            onClick={() => runTest('statsAds', 'stats', { 
+              adAccountId: selectedAdAccount,
+              startDate,
+              endDate,
+              granularity: 'TOTAL',
+              level: 'AD'
+            })}
+            disabled={!selectedAdAccount || loading === 'statsAds'}
+            className="p-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-bold transition"
+          >
+            {loading === 'statsAds' ? '⏳' : '📊'} 5B: Ads Reporting
           </button>
         </div>
 

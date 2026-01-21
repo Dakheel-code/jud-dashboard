@@ -217,24 +217,44 @@ export async function GET(request: NextRequest) {
       roas: stats.spend > 0 ? (stats.conversion_purchases_value || 0) / stats.spend : 0,
     };
 
-    // التشخيص التلقائي
+    // التشخيص التلقائي المحسّن
     const diagnosis: string[] = [];
     
+    // إذا كل القيم صفر
     if (processedStats.impressions === 0 && processedStats.spend === 0) {
-      diagnosis.push('No stats data found for this date range.');
+      diagnosis.push('⚠️ No stats data found for this date range.');
+      diagnosis.push('💡 Possible reasons:');
+      diagnosis.push('   1. No delivery in selected range - Try 30 or 90 days');
+      diagnosis.push('   2. Reporting level mismatch - Use AD level for detailed stats');
+      diagnosis.push('   3. Ads may be paused or not running');
     }
     
+    // إذا فيه impressions بس ما فيه conversions
     if (processedStats.impressions > 0 && processedStats.conversions === 0) {
-      diagnosis.push('Impressions exist but no conversions. Pixel may not be configured.');
+      diagnosis.push('📊 Impressions exist but no conversions.');
+      diagnosis.push('💡 Conversions need Pixel/CAPI setup to track purchases.');
     }
 
+    // إذا فيه spend بس ما فيه revenue
     if (processedStats.spend > 0 && processedStats.revenue === 0) {
-      diagnosis.push('Spend exists but no revenue tracked. Check conversion tracking.');
+      diagnosis.push('💰 Spend exists but no revenue tracked.');
+      diagnosis.push('💡 Check conversion tracking and Pixel configuration.');
+    }
+
+    // اقتراح تغيير الفترة إذا كانت 7 أيام وما فيه بيانات
+    const daysDiff = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff <= 7 && processedStats.spend === 0) {
+      diagnosis.push('📅 Try extending date range to 30 or 90 days for more data.');
     }
 
     const hasPaging = !!responseData.paging?.next_link;
     if (hasPaging) {
-      diagnosis.push('Data is paginated.');
+      diagnosis.push('📄 Data is paginated.');
+    }
+    
+    // إذا نجح بدون مشاكل
+    if (diagnosis.length === 0) {
+      diagnosis.push('✅ Stats retrieved successfully!');
     }
 
     return NextResponse.json({
@@ -246,6 +266,15 @@ export async function GET(request: NextRequest) {
       // Debug Info
       debug_info: debugInfo,
       raw_response_body: rawResponseBody.substring(0, 2000),
+      
+      // Proof - معلومات التحقق
+      proof: {
+        stats_level_used: level,
+        fields_used: fields,
+        start_time_final: normalizedStartTime,
+        end_time_final: normalizedEndTime,
+        date_range_days: Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)),
+      },
       
       // معلومات الطلب
       request_info: {
