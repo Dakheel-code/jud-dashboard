@@ -96,25 +96,45 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
     setError(null);
     
     try {
+      console.log('Fetching campaigns for store:', storeId, 'range:', range);
       const response = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${range}`);
-      const result = await response.json();
       
-      if (result.success) {
-        setData(result);
-        // إذا نجح الجلب، فالربط موجود
-        if (!connectionStatus.isConnected) {
-          setConnectionStatus(prev => ({ ...prev, isConnected: true, checking: false }));
+      // التحقق من HTTP status أولاً
+      if (!response.ok) {
+        console.error('HTTP error:', response.status);
+        if (response.status === 404) {
+          setError('Route not found (404). Check API path.');
+        } else if (response.status === 401 || response.status === 403) {
+          setConnectionStatus(prev => ({ ...prev, needsReauth: true, isConnected: false }));
+          setError('انتهت صلاحية الربط. يرجى إعادة ربط Snapchat.');
+        } else {
+          setError(`HTTP Error: ${response.status}`);
         }
+        setLoading(false);
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('Snapchat campaigns API response:', result);
+      
+      // إذا success=true أو campaigns موجودة، الربط يعمل
+      if (result.success || (result.campaigns && result.campaigns.length >= 0)) {
+        setData(result);
+        setConnectionStatus(prev => ({ ...prev, isConnected: true, checking: false }));
+        setError(null);
       } else {
-        setError(result.error || 'Failed to fetch campaigns');
+        // فقط إذا success=false صريحاً
         if (result.needs_reauth) {
           setConnectionStatus(prev => ({ ...prev, needsReauth: true, isConnected: false }));
           setError('انتهت صلاحية الربط. يرجى إعادة ربط Snapchat.');
         } else if (result.needs_connection) {
           setConnectionStatus(prev => ({ ...prev, isConnected: false, checking: false }));
+        } else {
+          setError(result.error || 'Failed to fetch campaigns');
         }
       }
     } catch (err: any) {
+      console.error('Fetch error:', err);
       setError(err.message || 'Network error');
     } finally {
       setLoading(false);
@@ -124,14 +144,16 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
   useEffect(() => {
     if (storeId) {
       checkConnection();
+      // جلب البيانات مباشرة بدون انتظار
+      fetchCampaigns();
     }
   }, [storeId]);
 
   useEffect(() => {
-    if (storeId && !isCollapsed && !connectionStatus.checking) {
+    if (storeId && !isCollapsed) {
       fetchCampaigns();
     }
-  }, [storeId, range, isCollapsed, connectionStatus.checking]);
+  }, [range, isCollapsed]);
 
   return (
     <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
@@ -193,8 +215,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations }
               )}
             </div>
 
-            {/* عرض المحتوى دائماً - سيتم التحقق من الربط داخلياً */}
-            {(isConnected || connectionStatus.checking) && (
+            {/* عرض المحتوى دائماً - البيانات ستحدد الحالة */}
+            {(isConnected || connectionStatus.checking || data) && (
               <>
                 {/* Range Selector */}
                 <div className="flex items-center gap-2 mb-4">

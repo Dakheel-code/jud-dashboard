@@ -54,6 +54,9 @@ export async function GET(
     const range = searchParams.get('range') || '30d';
     const debug = searchParams.get('debug') === 'true';
 
+    // Logging للتشخيص
+    console.log('=== Snapchat Campaigns Route Hit ===', { storeId, range });
+
     // التحقق من المتغيرات البيئية
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
