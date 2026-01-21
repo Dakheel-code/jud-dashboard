@@ -371,10 +371,15 @@ export default function SnapchatDiagnosticsPage() {
               </option>
               {adAccounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.name} {acc.organization_name ? `(${acc.organization_name})` : ''}
+                  {acc.name} - ID: {acc.id?.substring(0, 8)}...
                 </option>
               ))}
             </select>
+            {selectedAdAccount && (
+              <p className="text-xs text-gray-400 mt-1">
+                Selected ID: <span className="text-green-400 font-mono">{selectedAdAccount}</span>
+              </p>
+            )}
           </div>
         </div>
 

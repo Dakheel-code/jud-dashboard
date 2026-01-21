@@ -56,14 +56,31 @@ export async function GET(request: NextRequest) {
       const orgData = org.organization;
       if (orgData?.ad_accounts) {
         orgData.ad_accounts.forEach((acc: any) => {
-          allAdAccounts.push({
-            ...acc.ad_account,
-            organization_id: orgData.id,
-            organization_name: orgData.name,
-          });
+          const adAccount = acc.ad_account;
+          if (adAccount && adAccount.id) {
+            allAdAccounts.push({
+              id: adAccount.id,
+              name: adAccount.name || 'Unknown',
+              status: adAccount.status,
+              type: adAccount.type,
+              currency: adAccount.currency,
+              timezone: adAccount.timezone,
+              organization_id: orgData.id,
+              organization_name: orgData.name,
+            });
+          }
         });
       }
     });
+    
+    // Debug: طباعة أول ad account للتحقق
+    if (allAdAccounts.length > 0) {
+      console.log('Debug: First ad account extracted:', {
+        id: allAdAccounts[0].id,
+        name: allAdAccounts[0].name,
+        id_type: typeof allAdAccounts[0].id,
+      });
+    }
 
     // التشخيص التلقائي
     const diagnosis: string[] = [];

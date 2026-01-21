@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getValidAccessToken } from '@/lib/integrations/token-manager';
-import { buildSnapchatUrl, createDebugInfo } from '@/lib/debug/snapchat-url-builder';
+import { buildSnapchatUrl, createDebugInfo, validateAdAccountId } from '@/lib/debug/snapchat-url-builder';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +42,19 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // التحقق من صحة Ad Account ID
+    const idValidation = validateAdAccountId(adAccountId);
+    if (!idValidation.valid) {
+      return NextResponse.json({
+        success: false,
+        error: idValidation.error,
+        request_status: 'INVALID_AD_ACCOUNT_ID',
+        error_code: idValidation.error_code,
+        ad_account_id_received: adAccountId,
+        diagnosis: [`Invalid Ad Account ID: ${idValidation.error}`],
+      }, { status: 400 });
+    }
+
     // جلب توكن صالح
     const accessToken = await getValidAccessToken(storeId, 'snapchat');
     if (!accessToken) {
@@ -56,12 +69,12 @@ export async function GET(request: NextRequest) {
     // الحقول المطلوبة
     const fields = 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value,video_views,screen_time_millis';
     
-    // بناء URL باستخدام الدالة الموحدة
-    const urlResult = buildSnapchatUrl(`adaccounts/${adAccountId}/stats`, {
+    // بناء URL باستخدام الدالة الموحدة (مع صيغة الوقت الصحيحة Z)
+    const urlResult = buildSnapchatUrl(`adaccounts/${encodeURIComponent(adAccountId)}/stats`, {
       granularity,
       fields,
-      start_time: `${startDate}T00:00:00.000-00:00`,
-      end_time: `${endDate}T23:59:59.999-00:00`,
+      start_time: `${startDate}T00:00:00.000Z`,
+      end_time: `${endDate}T23:59:59.999Z`,
     });
     
     // التحقق من صحة URL

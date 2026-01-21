@@ -6,6 +6,54 @@
 const SNAPCHAT_BASE = 'https://adsapi.snapchat.com';
 const API_VERSION = '/v1';
 
+/**
+ * التحقق من صحة Ad Account ID
+ * يجب أن يكون UUID أو معرف رقمي، وليس اسم
+ */
+export function validateAdAccountId(adAccountId: string): {
+  valid: boolean;
+  error?: string;
+  error_code?: 'INVALID_AD_ACCOUNT_ID';
+} {
+  if (!adAccountId || adAccountId.trim() === '') {
+    return {
+      valid: false,
+      error: 'Ad Account ID is empty',
+      error_code: 'INVALID_AD_ACCOUNT_ID',
+    };
+  }
+
+  // التحقق من وجود أحرف غير متوقعة (أقواس، مسافات كثيرة)
+  if (adAccountId.includes('(') || adAccountId.includes(')')) {
+    return {
+      valid: false,
+      error: `Ad Account ID contains invalid characters: "${adAccountId}". This looks like a name, not an ID.`,
+      error_code: 'INVALID_AD_ACCOUNT_ID',
+    };
+  }
+
+  // التحقق من المسافات الكثيرة (أكثر من مسافة واحدة متتالية أو مسافات في البداية/النهاية)
+  if (adAccountId.trim() !== adAccountId || /\s{2,}/.test(adAccountId) || adAccountId.includes(' ')) {
+    return {
+      valid: false,
+      error: `Ad Account ID contains spaces: "${adAccountId}". This looks like a name, not an ID.`,
+      error_code: 'INVALID_AD_ACCOUNT_ID',
+    };
+  }
+
+  // التحقق من أن الـ ID يبدو كـ UUID أو معرف صالح (أحرف وأرقام وشرطات فقط)
+  const validIdPattern = /^[a-zA-Z0-9\-_]+$/;
+  if (!validIdPattern.test(adAccountId)) {
+    return {
+      valid: false,
+      error: `Ad Account ID has invalid format: "${adAccountId}". Expected alphanumeric ID.`,
+      error_code: 'INVALID_AD_ACCOUNT_ID',
+    };
+  }
+
+  return { valid: true };
+}
+
 export interface UrlBuildResult {
   success: boolean;
   final_url: string;
