@@ -7,6 +7,38 @@ import { StoreStats, StoreWithProgress } from '@/types';
 import Modal from '@/components/ui/Modal';
 import AdminAuth from '@/components/AdminAuth';
 import AddStoreModal from '@/components/AddStoreModal';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeletons';
+import DashboardKPIBar from '@/components/dashboard/DashboardKPIBar';
+import DashboardActionCenter from '@/components/dashboard/DashboardActionCenter';
+import StorePerformanceWidget from '@/components/dashboard/StorePerformanceWidget';
+import TeamPerformanceWidget from '@/components/dashboard/TeamPerformanceWidget';
+import MarketingPulseWidget from '@/components/dashboard/MarketingPulseWidget';
+import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget';
+import AnnouncementsWidget from '@/components/dashboard/AnnouncementsWidget';
+import SmartInsightsWidget from '@/components/dashboard/SmartInsightsWidget';
+
+// Dashboard Summary Types
+interface DashboardSummary {
+  kpis: Record<string, { value: number; trend: string; change: number }>;
+  action_center: Array<{ id: string; type: string; title: string; description: string; priority: string; link: string }>;
+  top_stores: Array<{ id: string; name: string; url: string; completion: number; tasks_done: number; tasks_total: number; trend: string }>;
+  team: {
+    top_performers: Array<{ id: string; name: string; avatar: string | null; tasks_completed: number; completion_rate: number }>;
+    low_performers: Array<{ id: string; name: string; avatar: string | null; tasks_completed: number; completion_rate: number; overdue_tasks: number }>;
+  };
+  campaigns_pulse: {
+    total_spend_today: number;
+    total_spend_week: number;
+    average_roas: number;
+    best_campaign: { id: string; name: string; spend: number; roas: number; conversions: number } | null;
+    worst_campaign: { id: string; name: string; spend: number; roas: number; conversions: number } | null;
+    campaigns_without_conversions: number;
+  };
+  today_tasks: Array<{ id: string; title: string; store: string; due: string; status: string; priority: string }>;
+  announcements: Array<{ id: string; title: string; type: string; created_at: string; is_read: boolean }>;
+  insights: Array<{ id: string; type: string; title: string; description: string; action: string | null; link: string | null }>;
+  last_updated: string;
+}
 
 const REFRESH_INTERVAL = 5000; // تحديث كل 5 ثواني
 
@@ -34,6 +66,10 @@ function AdminPageContent() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [storeMetadata, setStoreMetadata] = useState<Record<string, { name: string; logo: string | null }>>({});
   
+  // Dashboard Summary State
+  const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
@@ -45,13 +81,28 @@ function AdminPageContent() {
   const [showAddStoreModal, setShowAddStoreModal] = useState(false);
   const [editingStore, setEditingStore] = useState<StoreWithProgress | null>(null);
 
+  // جلب بيانات Dashboard Summary
+  const fetchDashboardSummary = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dashboard/summary', { cache: 'no-store' });
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard summary:', err);
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, []);
+
   // تحديث تلقائي للبيانات
   useEffect(() => {
     fetchData();
+    fetchDashboardSummary();
     
     // إعداد التحديث التلقائي
     const interval = setInterval(() => {
       fetchDataSilent();
+      fetchDashboardSummary();
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
@@ -255,178 +306,72 @@ function AdminPageContent() {
           </div>
         </div>
 
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
-              <h3 className="text-xs sm:text-sm font-medium text-purple-300/80 mb-1 sm:mb-2">
-                عدد المتاجر
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                {stats.total_stores}
-              </p>
-            </div>
+        {/* Dashboard Content with Skeleton Loading */}
+        {dashboardLoading ? (
+          <DashboardSkeleton />
+        ) : (
+          <div className="space-y-6">
+            {/* KPI Bar - شريط المؤشرات العلوي */}
+            {dashboardData?.kpis && (
+              <DashboardKPIBar kpis={dashboardData.kpis} />
+            )}
 
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
-              <h3 className="text-xs sm:text-sm font-medium text-purple-300/80 mb-1 sm:mb-2">
-                متوسط الإنجاز
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                {stats.average_completion}%
-              </p>
-            </div>
+            {/* Action Center - يحتاج تدخل الآن */}
+            {dashboardData?.action_center && (
+              <DashboardActionCenter items={dashboardData.action_center} />
+            )}
 
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
-              <h3 className="text-xs sm:text-sm font-medium text-purple-300/80 mb-1 sm:mb-2">
-                أكثر مدير إنجازاً
-              </h3>
-              {stats.top_account_manager?.id ? (
-                <Link href={`/admin/users/${stats.top_account_manager.id}`} className="text-sm sm:text-lg font-semibold text-white hover:text-fuchsia-400 transition-colors line-clamp-1">
-                  {stats.top_account_manager.name}
-                </Link>
-              ) : (
-                <p className="text-sm sm:text-lg font-semibold text-white">-</p>
+            {/* Store Performance Widget - Full Width */}
+            {dashboardData?.top_stores && (
+              <StorePerformanceWidget stores={dashboardData.top_stores} />
+            )}
+
+            {/* Team Performance Widget - Full Width */}
+            {dashboardData?.team && (
+              <TeamPerformanceWidget team={dashboardData.team} />
+            )}
+
+            {/* Marketing Pulse Widget - Full Width */}
+            {dashboardData?.campaigns_pulse && (
+              <MarketingPulseWidget data={dashboardData.campaigns_pulse} />
+            )}
+
+            {/* Main Grid - 2 columns on desktop, 1 on mobile */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Today Tasks Widget */}
+              {dashboardData?.today_tasks && (
+                <TodayTasksWidget tasks={dashboardData.today_tasks} />
+              )}
+
+              {/* Announcements Widget */}
+              {dashboardData?.announcements && (
+                <AnnouncementsWidget announcements={dashboardData.announcements} canSendAnnouncement={true} />
               )}
             </div>
 
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
-              <h3 className="text-xs sm:text-sm font-medium text-purple-300/80 mb-1 sm:mb-2">
-                أقل مدير إنجازاً
-              </h3>
-              {stats.lowest_account_manager?.id ? (
-                <Link href={`/admin/users/${stats.lowest_account_manager.id}`} className="text-sm sm:text-lg font-semibold text-white hover:text-fuchsia-400 transition-colors line-clamp-1">
-                  {stats.lowest_account_manager.name}
-                </Link>
-              ) : (
-                <p className="text-sm sm:text-lg font-semibold text-white">-</p>
-              )}
-            </div>
+            {/* Smart Insights Widget - Full Width */}
+            {dashboardData?.insights && (
+              <SmartInsightsWidget insights={dashboardData.insights} onRefresh={fetchDashboardSummary} />
+            )}
           </div>
         )}
 
-        {/* Top 10 Stores */}
-        {stores.length > 0 && (
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20 mb-6 sm:mb-8">
-            <h2 className="text-xl text-white mb-4 flex items-center gap-2" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
-              <svg className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              أفضل المتاجر إنجازاً
-            </h2>
-            <div className="space-y-3">
-              {[...stores]
-                .sort((a, b) => b.completion_percentage - a.completion_percentage)
-                .slice(0, 10)
-                .map((store, index) => (
-                  <div key={store.id} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-xl bg-purple-900/20 hover:bg-purple-900/30 transition-colors">
-                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0 ${
-                      index === 0 ? 'bg-yellow-500 text-yellow-900' :
-                      index === 1 ? 'bg-gray-300 text-gray-700' :
-                      index === 2 ? 'bg-amber-600 text-amber-100' :
-                      'bg-purple-700 text-purple-200'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {storeMetadata[store.store_url]?.logo ? (
-                        <img 
-                          src={storeMetadata[store.store_url].logo!}
-                          alt={storeMetadata[store.store_url]?.name}
-                          className="w-5 h-5 sm:w-6 sm:h-6 rounded object-cover flex-shrink-0"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : null}
-                      <a 
-                        href={`https://${store.store_url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm sm:text-base text-white font-medium hover:text-fuchsia-400 transition-colors truncate"
-                      >
-                        {storeMetadata[store.store_url]?.name || store.store_url}
-                      </a>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="hidden sm:block w-24 bg-purple-950/50 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-500 ${
-                            index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-                            index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-400' :
-                            index === 2 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-                            'bg-gradient-to-r from-purple-500 to-fuchsia-500'
-                          }`}
-                          style={{ width: `${store.completion_percentage}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs sm:text-sm font-bold w-10 sm:w-12 text-left ${
-                        index === 0 ? 'text-yellow-400' :
-                        index === 1 ? 'text-gray-300' :
-                        index === 2 ? 'text-amber-500' :
-                        'text-purple-300'
-                      }`}>
-                        {store.completion_percentage}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+        {/* Footer */}
+        <footer className="mt-8 pt-6 border-t border-purple-500/20">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-purple-300/60">
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="Jud" className="w-6 h-6 object-contain opacity-60" />
+              <span>© {new Date().getFullYear()} Jud Agency. جميع الحقوق محفوظة.</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                النظام يعمل بشكل طبيعي
+              </span>
+              <span>v2.0</span>
             </div>
           </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Link
-            href="/admin/stores"
-            className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <span className="text-white font-medium text-sm sm:text-base">المتاجر</span>
-            </div>
-          </Link>
-          <Link
-            href="/admin/tasks"
-            className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <span className="text-white font-medium text-sm sm:text-base">المهام</span>
-            </div>
-          </Link>
-          <Link
-            href="/admin/users"
-            className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium text-sm sm:text-base">المستخدمين</span>
-            </div>
-          </Link>
-          <Link
-            href="/admin/settings"
-            className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-purple-500/20 hover:border-purple-400/40 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500/20 rounded-xl flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium text-sm sm:text-base">الإعدادات</span>
-            </div>
-          </Link>
-        </div>
+        </footer>
 
         {/* Delete Confirmation Modal */}
         <Modal

@@ -10,6 +10,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const router = useRouter();
 
   const handleGoogleLogin = async () => {
@@ -29,7 +30,6 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      // محاولة تسجيل الدخول عبر NextAuth أولاً
       const result = await signIn('credentials', {
         username,
         password,
@@ -37,7 +37,6 @@ export default function AdminLoginPage() {
       });
 
       if (result?.error) {
-        // إذا فشل NextAuth، جرب الطريقة القديمة
         const response = await fetch('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -63,6 +62,11 @@ export default function AdminLoginPage() {
     }
   };
 
+  const toggleEmailForm = () => {
+    setShowEmailForm(!showEmailForm);
+    setError('');
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0118] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background effects */}
@@ -71,7 +75,7 @@ export default function AdminLoginPage() {
       <div className="absolute w-64 h-64 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/4 animate-pulse"></div>
 
       <div className="relative w-full max-w-md">
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl p-8 border border-purple-500/20 shadow-2xl">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-purple-500/20 shadow-2xl">
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 mb-4 relative">
@@ -90,7 +94,7 @@ export default function AdminLoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={googleLoading}
-            className="w-full py-3 mb-4 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 bg-white hover:bg-gray-50 text-gray-800 font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             {googleLoading ? (
               <span className="flex items-center justify-center gap-2">
@@ -112,75 +116,108 @@ export default function AdminLoginPage() {
               </>
             )}
           </button>
+          <p className="text-purple-400/60 text-xs text-center mt-2 mb-6">متاح فقط لحسابات @jud.sa</p>
 
-          <p className="text-purple-400/60 text-xs text-center mb-4">متاح فقط لحسابات @jud.sa</p>
+          {/* Email Login Toggle Button */}
+          <button
+            onClick={toggleEmailForm}
+            className={`w-full py-3 border rounded-xl transition-all flex items-center justify-center gap-3 ${
+              showEmailForm 
+                ? 'bg-purple-600/20 border-purple-500/50 text-purple-300' 
+                : 'bg-purple-900/30 border-purple-500/30 text-purple-400 hover:bg-purple-900/50 hover:border-purple-500/50 hover:text-purple-300'
+            }`}
+          >
+            {/* Mail Icon */}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span>تسجيل الدخول عبر البريد الإلكتروني</span>
+            {/* Chevron Icon */}
+            <svg 
+              className={`w-4 h-4 transition-transform duration-300 ${showEmailForm ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-purple-500/30"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-purple-950/40 text-purple-400">أو</span>
+          {/* Email Login Form - Collapsible */}
+          <div 
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              showEmailForm ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20">
+              <h3 className="text-purple-300 text-sm font-medium mb-4 text-center">تسجيل الدخول بالبريد</h3>
+              
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-purple-300 text-xs font-medium mb-1.5">
+                    اسم المستخدم
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-purple-900/40 border border-purple-500/30 rounded-lg text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all text-sm"
+                    placeholder="أدخل اسم المستخدم"
+                    required
+                    dir="rtl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-purple-300 text-xs font-medium mb-1.5">
+                    كلمة المرور
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-purple-900/40 border border-purple-500/30 rounded-lg text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all text-sm"
+                    placeholder="أدخل كلمة المرور"
+                    required
+                    dir="rtl"
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-2.5 bg-red-900/30 border border-red-500/30 rounded-lg text-red-300 text-xs text-center">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:from-purple-600 hover:to-fuchsia-600 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        جاري الدخول...
+                      </span>
+                    ) : (
+                      'تسجيل الدخول'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleEmailForm}
+                    className="px-4 py-2.5 bg-purple-900/40 hover:bg-purple-900/60 text-purple-400 hover:text-purple-300 font-medium rounded-lg transition-all text-sm border border-purple-500/30"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-purple-300 text-sm font-medium mb-2">
-                اسم المستخدم
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
-                placeholder="أدخل اسم المستخدم"
-                required
-                dir="rtl"
-              />
-            </div>
-
-            <div>
-              <label className="block text-purple-300 text-sm font-medium mb-2">
-                كلمة المرور
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
-                placeholder="أدخل كلمة المرور"
-                required
-                dir="rtl"
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-900/30 border border-red-500/30 rounded-xl text-red-300 text-sm text-center">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:from-purple-600 hover:to-fuchsia-600 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  جاري تسجيل الدخول...
-                </span>
-              ) : (
-                'تسجيل الدخول'
-              )}
-            </button>
-          </form>
 
           {/* Footer */}
           <div className="mt-6 text-center">
