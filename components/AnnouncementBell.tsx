@@ -209,7 +209,7 @@ export default function AnnouncementBell() {
         {isOpen && (
           <>
             <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999]">
+            <div className="fixed top-20 left-1/2 -translate-x-1/2 w-72 bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999]">
               <div className="p-3 border-b border-purple-500/20 flex items-center justify-between">
                 <h3 className="text-white font-semibold text-sm">التعاميم</h3>
                 {unreadCount > 0 && (
