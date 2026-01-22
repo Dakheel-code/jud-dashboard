@@ -16,6 +16,8 @@ interface AdminUser {
   is_active: boolean;
   last_login?: string;
   created_at: string;
+  avatar?: string;
+  provider?: string;
 }
 
 const ROLES = [
@@ -484,10 +486,26 @@ function UsersManagementContent() {
             filteredUsers.map((user) => (
               <div key={user.id} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
                 <div className="flex justify-between items-start mb-3">
-                  <Link href={`/admin/users/${user.id}`} className="hover:opacity-80 transition-opacity">
-                    <p className="text-white font-medium hover:text-fuchsia-400 transition-colors">{user.name}</p>
-                    <p className="text-purple-400 text-sm">@{user.username}</p>
-                    {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
+                  <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300 font-bold">
+                        {user.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-white font-medium hover:text-fuchsia-400 transition-colors flex items-center gap-2">
+                        {user.name}
+                        {user.provider === 'google' && (
+                          <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          </svg>
+                        )}
+                      </p>
+                      <p className="text-purple-400 text-sm">@{user.username}</p>
+                      {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
+                    </div>
                   </Link>
                   <div className="flex flex-wrap gap-1">
                     {(user.roles || [user.role]).map((role) => (
@@ -592,10 +610,27 @@ function UsersManagementContent() {
                   filteredUsers.map((user) => (
                     <tr key={user.id} className="border-b border-purple-500/10 hover:bg-purple-900/20">
                       <td className="p-4">
-                        <Link href={`/admin/users/${user.id}`} className="block hover:opacity-80 transition-opacity">
-                          <p className="text-white font-medium hover:text-fuchsia-400 transition-colors">{user.name}</p>
-                          <p className="text-purple-400 text-sm">@{user.username}</p>
-                          {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
+                        <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                          {user.avatar ? (
+                            <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-300 font-bold">
+                              {user.name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-white font-medium hover:text-fuchsia-400 transition-colors flex items-center gap-2">
+                              {user.name}
+                              {user.provider === 'google' && (
+                                <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24">
+                                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                </svg>
+                              )}
+                            </p>
+                            <p className="text-purple-400 text-sm">@{user.username}</p>
+                            {user.email && <p className="text-purple-500 text-xs">{user.email}</p>}
+                          </div>
                         </Link>
                       </td>
                       <td className="p-4">

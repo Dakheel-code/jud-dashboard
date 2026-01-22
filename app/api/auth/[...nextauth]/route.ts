@@ -101,26 +101,50 @@ const handler = NextAuth({
 
         if (!existingUser) {
           // إنشاء مستخدم جديد
-          await supabase.from('admin_users').insert({
+          const userName = (profile as any)?.name || user?.name || email.split('@')[0];
+          const userAvatar = (profile as any)?.picture || user?.image;
+          const username = email.split('@')[0];
+          
+          console.log('Creating new Google user:', { email, userName, username, userAvatar });
+          
+          const { data: newUser, error: insertError } = await supabase.from('admin_users').insert({
             email: email,
-            name: (profile as any)?.name || user?.name || email.split('@')[0],
-            username: email.split('@')[0],
+            name: userName,
+            username: username,
             role: 'user',
+            roles: ['user'],
             is_active: true,
             provider: 'google',
-            avatar: (profile as any)?.picture || user?.image,
+            avatar: userAvatar,
             permissions: ['view_tasks'],
             created_at: new Date().toISOString(),
-          });
+            last_login: new Date().toISOString(),
+          }).select().single();
+          
+          if (insertError) {
+            console.error('Error creating Google user:', insertError);
+          } else {
+            console.log('Google user created successfully:', newUser);
+          }
         } else {
-          // تحديث آخر تسجيل دخول
-          await supabase
+          // تحديث آخر تسجيل دخول والبيانات
+          const userAvatar = (profile as any)?.picture || user?.image;
+          const userName = (profile as any)?.name || user?.name;
+          
+          console.log('Updating existing Google user:', { email, userName, userAvatar });
+          
+          const { error: updateError } = await supabase
             .from('admin_users')
             .update({ 
               last_login: new Date().toISOString(),
-              avatar: (profile as any)?.picture || user?.image,
+              avatar: userAvatar,
+              name: userName || undefined,
             })
             .eq('email', email);
+            
+          if (updateError) {
+            console.error('Error updating Google user:', updateError);
+          }
         }
       }
       return true;
