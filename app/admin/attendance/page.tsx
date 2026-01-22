@@ -316,24 +316,27 @@ function AttendanceContent() {
               <p className="text-purple-300/80 text-xs sm:text-sm">تسجيل ومتابعة الحضور والانصراف</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button
               onClick={() => { setLeaveType('permission'); setShowLeaveModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-xl border border-yellow-500/30 hover:bg-yellow-500/30 transition-all"
+              className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-xl border border-yellow-500/30 hover:bg-yellow-500/30 transition-all text-sm sm:text-base flex-1 sm:flex-none"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              طلب استئذان
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="hidden sm:inline">طلب استئذان</span>
+              <span className="sm:hidden">استئذان</span>
             </button>
             <button
               onClick={() => { setLeaveType('leave'); setShowLeaveModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all"
+              className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-500/30 hover:bg-blue-500/30 transition-all text-sm sm:text-base flex-1 sm:flex-none"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              طلب إجازة
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <span className="hidden sm:inline">طلب إجازة</span>
+              <span className="sm:hidden">إجازة</span>
             </button>
-            <Link href="/admin/attendance/manage" className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-500/30 hover:bg-purple-500/30 transition-all">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              إدارة الحضور
+            <Link href="/admin/attendance/manage" className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl border border-purple-500/30 hover:bg-purple-500/30 transition-all text-sm sm:text-base flex-1 sm:flex-none">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <span className="hidden sm:inline">إدارة الحضور</span>
+              <span className="sm:hidden">إدارة</span>
             </Link>
           </div>
         </div>
@@ -451,10 +454,12 @@ function AttendanceContent() {
         </div>
 
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
-          <div className="px-6 py-4 border-b border-purple-500/20">
+          <div className="px-4 sm:px-6 py-4 border-b border-purple-500/20">
             <h2 className="text-lg font-semibold text-white">سجل الحضور والانصراف</h2>
           </div>
-          <div className="overflow-x-auto">
+          
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-purple-500/20">
@@ -494,6 +499,42 @@ function AttendanceContent() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden p-3 space-y-3">
+            {myRecords.length === 0 ? (
+              <div className="text-center text-purple-400 py-8">لا توجد سجلات لهذا الشهر</div>
+            ) : (
+              myRecords.map((record) => (
+                <div key={record.id} className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-white font-medium">{new Date(record.date).toLocaleDateString('ar-SA')}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${record.check_out_time ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                      {record.check_out_time ? 'مكتمل' : 'قيد العمل'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <div className="text-green-400 font-medium">{formatTime(record.check_in_time)}</div>
+                      <div className="text-purple-300/50 text-xs">حضور</div>
+                    </div>
+                    <div>
+                      <div className="text-orange-400 font-medium">{record.check_out_time ? formatTime(record.check_out_time) : '-'}</div>
+                      <div className="text-purple-300/50 text-xs">انصراف</div>
+                    </div>
+                    <div>
+                      <div className="text-cyan-400 font-medium">{record.work_hours ? `${record.work_hours.toFixed(1)}` : '-'}</div>
+                      <div className="text-purple-300/50 text-xs">ساعات</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-purple-400 text-xs mt-3 pt-3 border-t border-purple-500/10">
+                    {getDeviceIcon(record.device_type)}
+                    <span>{record.browser} - {record.device_type === 'mobile' ? 'جوال' : 'كمبيوتر'}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

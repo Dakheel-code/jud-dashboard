@@ -394,17 +394,6 @@ function AdminPageContent() {
           type={resultModalType}
         />
 
-        {/* Floating Add Store Button */}
-        <button
-          onClick={openAddStoreModal}
-          className="fixed bottom-24 left-6 lg:bottom-8 lg:left-8 w-14 h-14 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white rounded-full shadow-lg shadow-purple-500/50 flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 z-40"
-          title="إضافة متجر جديد"
-        >
-          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-
         {/* Add Store Modal */}
         <AddStoreModal
           isOpen={showAddStoreModal}
