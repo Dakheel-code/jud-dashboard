@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface Announcement {
   id: string;
@@ -10,9 +11,15 @@ interface Announcement {
   type: 'normal' | 'urgent' | 'scheduled' | 'conditional';
   priority: 'low' | 'normal' | 'high' | 'critical';
   created_at: string;
-  sent_at: string;
+  sent_at: string | null;
   read_at: string | null;
-  creator?: { id: string; name: string; avatar: string };
+  creator?: { id: string; name: string; avatar?: string };
+}
+
+interface ApiResponse {
+  announcements?: Announcement[];
+  data?: { announcements?: Announcement[] };
+  unread_count?: number;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -23,20 +30,151 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function AnnouncementBell() {
+  const router = useRouter();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [urgentAnnouncement, setUrgentAnnouncement] = useState<Announcement | null>(null);
+  const [acknowledgedUrgentIds, setAcknowledgedUrgentIds] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
+
+  const getUserId = useCallback((): string | null => {
+    try {
+      const userStr = localStorage.getItem('admin_user');
+      if (!userStr) return null;
+      const user = JSON.parse(userStr);
+      return user?.id || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const formatDate = useCallback((date: string | null | undefined): string => {
+    if (!date) return '';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      
+      const now = new Date();
+      const diff = now.getTime() - d.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'الآن';
+      if (minutes < 60) return `منذ ${minutes} دقيقة`;
+      if (hours < 24) return `منذ ${hours} ساعة`;
+      if (days < 7) return `منذ ${days} يوم`;
+      return d.toLocaleDateString('ar-SA');
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const fetchAnnouncements = useCallback(async () => {
+    const userId = getUserId();
+    if (!userId) return;
+
+    try {
+      // Add timestamp to prevent caching
+      const timestamp = Date.now();
+      const response = await fetch(`/api/announcements/my?user_id=${userId}&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) return;
+      
+      const data: ApiResponse = await response.json();
+      if (!isMountedRef.current) return;
+
+      const announcementsList = data.announcements || data.data?.announcements || [];
+      const unread = announcementsList.filter((a: Announcement) => !a.read_at).length;
+      
+      setAnnouncements(announcementsList);
+      setUnreadCount(unread);
+
+      const unreadUrgent = announcementsList.find(
+        (a: Announcement) => a.type === 'urgent' && !a.read_at && !acknowledgedUrgentIds.has(a.id)
+      );
+      
+      if (unreadUrgent && !urgentAnnouncement) {
+        setUrgentAnnouncement(unreadUrgent);
+      }
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  }, [getUserId, acknowledgedUrgentIds, urgentAnnouncement]);
+
+  const markSingleAsRead = useCallback(async (announcementId: string): Promise<boolean> => {
+    const userId = getUserId();
+    if (!userId) return false;
+
+    try {
+      const response = await fetch(`/api/announcements/${announcementId}/read`, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({ user_id: userId })
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error marking as read:', error);
+      return false;
+    }
+  }, [getUserId]);
+
+  const markAsRead = useCallback(async (announcementId: string) => {
+    const success = await markSingleAsRead(announcementId);
+    if (success && isMountedRef.current) {
+      // Refetch to get accurate state from server
+      await fetchAnnouncements();
+    }
+  }, [markSingleAsRead, fetchAnnouncements]);
+
+  const markAllAsRead = useCallback(async () => {
+    const unreadAnnouncements = announcements.filter(a => !a.read_at);
+    if (unreadAnnouncements.length === 0) return;
+
+    const markPromises = unreadAnnouncements.map(a => markSingleAsRead(a.id));
+    await Promise.all(markPromises);
+
+    if (isMountedRef.current) {
+      // Refetch to get accurate state from server
+      await fetchAnnouncements();
+    }
+  }, [announcements, markSingleAsRead, fetchAnnouncements]);
+
+  const handleUrgentAcknowledge = useCallback(async () => {
+    if (!urgentAnnouncement) return;
+    
+    const id = urgentAnnouncement.id;
+    setAcknowledgedUrgentIds(prev => new Set(prev).add(id));
+    setUrgentAnnouncement(null);
+    await markAsRead(id);
+  }, [urgentAnnouncement, markAsRead]);
+
+  const handleAnnouncementClick = useCallback(async (announcement: Announcement) => {
+    if (!announcement.read_at) {
+      await markAsRead(announcement.id);
+    }
+    setIsOpen(false);
+    router.push('/announcements');
+  }, [markAsRead, router]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchAnnouncements();
     
-    // تحديث كل 30 ثانية
     const interval = setInterval(fetchAnnouncements, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+    };
+  }, [fetchAnnouncements]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,74 +186,6 @@ export default function AnnouncementBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchAnnouncements = async () => {
-    try {
-      const userStr = localStorage.getItem('admin_user');
-      if (!userStr) return;
-      
-      const user = JSON.parse(userStr);
-      const response = await fetch(`/api/announcements/my?user_id=${user.id}`);
-      const data = await response.json();
-      
-      setAnnouncements(data.announcements || []);
-      setUnreadCount(data.unread_count || 0);
-
-      // التحقق من وجود تعميم عاجل غير مقروء
-      const unreadUrgent = data.announcements?.find(
-        (a: Announcement) => a.type === 'urgent' && !a.read_at
-      );
-      if (unreadUrgent && !urgentAnnouncement) {
-        setUrgentAnnouncement(unreadUrgent);
-      }
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-    }
-  };
-
-  const markAsRead = async (announcementId: string) => {
-    try {
-      const userStr = localStorage.getItem('admin_user');
-      if (!userStr) return;
-      
-      const user = JSON.parse(userStr);
-      await fetch(`/api/announcements/${announcementId}/read`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id })
-      });
-
-      // تحديث القائمة
-      setAnnouncements(prev => 
-        prev.map(a => a.id === announcementId ? { ...a, read_at: new Date().toISOString() } : a)
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking as read:', error);
-    }
-  };
-
-  const handleUrgentAcknowledge = async () => {
-    if (urgentAnnouncement) {
-      await markAsRead(urgentAnnouncement.id);
-      setUrgentAnnouncement(null);
-    }
-  };
-
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'الآن';
-    if (minutes < 60) return `منذ ${minutes} دقيقة`;
-    if (hours < 24) return `منذ ${hours} ساعة`;
-    if (days < 7) return `منذ ${days} يوم`;
-    return d.toLocaleDateString('ar-SA');
-  };
 
   return (
     <>
@@ -137,95 +207,72 @@ export default function AnnouncementBell() {
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute left-0 mt-2 w-80 bg-slate-900 border border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden z-50">
-            <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
-              <h3 className="text-white font-bold">التعاميم</h3>
-              {unreadCount > 0 && (
-                <span className="text-purple-400 text-sm">{unreadCount} غير مقروء</span>
-              )}
-            </div>
-
-            <div className="max-h-96 overflow-y-auto">
-              {announcements.length === 0 ? (
-                <div className="p-6 text-center text-purple-400">
-                  لا توجد تعاميم
-                </div>
-              ) : (
-                announcements.slice(0, 10).map((announcement) => (
-                  <div
-                    key={announcement.id}
-                    onClick={() => !announcement.read_at && markAsRead(announcement.id)}
-                    className={`p-4 border-b border-purple-500/10 hover:bg-purple-900/20 cursor-pointer transition-all border-l-4 ${PRIORITY_COLORS[announcement.priority]} ${!announcement.read_at ? 'bg-purple-900/30' : ''}`}
+          <>
+            <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
+            <div className="fixed top-20 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999]">
+              <div className="p-3 border-b border-purple-500/20 flex items-center justify-between">
+                <h3 className="text-white font-semibold text-sm">التعاميم</h3>
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      markAllAsRead();
+                    }}
+                    className="text-purple-400 text-xs hover:text-white cursor-pointer"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${!announcement.read_at ? 'bg-blue-400' : 'bg-transparent'}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium truncate ${!announcement.read_at ? 'text-white' : 'text-purple-300'}`}>
-                            {announcement.title}
-                          </p>
-                          {announcement.type === 'urgent' && (
-                            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">عاجل</span>
-                          )}
+                    تعليم الكل كمقروء ({unreadCount})
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-64 overflow-y-auto">
+                {announcements.length === 0 ? (
+                  <div className="p-4 text-center text-purple-400 text-sm">
+                    لا توجد تعاميم
+                  </div>
+                ) : (
+                  announcements.slice(0, 10).map((announcement) => (
+                    <div
+                      key={announcement.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAnnouncementClick(announcement);
+                      }}
+                      className={`p-3 border-b border-purple-500/10 hover:bg-purple-900/20 cursor-pointer transition-all border-l-4 ${PRIORITY_COLORS[announcement.priority] || 'border-l-blue-400'} ${!announcement.read_at ? 'bg-purple-900/30' : ''}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${!announcement.read_at ? 'bg-blue-400' : 'bg-transparent'}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`font-medium truncate ${!announcement.read_at ? 'text-white' : 'text-purple-300'}`}>
+                              {announcement.title}
+                            </p>
+                            {announcement.type === 'urgent' && (
+                              <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">عاجل</span>
+                            )}
+                          </div>
+                          <p className="text-purple-400 text-sm truncate mt-1">{announcement.content}</p>
+                          <p className="text-purple-500 text-xs mt-2">{formatDate(announcement.sent_at || announcement.created_at)}</p>
                         </div>
-                        <p className="text-purple-400 text-sm truncate mt-1">{announcement.content}</p>
-                        <p className="text-purple-500 text-xs mt-2">{formatDate(announcement.sent_at || announcement.created_at)}</p>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
 
-            <Link
-              href="/announcements"
-              className="block p-3 text-center text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all border-t border-purple-500/20"
-              onClick={() => setIsOpen(false)}
-            >
-              عرض جميع التعاميم
-            </Link>
-          </div>
+              <Link
+                href="/announcements"
+                className="block p-2.5 text-center text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all border-t border-purple-500/20 text-sm"
+                onClick={() => setIsOpen(false)}
+              >
+                عرض جميع التعاميم
+              </Link>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Urgent Announcement Modal */}
-      {urgentAnnouncement && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-slate-900 border-2 border-red-500/50 rounded-2xl w-full max-w-lg animate-pulse-slow">
-            <div className="p-4 bg-red-500/20 border-b border-red-500/30 flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-500/30 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-red-400 font-bold text-lg">تعميم عاجل</h2>
-                <p className="text-red-300/70 text-sm">يتطلب الاطلاع الفوري</p>
-              </div>
-            </div>
-
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-4">{urgentAnnouncement.title}</h3>
-              <p className="text-purple-300 whitespace-pre-wrap">{urgentAnnouncement.content}</p>
-              
-              {urgentAnnouncement.creator && (
-                <p className="text-purple-500 text-sm mt-4">
-                  من: {urgentAnnouncement.creator.name}
-                </p>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-purple-500/20">
-              <button
-                onClick={handleUrgentAcknowledge}
-                className="w-full py-3 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold rounded-xl hover:from-red-400 hover:to-orange-400 transition-all"
-              >
-                تم الاطلاع
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

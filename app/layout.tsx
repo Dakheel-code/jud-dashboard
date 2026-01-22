@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Cairo, Poppins } from "next/font/google";
 import "./globals.css";
+import dynamic from 'next/dynamic';
+
+const UrgentAnnouncementModal = dynamic(
+  () => import('@/components/UrgentAnnouncementModal'),
+  { ssr: false }
+);
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -41,6 +47,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.png" />
       </head>
       <body className={`${cairo.className} antialiased`}>
+        <UrgentAnnouncementModal />
         {children}
       </body>
     </html>

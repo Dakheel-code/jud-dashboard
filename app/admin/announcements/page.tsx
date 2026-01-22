@@ -8,7 +8,7 @@ interface Announcement {
   id: string;
   title: string;
   content: string;
-  type: 'normal' | 'urgent' | 'scheduled' | 'conditional';
+  type: 'normal' | 'urgent' | 'scheduled';
   priority: 'low' | 'normal' | 'high' | 'critical';
   target_type: 'all' | 'department' | 'users';
   target_department_id: string | null;
@@ -32,9 +32,8 @@ interface User {
 
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
   normal: { label: 'عادي', color: 'bg-blue-500/20 text-blue-400' },
-  urgent: { label: 'عاجل', color: 'bg-red-500/20 text-red-400' },
-  scheduled: { label: 'مجدول', color: 'bg-yellow-500/20 text-yellow-400' },
-  conditional: { label: 'مشروط', color: 'bg-purple-500/20 text-purple-400' }
+  urgent: { label: 'عاجل (نافذة Pop Up)', color: 'bg-red-500/20 text-red-400' },
+  scheduled: { label: 'مجدول', color: 'bg-yellow-500/20 text-yellow-400' }
 };
 
 const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
@@ -74,13 +73,14 @@ function AnnouncementsContent() {
   const [form, setForm] = useState({
     title: '',
     content: '',
-    type: 'normal' as 'normal' | 'urgent' | 'scheduled' | 'conditional',
+    type: 'normal' as 'normal' | 'urgent' | 'scheduled',
     priority: 'normal' as 'low' | 'normal' | 'high' | 'critical',
     target_type: 'all' as 'all' | 'department' | 'users',
     target_department_id: '',
     target_users: [] as string[],
     channels: ['in_app'] as string[],
     send_at: '',
+    show_as_popup: false,
     conditions: [] as { field: string; operator: string; value: string }[]
   });
 
@@ -137,6 +137,7 @@ function AnnouncementsContent() {
       target_users: [],
       channels: ['in_app'],
       send_at: '',
+      show_as_popup: false,
       conditions: []
     });
     setEditingAnnouncement(null);
@@ -155,6 +156,7 @@ function AnnouncementsContent() {
         target_users: announcement.target_users?.map(t => t.user.id) || [],
         channels: announcement.channels || ['in_app'],
         send_at: announcement.send_at ? announcement.send_at.slice(0, 16) : '',
+        show_as_popup: false,
         conditions: []
       });
     } else {
@@ -314,22 +316,21 @@ function AnnouncementsContent() {
               onChange={(e) => setFilterType(e.target.value)}
               className="px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
             >
-              <option value="">جميع الأنواع</option>
-              <option value="normal">عادي</option>
-              <option value="urgent">عاجل</option>
-              <option value="scheduled">مجدول</option>
-              <option value="conditional">مشروط</option>
+              <option value="" className="bg-slate-900">جميع الأنواع</option>
+              <option value="normal" className="bg-slate-900">عادي</option>
+              <option value="urgent" className="bg-slate-900">عاجل (نافذة Pop Up)</option>
+              <option value="scheduled" className="bg-slate-900">مجدول</option>
             </select>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
             >
-              <option value="">جميع الحالات</option>
-              <option value="draft">مسودة</option>
-              <option value="scheduled">مجدول</option>
-              <option value="sent">مرسل</option>
-              <option value="cancelled">ملغي</option>
+              <option value="" className="bg-slate-900">جميع الحالات</option>
+              <option value="draft" className="bg-slate-900">مسودة</option>
+              <option value="scheduled" className="bg-slate-900">مجدول</option>
+              <option value="sent" className="bg-slate-900">مرسل</option>
+              <option value="cancelled" className="bg-slate-900">ملغي</option>
             </select>
           </div>
         </div>
@@ -563,10 +564,9 @@ function AnnouncementsContent() {
                       onChange={(e) => setForm({ ...form, type: e.target.value as any })}
                       className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                     >
-                      <option value="normal">عادي</option>
-                      <option value="urgent">عاجل</option>
-                      <option value="scheduled">مجدول</option>
-                      <option value="conditional">مشروط</option>
+                      <option value="normal" className="bg-slate-900">عادي</option>
+                      <option value="urgent" className="bg-slate-900">عاجل (نافذة Pop Up)</option>
+                      <option value="scheduled" className="bg-slate-900">مجدول</option>
                     </select>
                   </div>
                   <div>
@@ -576,10 +576,10 @@ function AnnouncementsContent() {
                       onChange={(e) => setForm({ ...form, priority: e.target.value as any })}
                       className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                     >
-                      <option value="low">منخفضة</option>
-                      <option value="normal">عادية</option>
-                      <option value="high">عالية</option>
-                      <option value="critical">حرجة</option>
+                      <option value="low" className="bg-slate-900">منخفضة</option>
+                      <option value="normal" className="bg-slate-900">عادية</option>
+                      <option value="high" className="bg-slate-900">عالية</option>
+                      <option value="critical" className="bg-slate-900">حرجة</option>
                     </select>
                   </div>
                 </div>
@@ -592,9 +592,9 @@ function AnnouncementsContent() {
                     onChange={(e) => setForm({ ...form, target_type: e.target.value as any })}
                     className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
                   >
-                    <option value="all">جميع الموظفين</option>
-                    <option value="department">قسم محدد</option>
-                    <option value="users">موظفين محددين</option>
+                    <option value="all" className="bg-slate-900">جميع الموظفين</option>
+                    <option value="department" className="bg-slate-900">قسم محدد</option>
+                    <option value="users" className="bg-slate-900">موظفين محددين</option>
                   </select>
                 </div>
 
@@ -627,14 +627,30 @@ function AnnouncementsContent() {
 
                 {/* Scheduled Time */}
                 {form.type === 'scheduled' && (
-                  <div>
-                    <label className="block text-purple-300 text-sm mb-2">وقت الإرسال</label>
-                    <input
-                      type="datetime-local"
-                      value={form.send_at}
-                      onChange={(e) => setForm({ ...form, send_at: e.target.value })}
-                      className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-purple-300 text-sm mb-2">وقت الإرسال</label>
+                      <input
+                        type="datetime-local"
+                        value={form.send_at}
+                        onChange={(e) => setForm({ ...form, send_at: e.target.value })}
+                        className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer p-3 bg-purple-900/30 rounded-xl border border-purple-500/20 hover:bg-purple-900/50 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={form.show_as_popup}
+                          onChange={(e) => setForm({ ...form, show_as_popup: e.target.checked })}
+                          className="w-5 h-5 rounded border-purple-500/30 bg-purple-900/50 text-purple-500 focus:ring-purple-500"
+                        />
+                        <div>
+                          <span className="text-white font-medium">إظهار كنافذة Pop Up</span>
+                          <p className="text-purple-400 text-xs mt-0.5">عند تفعيل هذا الخيار، سيظهر التعميم كنافذة منبثقة للموظفين</p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 )}
 

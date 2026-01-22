@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
 
@@ -11,9 +11,9 @@ interface Announcement {
   type: 'normal' | 'urgent' | 'scheduled' | 'conditional';
   priority: 'low' | 'normal' | 'high' | 'critical';
   created_at: string;
-  sent_at: string;
+  sent_at: string | null;
   read_at: string | null;
-  creator?: { id: string; name: string; avatar: string };
+  creator?: { id: string; name: string; avatar?: string };
 }
 
 const TYPE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
@@ -35,7 +35,23 @@ function AnnouncementsListContent() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read' | 'urgent'>('all');
+
+  const fetchAnnouncements = useCallback(async (userId: string) => {
+    try {
+      const timestamp = Date.now();
+      const response = await fetch(`/api/announcements/my?user_id=${userId}&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const data = await response.json();
+      setAnnouncements(data.announcements || []);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem('admin_user');
@@ -44,37 +60,28 @@ function AnnouncementsListContent() {
       setCurrentUser(user);
       fetchAnnouncements(user.id);
     }
-  }, []);
+  }, [fetchAnnouncements]);
 
-  const fetchAnnouncements = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/announcements/my?user_id=${userId}`);
-      const data = await response.json();
-      setAnnouncements(data.announcements || []);
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const markAsRead = async (announcementId: string) => {
+  const markAsRead = useCallback(async (announcementId: string) => {
     if (!currentUser) return;
 
     try {
       await fetch(`/api/announcements/${announcementId}/read`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         body: JSON.stringify({ user_id: currentUser.id })
       });
 
-      setAnnouncements(prev =>
-        prev.map(a => a.id === announcementId ? { ...a, read_at: new Date().toISOString() } : a)
-      );
+      // Refetch to get accurate state
+      await fetchAnnouncements(currentUser.id);
     } catch (error) {
       console.error('Error marking as read:', error);
     }
-  };
+  }, [currentUser, fetchAnnouncements]);
 
   const openAnnouncement = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
@@ -96,6 +103,7 @@ function AnnouncementsListContent() {
   const filteredAnnouncements = announcements.filter(a => {
     if (filter === 'unread') return !a.read_at;
     if (filter === 'read') return !!a.read_at;
+    if (filter === 'urgent') return a.type === 'urgent';
     return true;
   });
 
@@ -128,7 +136,7 @@ function AnnouncementsListContent() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6">
           <button
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-xl transition-all ${filter === 'all' ? 'bg-purple-500 text-white' : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'}`}
@@ -142,10 +150,10 @@ function AnnouncementsListContent() {
             غير مقروء ({unreadCount})
           </button>
           <button
-            onClick={() => setFilter('read')}
-            className={`px-4 py-2 rounded-xl transition-all ${filter === 'read' ? 'bg-purple-500 text-white' : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'}`}
+            onClick={() => setFilter('urgent')}
+            className={`px-4 py-2 rounded-xl transition-all ${filter === 'urgent' ? 'bg-red-500 text-white' : 'bg-red-500/20 text-red-300 hover:bg-red-500/30'}`}
           >
-            مقروء ({announcements.length - unreadCount})
+            🚨 عاجل ({announcements.filter(a => a.type === 'urgent').length})
           </button>
         </div>
 

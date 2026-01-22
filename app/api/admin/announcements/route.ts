@@ -5,7 +5,8 @@ export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // استخدام service role key لتجاوز RLS
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase credentials');
@@ -25,24 +26,19 @@ export async function GET(request: Request) {
     const department = searchParams.get('department');
     const search = searchParams.get('search');
 
+    // Query for new table structure
     let query = supabase
       .from('announcements')
-      .select(`
-        *,
-        creator:admin_users!created_by(id, name, username, avatar),
-        target_users:announcement_target_users(
-          user:admin_users(id, name, username, avatar)
-        ),
-        reads:announcement_reads(count),
-        conditions:announcement_conditions(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (type) {
       query = query.eq('type', type);
     }
-    if (status) {
-      query = query.eq('status', status);
+    if (status === 'sent') {
+      query = query.not('sent_at', 'is', null);
+    } else if (status === 'draft') {
+      query = query.is('sent_at', null);
     }
     if (department) {
       query = query.eq('target_department_id', department);
@@ -55,13 +51,27 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error('Error fetching announcements:', error);
-      if (error.code === '42P01') {
-        return NextResponse.json({ announcements: [], message: 'جدول التعاميم غير موجود' });
-      }
       return NextResponse.json({ announcements: [] });
     }
 
-    return NextResponse.json({ announcements: announcements || [] });
+    // Add read counts
+    const announcementsWithCounts = await Promise.all(
+      (announcements || []).map(async (announcement: any) => {
+        const { count } = await supabase
+          .from('announcement_recipients')
+          .select('*', { count: 'exact', head: true })
+          .eq('announcement_id', announcement.id)
+          .not('read_at', 'is', null);
+        
+        return {
+          ...announcement,
+          status: announcement.sent_at ? 'sent' : 'draft',
+          read_count: count || 0
+        };
+      })
+    );
+
+    return NextResponse.json({ announcements: announcementsWithCounts });
 
   } catch (error) {
     console.error('Error:', error);
@@ -82,9 +92,7 @@ export async function POST(request: Request) {
       target_type, 
       target_department_id,
       target_users,
-      channels,
       send_at,
-      conditions,
       status,
       created_by
     } = body;
@@ -93,7 +101,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'العنوان والمحتوى مطلوبان' }, { status: 400 });
     }
 
-    // إنشاء التعميم
+    const sendNow = status === 'sent';
+
+    // إنشاء التعميم بالهيكل الجديد
     const { data: announcement, error } = await supabase
       .from('announcements')
       .insert({
@@ -103,10 +113,10 @@ export async function POST(request: Request) {
         priority: priority || 'normal',
         target_type: target_type || 'all',
         target_department_id: target_department_id || null,
-        channels: channels || ['in_app'],
+        target_user_ids: target_users || null,
         send_at: send_at || null,
-        status: status || 'draft',
-        is_automated: type === 'conditional' || type === 'scheduled',
+        sent_at: sendNow ? new Date().toISOString() : null,
+        is_active: true,
         created_by,
         created_at: new Date().toISOString()
       })
@@ -118,31 +128,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'فشل في إنشاء التعميم' }, { status: 500 });
     }
 
-    // إضافة المستخدمين المستهدفين إذا كان الاستهداف محدد
-    if (target_type === 'users' && target_users && target_users.length > 0) {
-      const targetRecords = target_users.map((userId: string) => ({
-        announcement_id: announcement.id,
-        user_id: userId
-      }));
-
-      await supabase.from('announcement_target_users').insert(targetRecords);
-    }
-
-    // إضافة الشروط إذا كان التعميم مشروطاً
-    if (type === 'conditional' && conditions && conditions.length > 0) {
-      const conditionRecords = conditions.map((cond: any) => ({
-        announcement_id: announcement.id,
-        field: cond.field,
-        operator: cond.operator,
-        value: cond.value
-      }));
-
-      await supabase.from('announcement_conditions').insert(conditionRecords);
-    }
-
-    // إذا كان الإرسال فوري
-    if (status === 'sent') {
-      await sendAnnouncement(supabase, announcement.id, target_type, target_department_id, target_users);
+    // إذا كان الإرسال فوري، أنشئ سجلات المستلمين
+    if (sendNow) {
+      console.log('=== SENDING ANNOUNCEMENT ===');
+      console.log('Announcement ID:', announcement.id);
+      console.log('Target Type:', target_type);
+      await sendAnnouncementToRecipients(supabase, announcement.id, target_type || 'all', target_department_id, target_users);
+      console.log('=== ANNOUNCEMENT SENT ===');
     }
 
     return NextResponse.json({ 
@@ -284,8 +276,8 @@ export async function DELETE(request: Request) {
   }
 }
 
-// دالة إرسال التعميم
-async function sendAnnouncement(
+// دالة إرسال التعميم للمستلمين (الجدول الجديد)
+async function sendAnnouncementToRecipients(
   supabase: any, 
   announcementId: string, 
   targetType: string, 
@@ -294,40 +286,43 @@ async function sendAnnouncement(
 ) {
   let usersToNotify: string[] = [];
 
+  console.log('sendAnnouncementToRecipients called:', { announcementId, targetType, targetDepartmentId, targetUsers });
+
   if (targetType === 'all') {
-    // جلب جميع المستخدمين
-    const { data: users } = await supabase
+    const { data: users, error } = await supabase
       .from('admin_users')
       .select('id');
+    console.log('All users fetched:', users?.length, error);
     usersToNotify = users?.map((u: any) => u.id) || [];
   } else if (targetType === 'department' && targetDepartmentId) {
-    // جلب مستخدمي القسم
-    const { data: users } = await supabase
+    const { data: users, error } = await supabase
       .from('admin_users')
       .select('id')
       .eq('department_id', targetDepartmentId);
+    console.log('Department users fetched:', users?.length, error);
     usersToNotify = users?.map((u: any) => u.id) || [];
   } else if (targetType === 'users' && targetUsers) {
     usersToNotify = targetUsers;
   }
 
-  // إنشاء سجلات القراءة (غير مقروءة)
+  console.log('Users to notify:', usersToNotify.length);
+
   if (usersToNotify.length > 0) {
-    const readRecords = usersToNotify.map(userId => ({
+    // إنشاء سجلات المستلمين في الجدول الجديد
+    const recipientRecords = usersToNotify.map(userId => ({
       announcement_id: announcementId,
       user_id: userId,
+      delivered_at: new Date().toISOString(),
       read_at: null
     }));
 
-    await supabase.from('announcement_reads').insert(readRecords);
+    const { error: insertError } = await supabase
+      .from('announcement_recipients')
+      .upsert(recipientRecords, { 
+        onConflict: 'announcement_id,user_id',
+        ignoreDuplicates: true 
+      });
+    
+    console.log('Insert announcement_recipients result:', insertError ? insertError : 'Success', recipientRecords.length);
   }
-
-  // تحديث حالة التعميم
-  await supabase
-    .from('announcements')
-    .update({ 
-      status: 'sent', 
-      sent_at: new Date().toISOString() 
-    })
-    .eq('id', announcementId);
 }

@@ -93,10 +93,19 @@ const menuItems: MenuItem[] = [
   },
   {
     href: '/admin/announcements',
-    label: 'التعاميم',
+    label: 'إدارة التعاميم',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+      </svg>
+    ),
+  },
+  {
+    href: '/announcements',
+    label: 'التعاميم',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
     ),
   },
@@ -283,15 +292,15 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
       <aside 
         className={`
           fixed top-0 right-0 h-screen bg-[#0a0118] border-l border-purple-500/20 z-50
-          transform transition-all duration-300 ease-in-out
+          transform transition-all duration-300 ease-in-out overflow-visible
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           lg:translate-x-0 lg:static lg:z-auto
           ${isCollapsed ? 'lg:w-20' : 'w-72'}
         `}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-visible">
           {/* Logo Header */}
-          <div className="p-6 border-b border-purple-500/20">
+          <div className="p-6 border-b border-purple-500/20 overflow-visible">
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
                 <img src="/logo.png" alt="Logo" className="object-contain w-12 h-12" />
