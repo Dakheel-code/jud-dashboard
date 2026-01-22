@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import ActivityTracker from './ActivityTracker';
 
 interface AdminAuthProps {
@@ -12,15 +13,29 @@ export default function AdminAuth({ children }: AdminAuthProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [session, status]);
 
   const checkAuth = async () => {
+    // انتظر حتى يتم تحميل حالة الجلسة
+    if (status === 'loading') {
+      return;
+    }
+
+    // التحقق من NextAuth session أولاً (تسجيل الدخول عبر Google)
+    if (session?.user) {
+      setIsAuthenticated(true);
+      setUserId((session.user as any).id || null);
+      return;
+    }
+
+    // التحقق من legacy token (تسجيل الدخول بالبريد)
     const token = localStorage.getItem('admin_token');
     
-    // إذا لم يوجد token، توجه لصفحة تسجيل الدخول
+    // إذا لم يوجد أي نوع من التوثيق، توجه لصفحة تسجيل الدخول
     if (!token) {
       setIsAuthenticated(false);
       router.push('/admin/login');
