@@ -17,7 +17,8 @@
     "next-auth": "^4.24.13",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-leaflet": "^4.2.1"
+    "react-leaflet": "^4.2.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
