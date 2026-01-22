@@ -18,6 +18,8 @@ const ROLE_LABELS: Record<string, string> = {
   'admin': 'مسؤول',
   'team_leader': 'قائد فريق',
   'account_manager': 'مدير حساب',
+  'employee': 'موظف',
+  'user': 'مستخدم',
 };
 
 interface MenuItem {
