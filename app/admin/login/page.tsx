@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,10 +17,26 @@ export default function AdminLoginPage() {
     setError('');
     setGoogleLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/admin' });
+      // Google login يعيد التوجيه تلقائياً، سنزامن localStorage في صفحة /admin
+      await signIn('google', { callbackUrl: '/admin?sync=1' });
     } catch (err) {
       setError('حدث خطأ في تسجيل الدخول عبر Google');
       setGoogleLoading(false);
+    }
+  };
+
+  // دالة مساعدة لجلب بيانات المستخدم وتخزينها في localStorage (للتوافق مع الصفحات القديمة)
+  const syncUserToLocalStorage = async () => {
+    try {
+      const response = await fetch('/api/me');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          localStorage.setItem('admin_user', JSON.stringify(data.user));
+        }
+      }
+    } catch (err) {
+      console.error('Error syncing user to localStorage:', err);
     }
   };
 
@@ -31,28 +47,16 @@ export default function AdminLoginPage() {
 
     try {
       const result = await signIn('credentials', {
-        username,
+        email,
         password,
         redirect: false,
       });
 
       if (result?.error) {
-        const response = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          localStorage.setItem('admin_token', data.token);
-          localStorage.setItem('admin_user', JSON.stringify(data.user));
-          router.push('/admin');
-        } else {
-          setError(data.error || 'خطأ في تسجيل الدخول');
-        }
+        setError('بيانات الدخول غير صحيحة');
       } else if (result?.ok) {
+        // مزامنة بيانات المستخدم إلى localStorage للتوافق مع الصفحات القديمة
+        await syncUserToLocalStorage();
         router.push('/admin');
       }
     } catch (err) {
@@ -155,16 +159,16 @@ export default function AdminLoginPage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-purple-300 text-xs font-medium mb-1.5">
-                    اسم المستخدم
+                    البريد الإلكتروني
                   </label>
                   <input
                     type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-2.5 bg-purple-900/40 border border-purple-500/30 rounded-lg text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all text-sm"
-                    placeholder="أدخل اسم المستخدم"
+                    placeholder="example@jud.sa أو اسم المستخدم"
                     required
-                    dir="rtl"
+                    dir="ltr"
                   />
                 </div>
 

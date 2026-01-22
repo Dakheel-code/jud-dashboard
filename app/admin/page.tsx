@@ -94,6 +94,29 @@ function AdminPageContent() {
     }
   }, []);
 
+  // مزامنة بيانات المستخدم إلى localStorage عند الدخول بـ Google (للتوافق مع الصفحات القديمة)
+  useEffect(() => {
+    const syncUserToLocalStorage = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('sync') === '1') {
+        try {
+          const response = await fetch('/api/me');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+              localStorage.setItem('admin_user', JSON.stringify(data.user));
+            }
+          }
+          // إزالة sync من URL بدون إعادة تحميل
+          window.history.replaceState({}, '', '/admin');
+        } catch (err) {
+          console.error('Error syncing user to localStorage:', err);
+        }
+      }
+    };
+    syncUserToLocalStorage();
+  }, []);
+
   // تحديث تلقائي للبيانات
   useEffect(() => {
     fetchData();
