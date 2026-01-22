@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AnnouncementBell from './AnnouncementBell';
+import { getAvatarUrl, getAvatarInitial } from '@/lib/avatar';
 
 interface UserInfo {
   id?: string;
@@ -186,8 +187,9 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
           phone: parsed.phone || '',
           avatar: parsed.avatar || ''
         }));
-        if (parsed.avatar) {
-          setAvatarPreview(parsed.avatar);
+        const avatarUrl = getAvatarUrl(parsed);
+        if (avatarUrl) {
+          setAvatarPreview(avatarUrl);
         }
       } catch {
         setUser({ name: 'مستخدم', role: 'account_manager' });
@@ -423,15 +425,15 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
               title={isCollapsed ? user?.name || 'الملف الشخصي' : undefined}
               className={`w-full flex items-center gap-3 bg-purple-900/30 hover:bg-purple-500/20 rounded-xl transition-all text-right border border-purple-500/20 mb-3 ${isCollapsed ? 'lg:justify-center lg:px-2 lg:py-3 px-4 py-3' : 'px-4 py-3'}`}
             >
-              {user?.avatar ? (
+              {getAvatarUrl(user) ? (
                 <img 
-                  src={user.avatar} 
-                  alt={user.name} 
+                  src={getAvatarUrl(user)!} 
+                  alt={user?.name || 'مستخدم'} 
                   className={`rounded-full object-cover flex-shrink-0 border-2 border-purple-500/30 ${isCollapsed ? 'lg:w-8 lg:h-8 w-10 h-10' : 'w-10 h-10'}`}
                 />
               ) : (
                 <div className={`rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-bold flex-shrink-0 ${isCollapsed ? 'lg:w-8 lg:h-8 lg:text-sm w-10 h-10 text-lg' : 'w-10 h-10 text-lg'}`}>
-                  {user?.name?.charAt(0) || 'م'}
+                  {getAvatarInitial(user)}
                 </div>
               )}
               {!isCollapsed && (
