@@ -13,6 +13,12 @@ interface Task {
   order_index: number;
 }
 
+// Drag state interface
+interface DragState {
+  taskId: string | null;
+  category: string | null;
+}
+
 function TasksManagementContent() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>([
@@ -29,6 +35,14 @@ function TasksManagementContent() {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editedCategoryName, setEditedCategoryName] = useState('');
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  
+  // Search and Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  
+  // Drag & Drop state
+  const [dragState, setDragState] = useState<DragState>({ taskId: null, category: null });
+  const [isDragging, setIsDragging] = useState(false);
 
   // مجموعة الأيقونات المتاحة للأقسام
   const categoryIcons: Record<string, { name: string; svg: string }> = {
@@ -251,13 +265,129 @@ function TasksManagementContent() {
     }
   };
 
-  const groupedTasks = tasks.reduce((acc, task) => {
+  // فلترة المهام حسب البحث والقسم
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = !searchQuery || task.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || task.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const groupedTasks = filteredTasks.reduce((acc, task) => {
     if (!acc[task.category]) {
       acc[task.category] = [];
     }
     acc[task.category].push(task);
     return acc;
   }, {} as Record<string, Task[]>);
+
+  // Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDragState({ taskId: task.id, category: task.category });
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDragState({ taskId: null, category: null });
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetTask: Task, category: string) => {
+    e.preventDefault();
+    
+    if (!dragState.taskId || dragState.taskId === targetTask.id) {
+      handleDragEnd();
+      return;
+    }
+
+    const draggedTask = tasks.find(t => t.id === dragState.taskId);
+    if (!draggedTask || draggedTask.category !== category) {
+      handleDragEnd();
+      return;
+    }
+
+    // Get tasks in this category sorted by order_index
+    const categoryTasks = [...(groupedTasks[category] || [])].sort((a, b) => a.order_index - b.order_index);
+    
+    const draggedIndex = categoryTasks.findIndex(t => t.id === draggedTask.id);
+    const targetIndex = categoryTasks.findIndex(t => t.id === targetTask.id);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      handleDragEnd();
+      return;
+    }
+
+    // Reorder tasks
+    categoryTasks.splice(draggedIndex, 1);
+    categoryTasks.splice(targetIndex, 0, draggedTask);
+
+    // Update order_index for all affected tasks
+    const updates: Promise<Response>[] = [];
+    categoryTasks.forEach((task, index) => {
+      const newOrderIndex = index + 1;
+      if (task.order_index !== newOrderIndex) {
+        updates.push(
+          fetch(`/api/admin/tasks/${task.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              order_index: newOrderIndex
+            })
+          })
+        );
+      }
+    });
+
+    try {
+      await Promise.all(updates);
+      await fetchTasks();
+    } catch (err) {
+      console.error('Failed to reorder tasks:', err);
+    }
+
+    handleDragEnd();
+  };
+
+  // نسخ مهمة (Duplicate)
+  const handleDuplicate = async (task: Task) => {
+    const categoryTasks = tasks.filter(t => t.category === task.category);
+    const maxOrderIndex = Math.max(...categoryTasks.map(t => t.order_index), 0);
+
+    try {
+      const response = await fetch('/api/admin/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${task.title} (نسخة)`,
+          description: task.description,
+          category: task.category,
+          order_index: maxOrderIndex + 1
+        })
+      });
+
+      if (response.ok) {
+        await fetchTasks();
+        setResultModalType('success');
+        setResultModalMessage('تم نسخ المهمة بنجاح!');
+        setShowResultModal(true);
+      } else {
+        throw new Error('Failed to duplicate');
+      }
+    } catch (err) {
+      console.error('Failed to duplicate task:', err);
+      setResultModalType('error');
+      setResultModalMessage('فشل نسخ المهمة.');
+      setShowResultModal(true);
+    }
+  };
 
   if (loading) {
     return (
@@ -343,6 +473,45 @@ function TasksManagementContent() {
           </div>
         </div>
 
+        {/* Search and Filter Bar */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="بحث بعنوان المهمة..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pr-10 pl-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none placeholder-purple-400/50"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div className="sm:w-48">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-4 py-2.5 bg-purple-900/50 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none appearance-none cursor-pointer"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239333ea'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'left 12px center', backgroundSize: '20px' }}
+              >
+                <option value="all" className="bg-[#1a0a2e]">جميع الأقسام</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat} className="bg-[#1a0a2e]">{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Results Count */}
+            <div className="text-sm text-purple-300 whitespace-nowrap">
+              {filteredTasks.length} من {tasks.length} مهمة
+            </div>
+          </div>
+        </div>
+
         {/* Tasks by Category */}
         <div className="space-y-6">
           {Object.keys(groupedTasks).sort((a, b) => {
@@ -377,12 +546,43 @@ function TasksManagementContent() {
               </div>
               <div className="space-y-3">
                 {groupedTasks[category]?.sort((a, b) => a.order_index - b.order_index).map(task => (
-                  <div key={task.id} className="flex items-center justify-between bg-purple-900/30 p-4 rounded-xl border border-purple-500/20 hover:bg-purple-900/50 transition-all">
+                  <div 
+                    key={task.id} 
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, task, category)}
+                    className={`flex items-center justify-between bg-purple-900/30 p-4 rounded-xl border transition-all cursor-grab active:cursor-grabbing ${
+                      dragState.taskId === task.id 
+                        ? 'border-purple-400 opacity-50 scale-95' 
+                        : isDragging && dragState.category === category
+                          ? 'border-purple-400/50 hover:border-purple-300'
+                          : 'border-purple-500/20 hover:bg-purple-900/50'
+                    }`}
+                  >
                     <div className="flex items-center gap-4">
+                      {/* Drag Handle */}
+                      <div className="text-purple-400/60 hover:text-purple-300 cursor-grab">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                        </svg>
+                      </div>
                       <span className="text-purple-300 font-mono text-sm">#{task.order_index}</span>
                       <span className="text-white">{task.title}</span>
                     </div>
                     <div className="flex gap-2">
+                      {/* Duplicate Button */}
+                      <button
+                        onClick={() => handleDuplicate(task)}
+                        className="p-2 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400/50 hover:bg-cyan-500/10 rounded-lg transition-all"
+                        title="نسخ المهمة"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                      {/* Edit Button */}
                       <button
                         onClick={() => handleEdit(task)}
                         className="p-2 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-lg transition-all"
@@ -392,6 +592,7 @@ function TasksManagementContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
+                      {/* Delete Button */}
                       <button
                         onClick={() => openDeleteTaskModal(task.id)}
                         className="p-2 text-red-400 border border-red-500/30 hover:border-red-400/50 hover:bg-red-500/10 rounded-lg transition-all"

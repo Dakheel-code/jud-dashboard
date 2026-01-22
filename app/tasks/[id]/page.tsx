@@ -1,0 +1,440 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  type: string;
+  due_date?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  store?: {
+    id: string;
+    store_name: string;
+    store_url: string;
+  };
+  assigned_user?: {
+    id: string;
+    name: string;
+    username: string;
+    avatar?: string;
+  };
+  created_user?: {
+    id: string;
+    name: string;
+    username: string;
+  };
+  participants?: Array<{
+    id: string;
+    role: string;
+    notes?: string;
+    added_at: string;
+    user: {
+      id: string;
+      name: string;
+      username: string;
+      avatar?: string;
+    };
+  }>;
+  activity_log?: Array<{
+    id: string;
+    action: string;
+    meta: any;
+    created_at: string;
+    user?: {
+      id: string;
+      name: string;
+      username: string;
+    };
+  }>;
+}
+
+interface User {
+  id: string;
+  name: string;
+  username: string;
+  avatar?: string;
+}
+
+const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'معلقة', color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30' },
+  in_progress: { label: 'قيد التنفيذ', color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
+  waiting: { label: 'بانتظار', color: 'text-orange-400', bg: 'bg-orange-500/20 border-orange-500/30' },
+  done: { label: 'مكتملة', color: 'text-green-400', bg: 'bg-green-500/20 border-green-500/30' },
+  blocked: { label: 'محظورة', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
+  canceled: { label: 'ملغاة', color: 'text-gray-400', bg: 'bg-gray-500/20 border-gray-500/30' }
+};
+
+const priorityLabels: Record<string, { label: string; color: string }> = {
+  low: { label: 'منخفضة', color: 'text-gray-400' },
+  normal: { label: 'عادية', color: 'text-blue-400' },
+  high: { label: 'عالية', color: 'text-orange-400' },
+  critical: { label: 'حرجة', color: 'text-red-400' }
+};
+
+const actionLabels: Record<string, string> = {
+  created: 'أنشأ المهمة',
+  assigned: 'أسند المهمة',
+  reassigned: 'أعاد إسناد المهمة',
+  status_changed: 'غيّر الحالة',
+  priority_changed: 'غيّر الأولوية',
+  due_date_changed: 'غيّر موعد التسليم',
+  participant_added: 'أضاف مشارك',
+  participant_removed: 'أزال مشارك',
+  updated: 'حدّث المهمة'
+};
+
+export default function TaskDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const taskId = params.id as string;
+
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+
+  useEffect(() => {
+    fetchTask();
+    fetchUsers();
+  }, [taskId]);
+
+  const fetchTask = async () => {
+    try {
+      const response = await fetch(`/api/admin/store-tasks/${taskId}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setTask(data.task);
+      } else {
+        console.error('Task not found');
+      }
+    } catch (error) {
+      console.error('Failed to fetch task:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+      setUsers(data.users || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
+  const updateStatus = async (newStatus: string) => {
+    if (!task || updating) return;
+    
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/store-tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        await fetchTask();
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const addParticipant = async () => {
+    if (!selectedUserId || updating) return;
+
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/admin/store-tasks/${taskId}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          user_id: selectedUserId,
+          role: 'helper'
+        })
+      });
+
+      if (response.ok) {
+        await fetchTask();
+        setShowHelpModal(false);
+        setSelectedUserId('');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'فشل إضافة المشارك');
+      }
+    } catch (error) {
+      console.error('Failed to add participant:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ar-SA', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const isOverdue = () => {
+    if (!task?.due_date || task.status === 'done' || task.status === 'canceled') return false;
+    return new Date(task.due_date) < new Date();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0118]">
+        <div className="text-center">
+          <div className="relative w-20 h-20 mx-auto mb-4">
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin"></div>
+          </div>
+          <p className="text-white text-lg">جاري تحميل المهمة...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0118]">
+        <div className="text-center">
+          <p className="text-red-400 text-xl mb-4">المهمة غير موجودة</p>
+          <Link href="/tasks/my" className="text-purple-400 hover:underline">
+            العودة للمهام
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
+        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/tasks/my"
+            className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">تفاصيل المهمة</h1>
+        </div>
+
+        {/* Main Card */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 mb-6">
+          {/* Title & Priority */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">{task.title}</h2>
+              {task.store && (
+                <p className="text-purple-300/80 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  {task.store.store_name}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full border ${statusLabels[task.status]?.bg} ${statusLabels[task.status]?.color}`}>
+                {statusLabels[task.status]?.label || task.status}
+              </span>
+              {isOverdue() && (
+                <span className="px-3 py-1 rounded-full bg-red-500/20 border border-red-500/30 text-red-400">
+                  متأخرة
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          {task.description && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-purple-300/80 mb-2">الوصف</h3>
+              <p className="text-white bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+                {task.description}
+              </p>
+            </div>
+          )}
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+              <p className="text-sm text-purple-300/60 mb-1">الأولوية</p>
+              <p className={`font-medium ${priorityLabels[task.priority]?.color}`}>
+                {priorityLabels[task.priority]?.label || task.priority}
+              </p>
+            </div>
+            <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+              <p className="text-sm text-purple-300/60 mb-1">النوع</p>
+              <p className="text-white font-medium">
+                {task.type === 'template' ? 'من القالب' : task.type === 'auto' ? 'تلقائية' : 'يدوية'}
+              </p>
+            </div>
+            <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+              <p className="text-sm text-purple-300/60 mb-1">موعد التسليم</p>
+              <p className={`font-medium ${isOverdue() ? 'text-red-400' : 'text-white'}`}>
+                {task.due_date ? formatDate(task.due_date) : '-'}
+              </p>
+            </div>
+            <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+              <p className="text-sm text-purple-300/60 mb-1">المكلف</p>
+              <p className="text-white font-medium">
+                {task.assigned_user?.name || 'غير محدد'}
+              </p>
+            </div>
+          </div>
+
+          {/* Status Change Buttons */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-purple-300/80 mb-3">تغيير الحالة</h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(statusLabels).map(([key, value]) => (
+                <button
+                  key={key}
+                  onClick={() => updateStatus(key)}
+                  disabled={updating || task.status === key}
+                  className={`px-4 py-2 rounded-lg border transition-all disabled:opacity-50 ${
+                    task.status === key
+                      ? `${value.bg} ${value.color}`
+                      : 'bg-purple-900/30 border-purple-500/30 text-purple-300 hover:border-purple-400/50'
+                  }`}
+                >
+                  {value.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Help Request Button */}
+          <button
+            onClick={() => setShowHelpModal(true)}
+            className="w-full py-3 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 rounded-xl border border-cyan-500/30 transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            طلب مساعدة
+          </button>
+        </div>
+
+        {/* Participants */}
+        {task.participants && task.participants.length > 0 && (
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 mb-6">
+            <h3 className="text-lg font-bold text-white mb-4">المشاركون</h3>
+            <div className="space-y-3">
+              {task.participants.map(p => (
+                <div key={p.id} className="flex items-center gap-3 bg-purple-900/30 rounded-xl p-3 border border-purple-500/20">
+                  <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center text-white font-bold">
+                    {p.user?.name?.charAt(0) || '?'}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-medium">{p.user?.name}</p>
+                    <p className="text-sm text-purple-300/60">
+                      {p.role === 'helper' ? 'مساعد' : p.role === 'reviewer' ? 'مراجع' : 'مراقب'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Activity Log */}
+        {task.activity_log && task.activity_log.length > 0 && (
+          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
+            <h3 className="text-lg font-bold text-white mb-4">سجل النشاط</h3>
+            <div className="space-y-3">
+              {task.activity_log.map(log => (
+                <div key={log.id} className="flex items-start gap-3 text-sm">
+                  <div className="w-2 h-2 rounded-full bg-purple-400 mt-2"></div>
+                  <div className="flex-1">
+                    <p className="text-white">
+                      <span className="text-purple-300">{log.user?.name || 'النظام'}</span>
+                      {' '}
+                      {actionLabels[log.action] || log.action}
+                    </p>
+                    <p className="text-purple-300/60 text-xs">{formatDate(log.created_at)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-purple-950/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-white mb-4">طلب مساعدة</h3>
+            <p className="text-purple-300/80 mb-4">اختر شخص لمساعدتك في هذه المهمة</p>
+            
+            <select
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl mb-4 outline-none focus:border-purple-400"
+            >
+              <option value="">اختر مستخدم...</option>
+              {users
+                .filter(u => !task.participants?.some(p => p.user?.id === u.id))
+                .map(user => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))
+              }
+            </select>
+
+            <div className="flex gap-3">
+              <button
+                onClick={addParticipant}
+                disabled={!selectedUserId || updating}
+                className="flex-1 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl transition-all disabled:opacity-50"
+              >
+                {updating ? 'جاري الإضافة...' : 'إضافة'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowHelpModal(false);
+                  setSelectedUserId('');
+                }}
+                className="flex-1 py-3 bg-purple-900/50 hover:bg-purple-900/70 text-white rounded-xl transition-all"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

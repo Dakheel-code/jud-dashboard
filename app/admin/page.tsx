@@ -304,7 +304,8 @@ function AdminPageContent() {
               </p>
             </div>
           </div>
-        </div>
+          
+          </div>
 
         {/* Dashboard Content with Skeleton Loading */}
         {dashboardLoading ? (
