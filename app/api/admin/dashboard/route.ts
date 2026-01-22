@@ -30,8 +30,7 @@ export async function GET(request: NextRequest) {
       tasksResult,
       storesResult,
       usersResult,
-      announcementsResult,
-      campaignsResult
+      announcementsResult
     ] = await Promise.all([
       // المهام
       supabase.from('tasks').select('id, status, due_date, assigned_to, store_id, title, created_at, completed_at'),
@@ -40,16 +39,22 @@ export async function GET(request: NextRequest) {
       // المستخدمين
       supabase.from('admin_users').select('id, name, username, avatar, role, is_active'),
       // التعاميم
-      supabase.from('announcements').select('id, title, type, status, created_at'),
-      // الحملات (إذا وجدت)
-      supabase.from('store_campaigns').select('*').catch(() => ({ data: [], error: null }))
+      supabase.from('announcements').select('id, title, type, status, created_at')
     ]);
+
+    // الحملات (إذا وجدت) - جلب منفصل مع معالجة الخطأ
+    let campaigns: any[] = [];
+    try {
+      const campaignsResult = await supabase.from('store_campaigns').select('*');
+      campaigns = campaignsResult.data || [];
+    } catch {
+      campaigns = [];
+    }
 
     const tasks = tasksResult.data || [];
     const stores = storesResult.data || [];
     const users = usersResult.data || [];
     const announcements = announcementsResult.data || [];
-    const campaigns = campaignsResult.data || [];
 
     // حساب KPIs
     const overdueTasks = tasks.filter(t => 
