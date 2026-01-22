@@ -105,12 +105,31 @@ function AdminPageContent() {
             const data = await response.json();
             if (data.user) {
               localStorage.setItem('admin_user', JSON.stringify(data.user));
+              // إرسال event لإعلام المكونات الأخرى بتحديث بيانات المستخدم
+              window.dispatchEvent(new Event('user-updated'));
             }
           }
           // إزالة sync من URL بدون إعادة تحميل
           window.history.replaceState({}, '', '/admin');
         } catch (err) {
           console.error('Error syncing user to localStorage:', err);
+        }
+      } else {
+        // حتى لو لم يكن sync=1، تأكد من وجود بيانات المستخدم
+        const storedUser = localStorage.getItem('admin_user');
+        if (!storedUser) {
+          try {
+            const response = await fetch('/api/me');
+            if (response.ok) {
+              const data = await response.json();
+              if (data.user) {
+                localStorage.setItem('admin_user', JSON.stringify(data.user));
+                window.dispatchEvent(new Event('user-updated'));
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching user:', err);
+          }
         }
       }
     };

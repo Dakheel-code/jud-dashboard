@@ -166,7 +166,8 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState(0);
 
-  useEffect(() => {
+  // دالة لتحميل بيانات المستخدم من localStorage
+  const loadUserFromStorage = () => {
     const storedUser = localStorage.getItem('admin_user');
     if (storedUser) {
       try {
@@ -195,12 +196,27 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
         setUser({ name: 'مستخدم', role: 'account_manager' });
       }
     }
+  };
+
+  useEffect(() => {
+    // تحميل بيانات المستخدم عند التحميل الأول
+    loadUserFromStorage();
+    
+    // الاستماع لـ event تحديث المستخدم
+    const handleUserUpdated = () => {
+      loadUserFromStorage();
+    };
+    window.addEventListener('user-updated', handleUserUpdated);
     
     // جلب عدد الطلبات المعلقة
     fetchPendingLeaveRequests();
     // تحديث كل 30 ثانية
     const interval = setInterval(fetchPendingLeaveRequests, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('user-updated', handleUserUpdated);
+    };
   }, []);
 
   const fetchPendingLeaveRequests = async () => {
