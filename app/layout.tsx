@@ -28,10 +28,10 @@ export const metadata: Metadata = {
   description: "نظام إدارة المتاجر - وكالة جود",
   icons: {
     icon: [
+      { url: "/favicon.gif", type: "image/gif" },
       { url: "/favicon.ico" },
-      { url: "/favicon.png", type: "image/png" },
     ],
-    apple: "/favicon.png",
+    apple: "/favicon.gif",
   },
 };
 
@@ -43,9 +43,9 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
+        <link rel="icon" href="/favicon.gif" type="image/gif" />
         <link rel="icon" href="/favicon.ico" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/favicon.gif" />
       </head>
       <body className={`${cairo.className} antialiased`}>
         <Providers>
