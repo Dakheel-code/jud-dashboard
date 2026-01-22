@@ -18,6 +18,7 @@ export async function GET() {
         name: user.name,
         email: user.email,
         role: user.role,
+        roles: user.roles || [],
         username: user.username,
         avatar: user.avatar || user.image,
         permissions: user.permissions || [],

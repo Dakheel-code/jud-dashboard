@@ -172,6 +172,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.uid = user.id;
         token.role = (user as any).role;
+        token.roles = (user as any).roles;
         token.username = (user as any).username;
         token.permissions = (user as any).permissions;
         token.avatar = (user as any).avatar;
@@ -190,13 +191,14 @@ export const authOptions: NextAuthOptions = {
         const supabase = getSupabaseClient();
         const { data: dbUser } = await supabase
           .from('admin_users')
-          .select('id, role, permissions, username, avatar')
+          .select('id, role, roles, permissions, username, avatar')
           .ilike('email', (token.email as string)?.toLowerCase() || '')
           .single();
 
         if (dbUser) {
           token.uid = dbUser.id;
           token.role = dbUser.role;
+          token.roles = dbUser.roles;
           token.permissions = dbUser.permissions;
           token.username = dbUser.username;
           token.avatar = dbUser.avatar;
@@ -209,6 +211,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.uid;
         (session.user as any).role = token.role;
+        (session.user as any).roles = token.roles;
         (session.user as any).provider = token.provider;
         (session.user as any).username = token.username;
         (session.user as any).permissions = token.permissions;

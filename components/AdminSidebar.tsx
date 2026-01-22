@@ -10,6 +10,7 @@ interface UserInfo {
   username?: string;
   email?: string;
   role: string;
+  roles?: string[];
   avatar?: string;
 }
 
@@ -18,8 +19,39 @@ const ROLE_LABELS: Record<string, string> = {
   'admin': 'مسؤول',
   'team_leader': 'قائد فريق',
   'account_manager': 'مدير حساب',
+  'media_buyer': 'ميديا باير',
+  'programmer': 'مبرمج',
+  'designer': 'مصمم',
+  'web_developer': 'مطور ويب',
   'employee': 'موظف',
   'user': 'مستخدم',
+};
+
+// دالة للحصول على أفضل وصف للدور
+const getRoleLabel = (user: UserInfo | null): string => {
+  if (!user) return 'لوحة التحكم';
+  
+  // أولاً: تحقق من roles (الأدوار المخصصة)
+  if (user.roles && user.roles.length > 0) {
+    // ابحث عن أول دور له ترجمة
+    for (const role of user.roles) {
+      if (ROLE_LABELS[role]) {
+        return ROLE_LABELS[role];
+      }
+    }
+  }
+  
+  // ثانياً: استخدم role الأساسي
+  if (user.role && ROLE_LABELS[user.role]) {
+    return ROLE_LABELS[user.role];
+  }
+  
+  // ثالثاً: إذا role موجود لكن بدون ترجمة، اعرضه كما هو
+  if (user.role) {
+    return user.role;
+  }
+  
+  return 'مدير حساب';
 };
 
 interface MenuItem {
@@ -144,6 +176,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
           username: parsed.username,
           email: parsed.email,
           role: parsed.role || 'account_manager',
+          roles: parsed.roles || [],
           avatar: parsed.avatar || null,
         });
         setProfileForm(prev => ({
@@ -302,7 +335,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                     <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden lg:block"></div>
                     <div className="hidden lg:block">
                       <h2 className="text-white text-lg uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</h2>
-                      <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
+                      <p className="text-purple-400/60 text-xs">{getRoleLabel(user)}</p>
                     </div>
                   </>
                 )}
@@ -312,7 +345,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                 </div>
                 <div className="lg:hidden">
                   <h2 className="text-white text-lg uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</h2>
-                  <p className="text-purple-400/60 text-xs">{user?.role ? ROLE_LABELS[user.role] || user.role : 'لوحة التحكم'}</p>
+                  <p className="text-purple-400/60 text-xs">{getRoleLabel(user)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -404,13 +437,13 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
               {!isCollapsed && (
                 <div className="flex-1 min-w-0">
                   <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
-                  <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
+                  <p className="text-purple-400/60 text-xs truncate">{getRoleLabel(user)}</p>
                 </div>
               )}
               {isCollapsed && (
                 <div className="flex-1 min-w-0 lg:hidden">
                   <p className="text-white truncate uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user?.name || 'مستخدم'}</p>
-                  <p className="text-purple-400/60 text-xs truncate">{ROLE_LABELS[user?.role || ''] || 'مدير حساب'}</p>
+                  <p className="text-purple-400/60 text-xs truncate">{getRoleLabel(user)}</p>
                 </div>
               )}
             </button>
