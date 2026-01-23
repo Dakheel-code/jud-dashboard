@@ -161,11 +161,14 @@ export default function TaskDetailsPage() {
       const response = await fetch(`/api/admin/store-tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus })
       });
 
       if (response.ok) {
         await fetchTask();
+        // تحديث سجل النشاط
+        window.dispatchEvent(new CustomEvent('refreshActivityLog'));
       }
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -218,6 +221,42 @@ export default function TaskDetailsPage() {
   const isOverdue = () => {
     if (!task?.due_date || task.status === 'done' || task.status === 'canceled') return false;
     return new Date(task.due_date) < new Date();
+  };
+
+  const getTimeRemaining = (dateStr: string) => {
+    const now = new Date();
+    const dueDate = new Date(dateStr);
+    const diff = dueDate.getTime() - now.getTime();
+    
+    // إذا انتهى الموعد
+    if (diff < 0) {
+      const absDiff = Math.abs(diff);
+      const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      
+      if (days > 0) {
+        return `متأخر ${days} يوم${days > 1 ? '' : ''} ${hours > 0 ? `و ${hours} ساعة` : ''}`;
+      } else if (hours > 0) {
+        const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+        return `متأخر ${hours} ساعة${minutes > 0 ? ` و ${minutes} دقيقة` : ''}`;
+      } else {
+        const minutes = Math.floor(absDiff / (1000 * 60));
+        return `متأخر ${minutes} دقيقة`;
+      }
+    }
+    
+    // الوقت المتبقي
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      return `متبقي ${days} يوم${hours > 0 ? ` و ${hours} ساعة` : ''}`;
+    } else if (hours > 0) {
+      return `متبقي ${hours} ساعة${minutes > 0 ? ` و ${minutes} دقيقة` : ''}`;
+    } else {
+      return `متبقي ${minutes} دقيقة`;
+    }
   };
 
   if (loading) {
@@ -324,6 +363,11 @@ export default function TaskDetailsPage() {
               <p className={`font-medium ${isOverdue() ? 'text-red-400' : 'text-white'}`}>
                 {task.due_date ? formatDate(task.due_date) : '-'}
               </p>
+              {task.due_date && (
+                <p className={`text-xs mt-1 ${isOverdue() ? 'text-red-400' : 'text-purple-400/70'}`}>
+                  {getTimeRemaining(task.due_date)}
+                </p>
+              )}
             </div>
             <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
               <p className="text-sm text-purple-300/60 mb-1">المكلف</p>

@@ -23,11 +23,12 @@ async function getCurrentUserId(): Promise<string | null> {
     const cookieStore = cookies();
     const adminUserCookie = cookieStore.get('admin_user');
     if (adminUserCookie?.value) {
-      const adminUser = JSON.parse(adminUserCookie.value);
+      const decodedValue = decodeURIComponent(adminUserCookie.value);
+      const adminUser = JSON.parse(decodedValue);
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
+    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -126,22 +127,41 @@ export async function POST(
     const filePath = `${taskId}/${attachmentId}-${safeFileName}`;
 
     // رفع الملف إلى Storage (إذا كان هناك بيانات)
+    let fileUploaded = false;
     if (file_data) {
-      // تحويل base64 إلى buffer
-      const base64Data = file_data.replace(/^data:[^;]+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
+      try {
+        // تحويل base64 إلى buffer
+        const base64Data = file_data.replace(/^data:[^;]+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, buffer, {
-          contentType: mime_type || 'application/octet-stream',
-          upsert: false
-        });
+        const { error: uploadError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, buffer, {
+            contentType: mime_type || 'application/octet-stream',
+            upsert: false
+          });
 
-      if (uploadError) {
-        console.error('Error uploading file:', uploadError);
-        return NextResponse.json({ error: 'فشل رفع الملف' }, { status: 500 });
+        if (uploadError) {
+          console.error('Error uploading file to storage:', uploadError);
+          // نستمر بدون رفع الملف للـ storage - سنحفظ المعلومات فقط
+        } else {
+          fileUploaded = true;
+        }
+      } catch (storageError) {
+        console.error('Storage error:', storageError);
+        // نستمر بدون رفع الملف للـ storage
       }
+    }
+
+    // إنشاء URL مؤقت للملف
+    let fileUrl = '';
+    if (fileUploaded) {
+      const { data: urlData } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days
+      fileUrl = urlData?.signedUrl || filePath;
+    } else {
+      fileUrl = filePath; // استخدام المسار كـ URL مؤقت
     }
 
     // إضافة المرفق في قاعدة البيانات
@@ -150,32 +170,31 @@ export async function POST(
       .insert({
         id: attachmentId,
         task_id: taskId,
-        uploader_id: userId,
+        user_id: userId,
         file_path: filePath,
         file_name: file_name,
+        file_url: fileUrl,
         file_size: file_size || null,
         mime_type: mime_type || null
       })
-      .select(`
-        id,
-        task_id,
-        file_path,
-        file_name,
-        file_size,
-        mime_type,
-        created_at,
-        uploader:admin_users!task_attachments_uploader_id_fkey(id, name, username, avatar)
-      `)
+      .select('*')
       .single();
 
     if (error) {
       console.error('Error creating attachment record:', error);
       // حذف الملف من Storage إذا فشل إنشاء السجل
-      if (file_data) {
+      if (fileUploaded) {
         await supabase.storage.from(BUCKET_NAME).remove([filePath]);
       }
-      return NextResponse.json({ error: 'فشل إضافة المرفق' }, { status: 500 });
+      return NextResponse.json({ error: 'فشل إضافة المرفق: ' + error.message }, { status: 500 });
     }
+
+    // جلب بيانات المستخدم
+    const { data: uploader } = await supabase
+      .from('admin_users')
+      .select('id, name, username, avatar')
+      .eq('id', userId)
+      .single();
 
     // إنشاء signed URL
     let signedUrl = null;
@@ -201,7 +220,7 @@ export async function POST(
     return NextResponse.json({ 
       attachment: {
         ...attachment,
-        user: attachment.uploader,
+        user: uploader,
         file_url: signedUrl
       }
     }, { status: 201 });

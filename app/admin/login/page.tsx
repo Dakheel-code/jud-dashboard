@@ -31,6 +31,8 @@ export default function AdminLoginPage() {
         const data = await response.json();
         if (data.user) {
           localStorage.setItem('admin_user', JSON.stringify(data.user));
+          // تعيين الـ cookie أيضاً
+          document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
         }
       }
     } catch (err) {

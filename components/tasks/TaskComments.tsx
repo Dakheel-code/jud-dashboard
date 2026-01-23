@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Comment {
   id: string;
@@ -17,6 +17,12 @@ interface Comment {
   } | null;
 }
 
+interface User {
+  id: string;
+  name: string;
+  username: string;
+}
+
 interface TaskCommentsProps {
   taskId: string;
   currentUserId: string;
@@ -30,12 +36,32 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  
+  // Mention state
+  const [users, setUsers] = useState<User[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isAdmin = ['super_admin', 'admin'].includes(userRole);
 
   useEffect(() => {
     fetchComments();
+    fetchUsers();
   }, [taskId]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users?active=true');
+      const data = await response.json();
+      if (response.ok) {
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -60,6 +86,7 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content: newComment.trim() })
       });
 
@@ -67,6 +94,9 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         const data = await response.json();
         setComments([...comments, data.comment]);
         setNewComment('');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'فشل إضافة التعليق');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -74,6 +104,48 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
       setSubmitting(false);
     }
   };
+
+  // Handle mention input
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+
+    // Check for @ mention
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+      // Check if there's no space after @
+      if (!textAfterAt.includes(' ')) {
+        setMentionFilter(textAfterAt.toLowerCase());
+        setShowMentions(true);
+        setMentionIndex(0);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  // Insert mention
+  const insertMention = (user: User) => {
+    const cursorPos = textareaRef.current?.selectionStart || 0;
+    const textBeforeCursor = newComment.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const textAfterCursor = newComment.substring(cursorPos);
+    
+    const newText = textBeforeCursor.substring(0, lastAtIndex) + `@${user.username} ` + textAfterCursor;
+    setNewComment(newText);
+    setShowMentions(false);
+    textareaRef.current?.focus();
+  };
+
+  // Filter users for mention
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(mentionFilter) || 
+    u.username.toLowerCase().includes(mentionFilter)
+  ).slice(0, 5);
 
   const handleEdit = async (commentId: string) => {
     if (!editContent.trim()) return;
@@ -240,14 +312,37 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
 
       {/* Add Comment Form */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-purple-500/20 bg-purple-900/20">
-        <div className="flex gap-3">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="اكتب تعليقاً..."
-            className="flex-1 p-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white text-sm resize-none focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
-            rows={2}
-          />
+        <div className="flex gap-3 relative">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={newComment}
+              onChange={handleCommentChange}
+              placeholder="اكتب تعليقاً... استخدم @ لذكر شخص"
+              className="w-full p-3 bg-purple-900/50 border border-purple-500/30 rounded-xl text-white text-sm resize-none focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
+              rows={2}
+            />
+            
+            {/* Mention Dropdown */}
+            {showMentions && filteredUsers.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-[#1a0a2e] border border-purple-500/30 rounded-xl shadow-xl overflow-hidden z-10">
+                {filteredUsers.map((user, index) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => insertMention(user)}
+                    className={`w-full px-3 py-2 text-right flex items-center gap-2 hover:bg-purple-500/20 transition-colors ${index === mentionIndex ? 'bg-purple-500/20' : ''}`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white text-xs font-bold">
+                      {user.name.charAt(0)}
+                    </div>
+                    <span className="text-white text-sm">{user.name}</span>
+                    <span className="text-purple-400/60 text-xs">@{user.username}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={!newComment.trim() || submitting}
@@ -265,6 +360,7 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
             )}
           </button>
         </div>
+        <p className="text-purple-400/50 text-xs mt-2">استخدم @ لذكر شخص في التعليق</p>
       </form>
     </div>
   );

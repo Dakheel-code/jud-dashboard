@@ -136,6 +136,40 @@ export default function MyTasksPage() {
     return new Date(task.due_date) < new Date();
   };
 
+  const getTimeRemaining = (dateStr: string) => {
+    const now = new Date();
+    const dueDate = new Date(dateStr);
+    const diff = dueDate.getTime() - now.getTime();
+    
+    if (diff < 0) {
+      const absDiff = Math.abs(diff);
+      const days = Math.floor(absDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((absDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      
+      if (days > 0) {
+        return `متأخر ${days} يوم${hours > 0 ? ` و ${hours} ساعة` : ''}`;
+      } else if (hours > 0) {
+        const minutes = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
+        return `متأخر ${hours} ساعة${minutes > 0 ? ` و ${minutes} دقيقة` : ''}`;
+      } else {
+        const minutes = Math.floor(absDiff / (1000 * 60));
+        return `متأخر ${minutes} دقيقة`;
+      }
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) {
+      return `متبقي ${days} يوم${hours > 0 ? ` و ${hours} ساعة` : ''}`;
+    } else if (hours > 0) {
+      return `متبقي ${hours} ساعة${minutes > 0 ? ` و ${minutes} دقيقة` : ''}`;
+    } else {
+      return `متبقي ${minutes} دقيقة`;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118]">
@@ -348,105 +382,96 @@ export default function MyTasksPage() {
           </div>
         </div>
 
-        {/* Tasks List */}
-        <div className="space-y-3">
-          {filteredTasks.length === 0 ? (
-            <div className="text-center py-16 bg-purple-950/40 rounded-2xl border border-purple-500/20">
-              <svg className="w-16 h-16 mx-auto text-purple-400/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              <p className="text-purple-300/60 text-lg">لا توجد مهام</p>
-            </div>
-          ) : (
-            filteredTasks.map(task => (
-              <div
+        {/* Tasks Cards Grid */}
+        {filteredTasks.length === 0 ? (
+          <div className="text-center py-16 bg-purple-950/40 rounded-2xl border border-purple-500/20">
+            <svg className="w-16 h-16 mx-auto text-purple-400/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <p className="text-purple-300/60 text-lg">لا توجد مهام</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filteredTasks.map(task => (
+              <Link
                 key={task.id}
-                className={`bg-purple-950/40 rounded-xl border p-4 transition-all hover:bg-purple-900/40 ${
+                href={`/tasks/${task.id}`}
+                className={`bg-purple-950/40 rounded-xl border p-3 transition-all hover:bg-purple-900/40 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer group ${
                   task.is_overdue 
-                    ? 'border-red-500/50' 
+                    ? 'border-red-500/50 hover:border-red-400' 
                     : task.priority === 'critical'
-                      ? 'border-orange-500/50'
-                      : 'border-purple-500/20'
+                      ? 'border-orange-500/50 hover:border-orange-400'
+                      : 'border-purple-500/20 hover:border-purple-400/50'
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  {/* Task Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      {/* Priority Icon */}
-                      <span className={`text-lg ${priorityLabels[task.priority]?.color || 'text-gray-400'}`}>
-                        {priorityLabels[task.priority]?.icon || '●'}
+                {/* Header */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm ${priorityLabels[task.priority]?.color || 'text-gray-400'}`}>
+                      {priorityLabels[task.priority]?.icon || '●'}
+                    </span>
+                    {task.is_overdue && (
+                      <span className="px-1.5 py-0.5 text-[10px] bg-red-500/20 text-red-400 rounded border border-red-500/30">
+                        متأخرة
                       </span>
-                      
-                      {/* Title */}
-                      <h3 className="text-white font-medium truncate">{task.title}</h3>
-                      
-                      {/* Overdue Badge */}
-                      {task.is_overdue && (
-                        <span className="px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded-full border border-red-500/30">
-                          متأخرة
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-sm">
-                      {/* Store */}
-                      {task.store && (
-                        <span className="text-purple-300/80 flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          {task.store.store_name}
-                        </span>
-                      )}
-
-                      {/* Status */}
-                      <span className={`px-2 py-0.5 rounded-full border text-xs ${statusLabels[task.status]?.bg || 'bg-gray-500/20 border-gray-500/30'} ${statusLabels[task.status]?.color || 'text-gray-400'}`}>
-                        {statusLabels[task.status]?.label || task.status}
-                      </span>
-
-                      {/* Due Date */}
-                      {task.due_date && (
-                        <span className={`flex items-center gap-1 ${task.is_overdue ? 'text-red-400' : 'text-purple-300/60'}`}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatDate(task.due_date)}
-                        </span>
-                      )}
-
-                      {/* Role Badge */}
-                      {task.is_assigned_to_me && (
-                        <span className="px-2 py-0.5 text-xs bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
-                          مسندة لي
-                        </span>
-                      )}
-                      {task.is_participant && !task.is_assigned_to_me && (
-                        <span className="px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-300 rounded-full border border-cyan-500/30">
-                          مشارك
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/tasks/${task.id}`}
-                      className="px-4 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg border border-purple-500/30 transition-all text-sm flex items-center gap-2"
-                    >
-                      <span>فتح</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </Link>
-                  </div>
+                  <span className={`px-2 py-0.5 rounded border text-[10px] ${statusLabels[task.status]?.bg || 'bg-gray-500/20 border-gray-500/30'} ${statusLabels[task.status]?.color || 'text-gray-400'}`}>
+                    {statusLabels[task.status]?.label || task.status}
+                  </span>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+
+                {/* Title */}
+                <h3 className="text-white font-medium text-sm mb-1.5 line-clamp-2 group-hover:text-purple-200 transition-colors">
+                  {task.title}
+                </h3>
+
+                {/* Store */}
+                {task.store && (
+                  <div className="flex items-center gap-1.5 mb-2 text-xs text-purple-300/70">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="truncate">{task.store.store_name}</span>
+                  </div>
+                )}
+
+                {/* Due Date */}
+                {task.due_date && (
+                  <div className={`flex items-center gap-1.5 text-[10px] mb-2 ${task.is_overdue ? 'text-red-400' : 'text-purple-400/70'}`}>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{getTimeRemaining(task.due_date)}</span>
+                  </div>
+                )}
+
+                {/* Footer - Assigned To */}
+                <div className="flex items-center justify-between pt-2 border-t border-purple-500/20">
+                  <div className="flex items-center gap-1">
+                    {task.assigned_user ? (
+                      <span className="px-1.5 py-0.5 text-[10px] bg-purple-500/20 text-purple-300 rounded border border-purple-500/30 truncate max-w-[100px]">
+                        {task.is_assigned_to_me ? 'مسندة لي' : task.assigned_user.name}
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 text-[10px] bg-green-500/20 text-green-300 rounded border border-green-500/30">
+                        مسندة للكل
+                      </span>
+                    )}
+                    {task.is_participant && !task.is_assigned_to_me && (
+                      <span className="px-1.5 py-0.5 text-[10px] bg-cyan-500/20 text-cyan-300 rounded border border-cyan-500/30">
+                        مشارك
+                      </span>
+                    )}
+                  </div>
+                  <svg className="w-4 h-4 text-purple-400/50 group-hover:text-purple-400 group-hover:-translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

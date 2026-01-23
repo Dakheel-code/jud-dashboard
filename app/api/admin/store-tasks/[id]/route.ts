@@ -35,10 +35,13 @@ async function getCurrentUserId(): Promise<string | null> {
     const cookieStore = cookies();
     const adminUserCookie = cookieStore.get('admin_user');
     if (adminUserCookie?.value) {
-      const adminUser = JSON.parse(adminUserCookie.value);
+      const decodedValue = decodeURIComponent(adminUserCookie.value);
+      const adminUser = JSON.parse(decodedValue);
       if (adminUser?.id) return adminUser.id;
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log('Cookie parsing error:', e);
+  }
 
   return null;
 }
@@ -207,8 +210,29 @@ export async function PUT(
     }
 
     if (assigned_to !== undefined && assigned_to !== currentTask.assigned_to) {
-      updateData.assigned_to = assigned_to || null;
-      changes.assigned_to = { old: currentTask.assigned_to, new: assigned_to };
+      // التأكد من أن assigned_to هو string وليس array
+      let assignedToValue = assigned_to;
+      if (Array.isArray(assigned_to)) {
+        assignedToValue = assigned_to[0] || null;
+      }
+      updateData.assigned_to = assignedToValue || null;
+      
+      // جلب اسم المستخدم الجديد
+      let assignedUserName = null;
+      if (assignedToValue) {
+        const { data: assignedUser } = await supabase
+          .from('admin_users')
+          .select('name')
+          .eq('id', assignedToValue)
+          .single();
+        assignedUserName = assignedUser?.name;
+      }
+      
+      changes.assigned_to = { 
+        old: currentTask.assigned_to, 
+        new: assignedToValue,
+        assigned_user_name: assignedUserName
+      };
     }
 
     if (due_date !== undefined && due_date !== currentTask.due_date) {
@@ -248,12 +272,18 @@ export async function PUT(
         action = 'due_date_changed';
       }
 
-      await supabase.from('task_activity_log').insert({
+      console.log('Inserting activity log:', { task_id: taskId, user_id: userId, action, details: changes });
+      const { error: activityError } = await supabase.from('task_activity_log').insert({
         task_id: taskId,
         user_id: userId,
         action,
-        meta: changes
+        details: changes
       });
+      if (activityError) {
+        console.error('Error inserting activity log:', activityError);
+      } else {
+        console.log('Activity log inserted successfully');
+      }
     }
 
     return NextResponse.json({

@@ -21,11 +21,13 @@ async function getCurrentUserId(): Promise<string | null> {
     const cookieStore = cookies();
     const adminUserCookie = cookieStore.get('admin_user');
     if (adminUserCookie?.value) {
-      const adminUser = JSON.parse(adminUserCookie.value);
+      // فك تشفير الـ cookie إذا كان مُشفّراً
+      const decodedValue = decodeURIComponent(adminUserCookie.value);
+      const adminUser = JSON.parse(decodedValue);
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
+    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -81,7 +83,9 @@ export async function POST(
 ) {
   try {
     const userId = await getCurrentUserId();
+    console.log('POST comment - userId:', userId);
     if (!userId) {
+      console.log('POST comment - No userId found, returning 401');
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 

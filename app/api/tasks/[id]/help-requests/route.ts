@@ -21,11 +21,12 @@ async function getCurrentUserId(): Promise<string | null> {
     const cookieStore = cookies();
     const adminUserCookie = cookieStore.get('admin_user');
     if (adminUserCookie?.value) {
-      const adminUser = JSON.parse(adminUserCookie.value);
+      const decodedValue = decodeURIComponent(adminUserCookie.value);
+      const adminUser = JSON.parse(decodedValue);
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
+    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -39,27 +40,49 @@ export async function GET(
     const taskId = params.id;
     const supabase = getSupabaseClient();
 
-    const { data: helpRequests, error } = await supabase
+    // جلب الطلبات الأساسية
+    const { data: requests, error } = await supabase
       .from('task_help_requests')
-      .select(`
-        id,
-        task_id,
-        message,
-        status,
-        created_at,
-        responded_at,
-        requester:admin_users!task_help_requests_requester_id_fkey(id, name, username, avatar),
-        helper:admin_users!task_help_requests_helper_id_fkey(id, name, username, avatar)
-      `)
+      .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching help requests:', error);
-      return NextResponse.json({ error: 'فشل جلب طلبات المساعدة' }, { status: 500 });
+      return NextResponse.json({ helpRequests: [] });
     }
 
-    return NextResponse.json({ helpRequests: helpRequests || [] });
+    // جلب بيانات المستخدمين بشكل منفصل
+    const helpRequests = await Promise.all((requests || []).map(async (req) => {
+      let requester = null;
+      let helper = null;
+
+      if (req.requester_id) {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id, name, username, avatar')
+          .eq('id', req.requester_id)
+          .single();
+        requester = data;
+      }
+
+      if (req.helper_id) {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id, name, username, avatar')
+          .eq('id', req.helper_id)
+          .single();
+        helper = data;
+      }
+
+      return {
+        ...req,
+        requester,
+        helper
+      };
+    }));
+
+    return NextResponse.json({ helpRequests });
   } catch (error) {
     console.error('GET help requests error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -119,30 +142,35 @@ export async function POST(
     }
 
     // إنشاء طلب المساعدة
-    const { data: helpRequest, error } = await supabase
+    const { data: newRequest, error } = await supabase
       .from('task_help_requests')
       .insert({
         task_id: taskId,
         requester_id: userId,
         helper_id: helper_id,
-        message: message?.trim() || null
+        message: message?.trim() || null,
+        status: 'pending'
       })
-      .select(`
-        id,
-        task_id,
-        message,
-        status,
-        created_at,
-        responded_at,
-        requester:admin_users!task_help_requests_requester_id_fkey(id, name, username, avatar),
-        helper:admin_users!task_help_requests_helper_id_fkey(id, name, username, avatar)
-      `)
+      .select('*')
       .single();
 
     if (error) {
       console.error('Error creating help request:', error);
       return NextResponse.json({ error: 'فشل إنشاء طلب المساعدة' }, { status: 500 });
     }
+
+    // جلب بيانات المستخدمين
+    const { data: requesterData } = await supabase
+      .from('admin_users')
+      .select('id, name, username, avatar')
+      .eq('id', userId)
+      .single();
+
+    const helpRequest = {
+      ...newRequest,
+      requester: requesterData,
+      helper: { id: helper.id, name: helper.name }
+    };
 
     // إضافة تعليق SYSTEM
     const systemComment = `[SYSTEM] طلب مساعدة من ${helper.name}`;

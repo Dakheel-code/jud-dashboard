@@ -93,6 +93,7 @@ export default function TaskAttachments({ taskId, currentUserId, userRole }: Tas
         const response = await fetch(`/api/tasks/${taskId}/attachments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             file_name: file.name,
             file_data: base64,
@@ -281,25 +282,31 @@ export default function TaskAttachments({ taskId, currentUserId, userRole }: Tas
         </div>
       )}
 
-      {/* Drag & Drop Zone */}
-      <div
+      {/* Drag & Drop Zone - Clickable */}
+      <label
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`mx-4 mt-4 p-6 border-2 border-dashed rounded-xl text-center transition-colors ${
+        className={`mx-4 mt-4 p-6 border-2 border-dashed rounded-xl text-center transition-colors cursor-pointer block ${
           isDragging
             ? 'border-purple-400 bg-purple-500/10'
-            : 'border-purple-500/30 hover:border-purple-500/50'
-        }`}
+            : 'border-purple-500/30 hover:border-purple-500/50 hover:bg-purple-500/5'
+        } ${uploading ? 'pointer-events-none opacity-50' : ''}`}
       >
+        <input
+          type="file"
+          className="hidden"
+          onChange={handleFileSelect}
+          disabled={uploading}
+        />
         <svg className="w-10 h-10 mx-auto text-purple-400/60 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
         <p className="text-purple-400/80 text-sm">
-          {isDragging ? 'أفلت الملف هنا' : 'اسحب وأفلت الملف هنا أو اضغط على زر إضافة مرفق'}
+          {uploading ? 'جاري الرفع...' : isDragging ? 'أفلت الملف هنا' : 'اسحب وأفلت الملف هنا أو اضغط للاختيار'}
         </p>
         <p className="text-purple-400/50 text-xs mt-1">الحد الأقصى: 25 ميجابايت</p>
-      </div>
+      </label>
 
       {/* Attachments List */}
       <div className="p-4">

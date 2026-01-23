@@ -26,20 +26,30 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
 
   useEffect(() => {
     fetchActivities();
+    
+    // Listen for refresh events
+    const handleRefresh = () => {
+      setTimeout(() => fetchActivities(), 800);
+    };
+    window.addEventListener('refreshActivityLog', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshActivityLog', handleRefresh);
+    };
   }, [taskId]);
 
   const fetchActivities = async () => {
     try {
       const response = await fetch(`/api/tasks/${taskId}/activity`);
       const data = await response.json();
+      console.log('Activity data received:', data.activities?.length);
       if (response.ok) {
         setActivities(data.activities || []);
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const formatTime = (date: string) => {
@@ -109,6 +119,30 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
             </svg>
           </div>
         );
+      case 'priority_changed':
+        return (
+          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+        );
+      case 'due_date_changed':
+        return (
+          <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        );
+      case 'assigned':
+        return (
+          <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
+            <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        );
       default:
         return (
           <div className="w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center">
@@ -120,23 +154,63 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
     }
   };
 
+  const statusLabels: Record<string, string> = {
+    pending: 'قيد الانتظار',
+    in_progress: 'قيد التنفيذ',
+    done: 'مكتملة',
+    completed: 'مكتملة',
+    cancelled: 'ملغاة',
+    canceled: 'ملغاة',
+    blocked: 'معلقة',
+    waiting: 'في الانتظار',
+    review: 'قيد المراجعة'
+  };
+
+  const priorityLabels: Record<string, string> = {
+    low: 'منخفضة',
+    medium: 'متوسطة',
+    high: 'عالية',
+    urgent: 'عاجلة'
+  };
+
   const getActionText = (activity: Activity) => {
     const userName = activity.user?.name || 'مستخدم';
+    const details = activity.details || {};
+    
     switch (activity.action) {
       case 'created':
         return `${userName} أنشأ المهمة`;
       case 'updated':
-        return `${userName} حدّث المهمة`;
+        // عرض التفاصيل المحددة
+        const updates: string[] = [];
+        if (details.title) updates.push('العنوان');
+        if (details.description) updates.push('الوصف');
+        return `${userName} حدّث ${updates.length > 0 ? updates.join(' و') : 'المهمة'}`;
       case 'commented':
         return `${userName} أضاف تعليقاً`;
       case 'attached':
-        return `${userName} أضاف مرفقاً: ${activity.details?.file_name || ''}`;
+        return `${userName} أضاف مرفقاً${details.file_name ? ': ' + details.file_name : ''}`;
       case 'reassigned':
-        return `${userName} أسند المهمة إلى ${activity.details?.to_user_name || 'مستخدم آخر'}`;
+      case 'assigned':
+        // التحقق من وجود اسم المستخدم المُسند إليه
+        const assignedToName = details.to_user_name || details.assigned_user_name || details.assigned_to?.assigned_user_name;
+        if (assignedToName) {
+          return `${userName} أسند المهمة إلى ${assignedToName}`;
+        }
+        return `${userName} غيّر المكلف بالمهمة`;
       case 'help_requested':
         return `${userName} طلب مساعدة`;
       case 'status_changed':
-        return `${userName} غيّر الحالة إلى ${activity.details?.new_status || ''}`;
+        const newStatus = details.status?.new || details.new_status || '';
+        const statusText = statusLabels[newStatus] || newStatus;
+        return `${userName} غيّر الحالة${statusText ? ' إلى ' + statusText : ''}`;
+      case 'priority_changed':
+        const newPriority = details.priority?.new || details.new_priority || '';
+        const priorityText = priorityLabels[newPriority] || newPriority;
+        return `${userName} غيّر الأولوية${priorityText ? ' إلى ' + priorityText : ''}`;
+      case 'due_date_changed':
+        const newDate = details.due_date?.new;
+        return `${userName} غيّر تاريخ الاستحقاق${newDate ? ' إلى ' + new Date(newDate).toLocaleDateString('ar-SA') : ''}`;
       default:
         return `${userName} قام بإجراء`;
     }
@@ -151,7 +225,21 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
   }
 
   if (activities.length === 0) {
-    return null;
+    return (
+      <div className="bg-purple-950/40 rounded-xl border border-purple-500/20 overflow-hidden">
+        <div className="p-4 border-b border-purple-500/20 bg-purple-900/30">
+          <h3 className="text-white font-medium flex items-center gap-2">
+            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            سجل النشاط
+          </h3>
+        </div>
+        <div className="p-4 text-center text-purple-400/60">
+          لا توجد أنشطة بعد
+        </div>
+      </div>
+    );
   }
 
   const displayedActivities = expanded ? activities : activities.slice(0, 5);

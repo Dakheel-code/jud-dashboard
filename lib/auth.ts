@@ -15,87 +15,97 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
+// Build providers array conditionally
+const providers: any[] = [];
+
+// Only add Google provider if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: { params: { prompt: "select_account" } },
+    })
+  );
+}
+
+// Always add Credentials provider
+providers.push(
+  CredentialsProvider({
+    name: "Email & Password",
+    credentials: {
+      email: { label: "Email", type: "text" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      const identifier = credentials?.email?.trim()?.toLowerCase();
+      const password = credentials?.password;
+
+      if (!identifier || !password) return null;
+
+      // بيانات افتراضية للمسؤول (مرحلة انتقالية)
+      if ((identifier === 'admin' || identifier === 'admin@jud.sa') && password === 'admin123') {
+        return {
+          id: 'default-admin',
+          name: 'المسؤول الرئيسي',
+          email: 'admin@jud.sa',
+          role: 'super_admin',
+          username: 'admin',
+          avatar: null,
+          permissions: ['manage_tasks', 'manage_stores', 'manage_users', 'manage_help', 'view_stats', 'manage_team'],
+        };
+      }
+
+      // البحث في قاعدة البيانات
+      const supabase = getSupabaseClient();
+      const passwordHash = hashPassword(password);
+
+      // مرحلة انتقالية: إذا فيه @ ابحث بالـ email، وإلا ابحث بالـ username
+      const isEmail = identifier.includes('@');
+      
+      let query = supabase
+        .from('admin_users')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (isEmail) {
+        query = query.ilike('email', identifier);
+      } else {
+        query = query.ilike('username', identifier);
+      }
+      
+      const { data: user, error } = await query.single();
+
+      if (error || !user) return null;
+
+      // تحقق من كلمة المرور (تجاهل إذا كان password_hash فارغ - مستخدم Google)
+      if (user.password_hash && user.password_hash !== '' && user.password_hash !== passwordHash) {
+        return null;
+      }
+
+      // تحديث آخر تسجيل دخول
+      await supabase
+        .from('admin_users')
+        .update({ last_login: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email || `${user.username}@jud.sa`,
+        role: user.role,
+        username: user.username,
+        avatar: user.avatar,
+        permissions: user.permissions || [],
+      };
+    },
+  })
+);
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
-  secret: process.env.NEXTAUTH_SECRET,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: { params: { prompt: "select_account" } },
-    }),
-
-    CredentialsProvider({
-      name: "Email & Password",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const identifier = credentials?.email?.trim()?.toLowerCase();
-        const password = credentials?.password;
-
-        if (!identifier || !password) return null;
-
-        // بيانات افتراضية للمسؤول (مرحلة انتقالية)
-        if ((identifier === 'admin' || identifier === 'admin@jud.sa') && password === 'admin123') {
-          return {
-            id: 'default-admin',
-            name: 'المسؤول الرئيسي',
-            email: 'admin@jud.sa',
-            role: 'super_admin',
-            username: 'admin',
-            avatar: null,
-            permissions: ['manage_tasks', 'manage_stores', 'manage_users', 'manage_help', 'view_stats', 'manage_team'],
-          };
-        }
-
-        // البحث في قاعدة البيانات
-        const supabase = getSupabaseClient();
-        const passwordHash = hashPassword(password);
-
-        // مرحلة انتقالية: إذا فيه @ ابحث بالـ email، وإلا ابحث بالـ username
-        const isEmail = identifier.includes('@');
-        
-        let query = supabase
-          .from('admin_users')
-          .select('*')
-          .eq('is_active', true);
-        
-        if (isEmail) {
-          query = query.ilike('email', identifier);
-        } else {
-          query = query.ilike('username', identifier);
-        }
-        
-        const { data: user, error } = await query.single();
-
-        if (error || !user) return null;
-
-        // تحقق من كلمة المرور (تجاهل إذا كان password_hash فارغ - مستخدم Google)
-        if (user.password_hash && user.password_hash !== '' && user.password_hash !== passwordHash) {
-          return null;
-        }
-
-        // تحديث آخر تسجيل دخول
-        await supabase
-          .from('admin_users')
-          .update({ last_login: new Date().toISOString(), updated_at: new Date().toISOString() })
-          .eq('id', user.id);
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email || `${user.username}@jud.sa`,
-          role: user.role,
-          username: user.username,
-          avatar: user.avatar,
-          permissions: user.permissions || [],
-        };
-      },
-    }),
-  ],
-
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development',
+  providers,
   callbacks: {
     async signIn({ user, account, profile }) {
       // تقييد Google على دومين jud.sa فقط

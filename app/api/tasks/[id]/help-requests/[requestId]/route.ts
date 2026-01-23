@@ -18,7 +18,7 @@ function getSupabaseClient() {
 
 async function getCurrentUserId(): Promise<string | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const adminUserCookie = cookieStore.get('admin_user');
     if (adminUserCookie?.value) {
       const adminUser = JSON.parse(adminUserCookie.value);

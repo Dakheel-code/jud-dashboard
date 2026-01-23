@@ -103,6 +103,7 @@ export default function HelpRequestModal({
       const response = await fetch(`/api/tasks/${taskId}/help-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           helper_id: newRequest.helper_id,
           message: newRequest.message.trim() || null

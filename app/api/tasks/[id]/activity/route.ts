@@ -23,12 +23,10 @@ export async function GET(
     const taskId = params.id;
     const supabase = getSupabaseClient();
 
+    // جلب الأنشطة بدون join
     const { data: activities, error } = await supabase
       .from('task_activity_log')
-      .select(`
-        *,
-        user:admin_users(id, name, username, avatar)
-      `)
+      .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -38,7 +36,28 @@ export async function GET(
       return NextResponse.json({ error: 'فشل جلب سجل النشاط' }, { status: 500 });
     }
 
-    return NextResponse.json({ activities: activities || [] });
+    console.log('Activities fetched:', activities?.length, 'for task:', taskId);
+    if (activities && activities.length > 0) {
+      console.log('First activity:', JSON.stringify(activities[0]));
+    }
+
+    // جلب بيانات المستخدمين بشكل منفصل ودمج meta و details
+    const activitiesWithUsers = await Promise.all((activities || []).map(async (activity) => {
+      let user = null;
+      if (activity.user_id) {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id, name, username, avatar')
+          .eq('id', activity.user_id)
+          .single();
+        user = data;
+      }
+      // دمج meta و details (الأولوية لـ details)
+      const details = { ...(activity.meta || {}), ...(activity.details || {}) };
+      return { ...activity, user, details };
+    }));
+
+    return NextResponse.json({ activities: activitiesWithUsers });
   } catch (error) {
     console.error('GET activity error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
