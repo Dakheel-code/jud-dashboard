@@ -24,8 +24,8 @@ export const getSlotsSchema = z.object({
 export const bookMeetingSchema = z.object({
   employee_id: z.string().uuid('معرف الموظف غير صالح'),
   datetime: z.string().datetime('التاريخ والوقت غير صالح'),
-  duration_minutes: z.union([z.literal(30), z.literal(60)], {
-    errorMap: () => ({ message: 'المدة يجب أن تكون 30 أو 60 دقيقة' }),
+  duration_minutes: z.number().refine(val => [15, 30, 60].includes(val), {
+    message: 'المدة يجب أن تكون 15 أو 30 أو 60 دقيقة',
   }),
   client_name: z.string()
     .min(2, 'الاسم يجب أن يكون على الأقل حرفين')
