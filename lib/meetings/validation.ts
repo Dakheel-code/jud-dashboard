@@ -23,10 +23,8 @@ export const getSlotsSchema = z.object({
 // Schema لحجز اجتماع
 export const bookMeetingSchema = z.object({
   employee_id: z.string().uuid('معرف الموظف غير صالح'),
-  datetime: z.string().datetime('التاريخ والوقت غير صالح'),
-  duration_minutes: z.number().refine(val => [15, 30, 60].includes(val), {
-    message: 'المدة يجب أن تكون 15 أو 30 أو 60 دقيقة',
-  }),
+  datetime: z.string(),
+  duration_minutes: z.number().min(15, 'المدة يجب أن تكون على الأقل 15 دقيقة').max(120, 'المدة يجب أن لا تتجاوز 120 دقيقة'),
   client_name: z.string()
     .min(2, 'الاسم يجب أن يكون على الأقل حرفين')
     .max(100, 'الاسم يجب أن لا يتجاوز 100 حرف'),

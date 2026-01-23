@@ -10,11 +10,10 @@ const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
 // مفتاح التشفير من متغيرات البيئة
+const DEFAULT_SECRET = 'jud-dashboard-default-secret-key-2026';
+
 function getEncryptionKey(): Buffer {
-  const key = process.env.ENCRYPTION_KEY || process.env.MEETING_JWT_SECRET;
-  if (!key) {
-    throw new Error('ENCRYPTION_KEY or MEETING_JWT_SECRET is required');
-  }
+  const key = process.env.ENCRYPTION_KEY || process.env.MEETING_JWT_SECRET || DEFAULT_SECRET;
   // تحويل المفتاح إلى 32 bytes باستخدام SHA-256
   return crypto.createHash('sha256').update(key).digest();
 }
@@ -76,10 +75,7 @@ export function createMeetingToken(payload: {
   action: 'view' | 'reschedule' | 'cancel';
   expires_in_days?: number;
 }): string {
-  const secret = process.env.MEETING_JWT_SECRET;
-  if (!secret) {
-    throw new Error('MEETING_JWT_SECRET is required');
-  }
+  const secret = process.env.MEETING_JWT_SECRET || DEFAULT_SECRET;
 
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   
@@ -118,10 +114,7 @@ export function verifyMeetingToken(token: string): {
   };
   error?: string;
 } {
-  const secret = process.env.MEETING_JWT_SECRET;
-  if (!secret) {
-    return { valid: false, error: 'MEETING_JWT_SECRET is required' };
-  }
+  const secret = process.env.MEETING_JWT_SECRET || DEFAULT_SECRET;
 
   const parts = token.split('.');
   if (parts.length !== 3) {

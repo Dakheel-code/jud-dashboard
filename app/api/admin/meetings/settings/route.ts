@@ -177,17 +177,21 @@ export async function PUT(request: NextRequest) {
       .replace(/[^a-z0-9-]/g, '') || `user-${Date.now()}`;
     
     // تحديث أو إنشاء الإعدادات الأساسية
-    const settingsData = {
+    const settingsData: Record<string, any> = {
       employee_id: userId,
       booking_slug: baseSlug,
       is_accepting_meetings: body.is_accepting_meetings ?? true,
       slot_duration: body.slot_duration ?? 30,
-      buffer_before: 5,
-      buffer_after: 5,
-      max_meetings_per_day: 8,
-      max_advance_days: 30,
-      min_notice_hours: 24,
     };
+
+    // إضافة الحقول الجديدة إذا موجودة (استخدام أسماء الأعمدة الصحيحة)
+    if (body.max_days_ahead !== undefined) settingsData.max_advance_days = body.max_days_ahead;
+    if (body.min_notice_hours !== undefined) settingsData.min_notice_hours = body.min_notice_hours;
+    if (body.buffer_minutes !== undefined) {
+      settingsData.buffer_before = Math.floor(body.buffer_minutes / 2);
+      settingsData.buffer_after = Math.ceil(body.buffer_minutes / 2);
+    }
+    if (body.meeting_title !== undefined) settingsData.welcome_message = body.meeting_title;
     
     console.log('PUT settings - settingsData:', JSON.stringify(settingsData));
     

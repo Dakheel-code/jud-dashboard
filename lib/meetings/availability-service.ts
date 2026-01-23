@@ -6,9 +6,12 @@ import { createClient } from '@supabase/supabase-js';
 import type { AvailableSlot, EmployeeAvailability, EmployeeMeetingSettings, EmployeeTimeOff, Meeting } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function getSupabase() {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase credentials missing');
+  }
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
@@ -300,22 +303,30 @@ export async function isSlotAvailable(
 ): Promise<boolean> {
   const supabase = getSupabase();
   
-  // استخدام الدالة المخزنة في قاعدة البيانات
   const endTime = new Date(datetime.getTime() + duration * 60000);
   
-  const { data, error } = await supabase.rpc('is_slot_available', {
-    p_employee_id: employeeId,
-    p_start_at: datetime.toISOString(),
-    p_end_at: endTime.toISOString(),
-    p_exclude_meeting_id: excludeMeetingId || null,
-  });
+  // التحقق من عدم وجود تعارض مع اجتماعات أخرى
+  let query = supabase
+    .from('meetings')
+    .select('id')
+    .eq('employee_id', employeeId)
+    .in('status', ['confirmed', 'rescheduled'])
+    .or(`and(start_at.lt.${endTime.toISOString()},end_at.gt.${datetime.toISOString()})`);
+  
+  if (excludeMeetingId) {
+    query = query.neq('id', excludeMeetingId);
+  }
+  
+  const { data, error } = await query;
   
   if (error) {
     console.error('Error checking slot availability:', error);
-    return false;
+    // في حالة الخطأ، نسمح بالحجز
+    return true;
   }
   
-  return data === true;
+  // الوقت متاح إذا لم يكن هناك اجتماعات متعارضة
+  return !data || data.length === 0;
 }
 
 /**

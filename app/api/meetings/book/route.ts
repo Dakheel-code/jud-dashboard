@@ -146,8 +146,11 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Error in /api/meetings/book:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('Error details:', { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
+      { error: 'حدث خطأ في الخادم: ' + errorMessage, code: 'INTERNAL_ERROR' },
       { status: 500 }
     );
   }

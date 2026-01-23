@@ -8,14 +8,23 @@ import AdminBottomNav from '@/components/AdminBottomNav';
 
 interface Meeting {
   id: string;
+  employee_id?: string;
   client_name: string;
   client_email: string;
+  client_phone?: string;
   subject: string;
   start_at: string;
   end_at: string;
   duration_minutes: number;
   status: string;
   google_meet_link?: string;
+  created_at?: string;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface Availability {
@@ -33,13 +42,28 @@ interface TimeOff {
   reason?: string;
 }
 
+interface TimeSlot {
+  start: string;
+  end: string;
+}
+
+interface DaySchedule {
+  enabled: boolean;
+  slots: TimeSlot[];
+}
+
 interface Settings {
   is_accepting_meetings: boolean;
   booking_slug?: string;
   google_calendar_connected: boolean;
   google_email?: string;
   slot_duration: number;
-  working_hours: Record<string, { start: string; end: string; enabled: boolean }>;
+  working_hours: Record<string, DaySchedule>;
+  max_days_ahead?: number;
+  min_notice_hours?: number;
+  min_notice_unit?: 'minutes' | 'hours' | 'days';
+  buffer_minutes?: number;
+  meeting_title?: string;
 }
 
 const DAY_NAMES: Record<string, string> = {
@@ -60,13 +84,25 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   rescheduled: { label: 'أُعيد جدولته', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
 };
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'كل الحالات' },
+  { value: 'confirmed', label: 'مؤكد' },
+  { value: 'completed', label: 'مكتمل' },
+  { value: 'cancelled', label: 'ملغي' },
+  { value: 'no_show', label: 'لم يحضر' },
+  { value: 'rescheduled', label: 'أُعيد جدولته' },
+];
+
 function MyCalendarContent() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [timeOffs, setTimeOffs] = useState<TimeOff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'availability' | 'timeoff'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'timeoff' | 'admin'>('upcoming');
   const [showTimeOffModal, setShowTimeOffModal] = useState(false);
+  const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
+  const [copyTimesDay, setCopyTimesDay] = useState<string | null>(null);
+  const [copyTimesTarget, setCopyTimesTarget] = useState<string[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,6 +118,67 @@ function MyCalendarContent() {
     reason: '',
   });
 
+  // Admin Meetings Management State
+  const [allMeetings, setAllMeetings] = useState<Meeting[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminTotalPages, setAdminTotalPages] = useState(1);
+  const [adminFilters, setAdminFilters] = useState({
+    employee_id: '',
+    status: '',
+    start_date: '',
+    end_date: '',
+  });
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  }, []);
+
+  const fetchAllMeetings = useCallback(async () => {
+    setAdminLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: adminPage.toString(),
+        limit: '15',
+      });
+      
+      if (adminFilters.status) params.set('status', adminFilters.status);
+      if (adminFilters.start_date) params.set('start_date', adminFilters.start_date);
+      if (adminFilters.end_date) params.set('end_date', adminFilters.end_date);
+      if (adminFilters.employee_id) params.set('employee_id', adminFilters.employee_id);
+
+      const response = await fetch(`/api/admin/meetings/all?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAllMeetings(data.meetings || []);
+        setAdminTotalPages(data.pagination?.total_pages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [adminPage, adminFilters]);
+
+  const getDefaultWorkingHours = (): Record<string, DaySchedule> => ({
+    sun: { enabled: true, slots: [{ start: '09:00', end: '17:00' }] },
+    mon: { enabled: true, slots: [{ start: '09:00', end: '17:00' }] },
+    tue: { enabled: true, slots: [{ start: '09:00', end: '17:00' }] },
+    wed: { enabled: true, slots: [{ start: '09:00', end: '17:00' }] },
+    thu: { enabled: true, slots: [{ start: '09:00', end: '17:00' }] },
+    fri: { enabled: false, slots: [{ start: '09:00', end: '17:00' }] },
+    sat: { enabled: false, slots: [{ start: '09:00', end: '17:00' }] },
+  });
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     
@@ -92,15 +189,11 @@ function MyCalendarContent() {
       google_calendar_connected: false,
       google_email: undefined,
       slot_duration: 30,
-      working_hours: {
-        sun: { start: '09:00', end: '17:00', enabled: true },
-        mon: { start: '09:00', end: '17:00', enabled: true },
-        tue: { start: '09:00', end: '17:00', enabled: true },
-        wed: { start: '09:00', end: '17:00', enabled: true },
-        thu: { start: '09:00', end: '17:00', enabled: true },
-        fri: { start: '09:00', end: '17:00', enabled: false },
-        sat: { start: '09:00', end: '17:00', enabled: false },
-      },
+      working_hours: getDefaultWorkingHours(),
+      max_days_ahead: 30,
+      min_notice_hours: 4,
+      min_notice_unit: 'hours',
+      buffer_minutes: 15,
     };
     
     try {
@@ -132,20 +225,29 @@ function MyCalendarContent() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchEmployees();
+  }, [fetchData, fetchEmployees]);
 
-  const updateAvailability = async (day: string, field: 'start' | 'end' | 'enabled', value: string | boolean) => {
-    const defaultWorkingHours: Record<string, { start: string; end: string; enabled: boolean }> = {
-      sun: { start: '09:00', end: '17:00', enabled: true },
-      mon: { start: '09:00', end: '17:00', enabled: true },
-      tue: { start: '09:00', end: '17:00', enabled: true },
-      wed: { start: '09:00', end: '17:00', enabled: true },
-      thu: { start: '09:00', end: '17:00', enabled: true },
-      fri: { start: '09:00', end: '17:00', enabled: false },
-      sat: { start: '09:00', end: '17:00', enabled: false },
-    };
+  useEffect(() => {
+    if (activeTab === 'admin') {
+      fetchAllMeetings();
+    }
+  }, [activeTab, fetchAllMeetings]);
 
-    const currentWorkingHours = settings?.working_hours || defaultWorkingHours;
+  const getLastEnabledDaySlots = (): TimeSlot[] => {
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    for (let i = days.length - 1; i >= 0; i--) {
+      const day = days[i];
+      if (settings?.working_hours?.[day]?.enabled && settings.working_hours[day].slots?.length > 0) {
+        return [...settings.working_hours[day].slots];
+      }
+    }
+    return [{ start: '09:00', end: '17:00' }];
+  };
+
+  const toggleDayEnabled = (day: string, enabled: boolean) => {
+    const currentWorkingHours = settings?.working_hours || getDefaultWorkingHours();
+    const slots = enabled ? getLastEnabledDaySlots() : (currentWorkingHours[day]?.slots || [{ start: '09:00', end: '17:00' }]);
     
     const newSettings: Settings = {
       is_accepting_meetings: settings?.is_accepting_meetings ?? true,
@@ -155,13 +257,100 @@ function MyCalendarContent() {
       slot_duration: settings?.slot_duration ?? 30,
       working_hours: {
         ...currentWorkingHours,
-        [day]: {
-          ...(currentWorkingHours[day] || defaultWorkingHours[day]),
-          [field]: value,
-        },
+        [day]: { enabled, slots },
       },
     };
     setSettings(newSettings);
+  };
+
+  const updateSlotTime = (day: string, slotIndex: number, field: 'start' | 'end', value: string) => {
+    const currentWorkingHours = settings?.working_hours || getDefaultWorkingHours();
+    const daySchedule = currentWorkingHours[day] || { enabled: true, slots: [{ start: '09:00', end: '17:00' }] };
+    const newSlots = [...daySchedule.slots];
+    newSlots[slotIndex] = { ...newSlots[slotIndex], [field]: value };
+    
+    const newSettings: Settings = {
+      is_accepting_meetings: settings?.is_accepting_meetings ?? true,
+      booking_slug: settings?.booking_slug,
+      google_calendar_connected: settings?.google_calendar_connected ?? false,
+      google_email: settings?.google_email,
+      slot_duration: settings?.slot_duration ?? 30,
+      working_hours: {
+        ...currentWorkingHours,
+        [day]: { ...daySchedule, slots: newSlots },
+      },
+    };
+    setSettings(newSettings);
+  };
+
+  const addSlot = (day: string) => {
+    const currentWorkingHours = settings?.working_hours || getDefaultWorkingHours();
+    const daySchedule = currentWorkingHours[day] || { enabled: true, slots: [{ start: '09:00', end: '17:00' }] };
+    const existingSlots = daySchedule.slots || [{ start: '09:00', end: '17:00' }];
+    const lastSlot = existingSlots[existingSlots.length - 1] || { start: '09:00', end: '17:00' };
+    const newSlots = [...existingSlots, { start: lastSlot.start, end: lastSlot.end }];
+    
+    const newSettings: Settings = {
+      is_accepting_meetings: settings?.is_accepting_meetings ?? true,
+      booking_slug: settings?.booking_slug,
+      google_calendar_connected: settings?.google_calendar_connected ?? false,
+      google_email: settings?.google_email,
+      slot_duration: settings?.slot_duration ?? 30,
+      working_hours: {
+        ...currentWorkingHours,
+        [day]: { ...daySchedule, slots: newSlots },
+      },
+    };
+    setSettings(newSettings);
+  };
+
+  const removeSlot = (day: string, slotIndex: number) => {
+    const currentWorkingHours = settings?.working_hours || getDefaultWorkingHours();
+    const daySchedule = currentWorkingHours[day];
+    if (!daySchedule || !daySchedule.slots || daySchedule.slots.length <= 1) return;
+    
+    const newSlots = daySchedule.slots.filter((_, i) => i !== slotIndex);
+    
+    const newSettings: Settings = {
+      is_accepting_meetings: settings?.is_accepting_meetings ?? true,
+      booking_slug: settings?.booking_slug,
+      google_calendar_connected: settings?.google_calendar_connected ?? false,
+      google_email: settings?.google_email,
+      slot_duration: settings?.slot_duration ?? 30,
+      working_hours: {
+        ...currentWorkingHours,
+        [day]: { ...daySchedule, slots: newSlots },
+      },
+    };
+    setSettings(newSettings);
+  };
+
+  const copyTimesToDays = () => {
+    if (!copyTimesDay || copyTimesTarget.length === 0) return;
+    
+    const currentWorkingHours = settings?.working_hours || getDefaultWorkingHours();
+    const sourceSchedule = currentWorkingHours[copyTimesDay];
+    if (!sourceSchedule) return;
+    
+    const newWorkingHours = { ...currentWorkingHours };
+    copyTimesTarget.forEach(targetDay => {
+      newWorkingHours[targetDay] = {
+        enabled: true,
+        slots: [...sourceSchedule.slots],
+      };
+    });
+    
+    const newSettings: Settings = {
+      is_accepting_meetings: settings?.is_accepting_meetings ?? true,
+      booking_slug: settings?.booking_slug,
+      google_calendar_connected: settings?.google_calendar_connected ?? false,
+      google_email: settings?.google_email,
+      slot_duration: settings?.slot_duration ?? 30,
+      working_hours: newWorkingHours,
+    };
+    setSettings(newSettings);
+    setCopyTimesDay(null);
+    setCopyTimesTarget([]);
   };
 
   const saveSettings = async () => {
@@ -177,6 +366,11 @@ function MyCalendarContent() {
           is_accepting_meetings: settings.is_accepting_meetings,
           slot_duration: settings.slot_duration,
           working_hours: settings.working_hours,
+          max_days_ahead: settings.max_days_ahead,
+          min_notice_hours: settings.min_notice_hours,
+          min_notice_unit: settings.min_notice_unit,
+          buffer_minutes: settings.buffer_minutes,
+          meeting_title: settings.meeting_title,
         }),
       });
 
@@ -184,11 +378,9 @@ function MyCalendarContent() {
       
       if (response.ok) {
         setMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح ✓' });
-        // تحديث الإعدادات من الـ API
         if (data.settings) {
           setSettings(prev => prev ? { ...prev, ...data.settings } : data.settings);
         }
-        fetchData(); // إعادة جلب البيانات
       } else {
         console.error('Save error:', data);
         setMessage({ type: 'error', text: data.error || 'فشل حفظ الإعدادات' });
@@ -317,7 +509,7 @@ function MyCalendarContent() {
               <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain hidden lg:block" />
               <div className="hidden lg:block h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
               <div>
-                <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>تقويمي</h1>
+                <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>الاجتماعات</h1>
                 <p className="text-purple-300/80 text-xs sm:text-sm">إدارة اجتماعاتك وأوقات عملك</p>
               </div>
             </div>
@@ -369,11 +561,11 @@ function MyCalendarContent() {
                 {settings?.booking_slug ? (
                   <>
                     <code className="px-3 py-2 bg-purple-900/50 rounded-xl text-purple-300 text-sm break-all" dir="ltr">
-                      {typeof window !== 'undefined' ? window.location.origin : ''}/meet/{settings.booking_slug}
+                      {typeof window !== 'undefined' ? window.location.origin : ''}/book/{settings.booking_slug}
                     </code>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/meet/${settings.booking_slug}`);
+                        navigator.clipboard.writeText(`${window.location.origin}/book/${settings.booking_slug}`);
                         setMessage({ type: 'success', text: 'تم نسخ الرابط!' });
                       }}
                       className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl transition-all text-sm whitespace-nowrap"
@@ -381,7 +573,7 @@ function MyCalendarContent() {
                       📋 نسخ
                     </button>
                     <a
-                      href={`/meet/${settings.booking_slug}`}
+                      href={`/book/${settings.booking_slug}`}
                       target="_blank"
                       className="px-3 py-2 bg-purple-900/50 hover:bg-purple-800/50 text-purple-300 rounded-xl transition-all text-sm whitespace-nowrap"
                     >
@@ -399,24 +591,32 @@ function MyCalendarContent() {
 
           {/* Tabs */}
           <div className="flex flex-wrap gap-2 mb-6">
-        {[
-            { id: 'upcoming', label: 'الاجتماعات القادمة', icon: '📅' },
-            { id: 'availability', label: 'أوقات العمل', icon: '⏰' },
-            { id: 'timeoff', label: 'الإجازات', icon: '🏖️' },
-          ].map((tab) => (
+            {[
+              { id: 'upcoming', label: 'الاجتماعات القادمة', icon: '📅' },
+              { id: 'timeoff', label: 'الإجازات', icon: '🏖️' },
+              { id: 'admin', label: 'إدارة الاجتماعات', icon: '👥' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as 'upcoming' | 'timeoff' | 'admin')}
+                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+            {/* زر أوقات العمل - يفتح نافذة منبثقة */}
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-              }`}
+              onClick={() => setShowWorkingHoursModal(true)}
+              className="px-4 py-2 rounded-xl transition-all flex items-center gap-2 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30"
             >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
+              <span>⏰</span>
+              <span>أوقات العمل</span>
             </button>
-          ))}
           </div>
 
       {/* Tab Content */}
@@ -482,71 +682,6 @@ function MyCalendarContent() {
             </div>
           )}
 
-          {activeTab === 'availability' && (
-            <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-white">أوقات العمل</h2>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={settings?.is_accepting_meetings ?? true}
-                    onChange={(e) => setSettings(prev => prev ? { ...prev, is_accepting_meetings: e.target.checked } : null)}
-                    className="w-5 h-5 rounded bg-purple-900/30 border-purple-500/30 text-purple-600"
-                  />
-                  <span className="text-purple-300">قبول الحجوزات</span>
-                </label>
-              </div>
-              
-              <div className="space-y-3 mb-6">
-                {Object.entries(DAY_NAMES).map(([day, name]) => {
-                  const dayEnabled = settings?.working_hours?.[day]?.enabled ?? (day !== 'fri' && day !== 'sat');
-                  return (
-                    <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 bg-purple-900/20 rounded-xl">
-                      <label className="flex items-center gap-2 w-28 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={dayEnabled}
-                          onChange={(e) => updateAvailability(day, 'enabled', e.target.checked)}
-                          className="w-4 h-4 rounded bg-purple-900/30 border-purple-500/30 text-purple-600"
-                        />
-                        <span className={`text-sm ${dayEnabled ? 'text-white font-medium' : 'text-purple-400/50'}`}>
-                          {name}
-                        </span>
-                      </label>
-                      
-                      {dayEnabled && (
-                        <div className="flex items-center gap-2 flex-1 mr-6 sm:mr-0">
-                          <input
-                            type="time"
-                            value={settings?.working_hours?.[day]?.start || '09:00'}
-                            onChange={(e) => updateAvailability(day, 'start', e.target.value)}
-                            className="px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm flex-1"
-                          />
-                          <span className="text-purple-400">إلى</span>
-                          <input
-                            type="time"
-                            value={settings?.working_hours?.[day]?.end || '17:00'}
-                            onChange={(e) => updateAvailability(day, 'end', e.target.value)}
-                            className="px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm flex-1"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              
-              <div className="flex justify-end">
-                <button
-                  onClick={saveSettings}
-                  disabled={savingSettings}
-                  className="px-6 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 text-white rounded-xl transition-all"
-                >
-                  {savingSettings ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-                </button>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'timeoff' && (
             <div>
@@ -582,6 +717,388 @@ function MyCalendarContent() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Admin Meetings Tab */}
+          {activeTab === 'admin' && (
+            <div>
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-white">إدارة الاجتماعات</h2>
+                  <p className="text-purple-400/60 text-sm">عرض وإدارة جميع اجتماعات الموظفين</p>
+                </div>
+                <Link
+                  href="/dashboard/admin/meetings/stats"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl transition-all flex items-center gap-2 w-fit"
+                >
+                  <span>📊</span> الإحصائيات
+                </Link>
+              </div>
+
+              {/* Filters */}
+              <div className="bg-purple-950/40 border border-purple-500/20 rounded-xl p-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div>
+                    <label className="block text-purple-300 text-sm mb-1">الموظف</label>
+                    <select
+                      value={adminFilters.employee_id}
+                      onChange={(e) => {
+                        setAdminFilters({ ...adminFilters, employee_id: e.target.value });
+                        setAdminPage(1);
+                      }}
+                      className="w-full px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm"
+                    >
+                      <option value="">كل الموظفين</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-purple-300 text-sm mb-1">الحالة</label>
+                    <select
+                      value={adminFilters.status}
+                      onChange={(e) => {
+                        setAdminFilters({ ...adminFilters, status: e.target.value });
+                        setAdminPage(1);
+                      }}
+                      className="w-full px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm"
+                    >
+                      {STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-purple-300 text-sm mb-1">من تاريخ</label>
+                    <input
+                      type="date"
+                      value={adminFilters.start_date}
+                      onChange={(e) => {
+                        setAdminFilters({ ...adminFilters, start_date: e.target.value });
+                        setAdminPage(1);
+                      }}
+                      className="w-full px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-purple-300 text-sm mb-1">إلى تاريخ</label>
+                    <input
+                      type="date"
+                      value={adminFilters.end_date}
+                      onChange={(e) => {
+                        setAdminFilters({ ...adminFilters, end_date: e.target.value });
+                        setAdminPage(1);
+                      }}
+                      className="w-full px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setAdminFilters({ employee_id: '', status: '', start_date: '', end_date: '' });
+                        setAdminPage(1);
+                      }}
+                      className="w-full px-3 py-2 bg-purple-900/50 hover:bg-purple-800/50 text-purple-300 rounded-lg text-sm transition-all"
+                    >
+                      مسح الفلاتر
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meetings Table */}
+              {adminLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : allMeetings.length === 0 ? (
+                <div className="bg-purple-950/40 border border-purple-500/20 rounded-xl p-12 text-center">
+                  <div className="text-4xl mb-4">📭</div>
+                  <p className="text-purple-400/60">لا توجد اجتماعات</p>
+                </div>
+              ) : (
+                <div className="bg-purple-950/40 border border-purple-500/20 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-purple-500/20">
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">الموظف</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">العميل</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">الموضوع</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">التاريخ</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">الوقت</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">الحالة</th>
+                          <th className="px-4 py-3 text-right text-purple-300 text-sm font-medium">إجراءات</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allMeetings.map((meeting) => {
+                          const employee = employees.find(e => e.id === meeting.employee_id);
+                          return (
+                            <tr key={meeting.id} className="border-b border-purple-500/10 hover:bg-purple-900/20">
+                              <td className="px-4 py-3 text-white text-sm">{employee?.name || 'غير معروف'}</td>
+                              <td className="px-4 py-3">
+                                <div className="text-white text-sm">{meeting.client_name}</div>
+                                <div className="text-purple-400/60 text-xs">{meeting.client_email}</div>
+                              </td>
+                              <td className="px-4 py-3 text-white text-sm max-w-[200px] truncate">{meeting.subject}</td>
+                              <td className="px-4 py-3 text-purple-300 text-sm">
+                                {new Date(meeting.start_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </td>
+                              <td className="px-4 py-3 text-purple-300 text-sm">
+                                {formatTime(meeting.start_at)} - {formatTime(meeting.end_at)}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-xs border ${STATUS_LABELS[meeting.status]?.color || ''}`}>
+                                  {STATUS_LABELS[meeting.status]?.label || meeting.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  {meeting.google_meet_link && (
+                                    <a
+                                      href={meeting.google_meet_link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded transition-all"
+                                      title="انضم للاجتماع"
+                                    >
+                                      📹
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {adminTotalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <button
+                    onClick={() => setAdminPage(Math.max(1, adminPage - 1))}
+                    disabled={adminPage === 1}
+                    className="px-4 py-2 bg-purple-900/30 hover:bg-purple-800/30 disabled:opacity-50 text-purple-300 rounded-lg transition-all"
+                  >
+                    السابق
+                  </button>
+                  <span className="text-purple-400 px-4">
+                    {adminPage} من {adminTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setAdminPage(Math.min(adminTotalPages, adminPage + 1))}
+                    disabled={adminPage === adminTotalPages}
+                    className="px-4 py-2 bg-purple-900/30 hover:bg-purple-800/30 disabled:opacity-50 text-purple-300 rounded-lg transition-all"
+                  >
+                    التالي
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+      {/* Working Hours Modal */}
+          {showWorkingHoursModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-white">🔄 ساعات العمل</h2>
+                    <p className="text-purple-400/60 text-xs">حدد أوقات توفرك للاجتماعات</p>
+                  </div>
+                  <button
+                    onClick={() => setShowWorkingHoursModal(false)}
+                    className="p-2 text-purple-400 hover:text-white hover:bg-purple-500/20 rounded-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* عنوان الاجتماع */}
+                <div className="mb-4">
+                  <label className="block text-purple-300 text-sm mb-2">عنوان الاجتماع</label>
+                  <input
+                    type="text"
+                    value={settings?.meeting_title || ''}
+                    onChange={(e) => setSettings(prev => prev ? { ...prev, meeting_title: e.target.value } : null)}
+                    placeholder={`اجتماع ${settings?.slot_duration || 30} دقيقة`}
+                    className="w-full px-3 py-2 bg-purple-900/30 border border-purple-500/20 rounded-lg text-white text-sm placeholder-purple-400/50"
+                  />
+                </div>
+
+                {/* إعدادات الحجز */}
+                <div className="mb-4 p-3 bg-purple-900/20 rounded-xl space-y-3">
+                  {/* نطاق الحجز */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-300 text-sm">نطاق الحجز</span>
+                    <div className="flex items-center gap-1" dir="ltr">
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={settings?.max_days_ahead ?? 30}
+                        onChange={(e) => setSettings(prev => prev ? { ...prev, max_days_ahead: Number(e.target.value) } : null)}
+                        className="w-14 px-2 py-1 bg-purple-900/50 border border-purple-500/30 rounded text-white text-sm text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-purple-400 text-sm">يوم</span>
+                    </div>
+                  </div>
+                  
+                  {/* الإشعار المسبق */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-300 text-sm">لا يمكن الحجز قبل</span>
+                    <div className="flex items-center bg-purple-900/50 border border-purple-500/30 rounded overflow-hidden" dir="ltr">
+                      <input
+                        type="number"
+                        min="1"
+                        max="999"
+                        value={settings?.min_notice_hours ?? 4}
+                        onChange={(e) => setSettings(prev => prev ? { ...prev, min_notice_hours: Number(e.target.value) } : null)}
+                        className="w-12 px-2 py-1 bg-transparent text-white text-sm text-center border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <div className="w-px h-5 bg-purple-500/30"></div>
+                      <select
+                        value={settings?.min_notice_unit ?? 'hours'}
+                        onChange={(e) => setSettings(prev => prev ? { ...prev, min_notice_unit: e.target.value as 'minutes' | 'hours' | 'days' } : null)}
+                        className="px-2 py-1 bg-transparent text-white text-sm border-none outline-none cursor-pointer"
+                        dir="rtl"
+                      >
+                        <option value="minutes" className="bg-[#1a0a2e]">دقائق</option>
+                        <option value="hours" className="bg-[#1a0a2e]">ساعات</option>
+                        <option value="days" className="bg-[#1a0a2e]">أيام</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* وقت الراحة */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-300 text-sm">راحة بين الاجتماعات</span>
+                    <div className="flex items-center gap-1" dir="ltr">
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={settings?.buffer_minutes ?? 15}
+                        onChange={(e) => setSettings(prev => prev ? { ...prev, buffer_minutes: Number(e.target.value) } : null)}
+                        className="w-14 px-2 py-1 bg-purple-900/50 border border-purple-500/30 rounded text-white text-sm text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-purple-400 text-sm">دقيقة</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* أيام العمل */}
+                <div className="space-y-2">
+                  {Object.entries(DAY_NAMES).map(([day, name]) => {
+                    const daySchedule = settings?.working_hours?.[day];
+                    const dayEnabled = daySchedule?.enabled ?? (day !== 'fri' && day !== 'sat');
+                    const slots = daySchedule?.slots || [{ start: '09:00', end: '17:00' }];
+                    
+                    return (
+                      <div key={day} className="flex items-center gap-3 py-2 border-b border-purple-500/10 last:border-0">
+                        {/* اسم اليوم */}
+                        <div 
+                          onClick={() => toggleDayEnabled(day, !dayEnabled)}
+                          className={`w-16 py-1.5 rounded-lg flex items-center justify-center text-sm font-medium cursor-pointer flex-shrink-0 ${
+                            dayEnabled ? 'bg-purple-600 text-white' : 'bg-purple-900/30 text-purple-400/50'
+                          }`}
+                        >
+                          {name}
+                        </div>
+                        
+                        {/* المحتوى */}
+                        <div className="flex-1">
+                          {!dayEnabled ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-purple-400/50 text-sm">غير متاح</span>
+                              <button onClick={() => toggleDayEnabled(day, true)} className="p-1 text-purple-400 hover:text-purple-300 rounded">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {slots.map((slot, slotIndex) => (
+                                <div key={slotIndex} className="flex items-center gap-1">
+                                  <input
+                                    type="time"
+                                    value={slot.start}
+                                    onChange={(e) => updateSlotTime(day, slotIndex, 'start', e.target.value)}
+                                    className="px-2 py-1 bg-purple-900/30 border border-purple-500/20 rounded text-white text-sm w-[90px]"
+                                  />
+                                  <span className="text-purple-400/60">-</span>
+                                  <input
+                                    type="time"
+                                    value={slot.end}
+                                    onChange={(e) => updateSlotTime(day, slotIndex, 'end', e.target.value)}
+                                    className="px-2 py-1 bg-purple-900/30 border border-purple-500/20 rounded text-white text-sm w-[90px]"
+                                  />
+                                  <button onClick={() => slots.length > 1 ? removeSlot(day, slotIndex) : toggleDayEnabled(day, false)} className="p-1 text-purple-400/60 hover:text-red-400" title="حذف">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                  <button onClick={() => addSlot(day)} className="p-1 text-purple-400/60 hover:text-purple-300" title="إضافة">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                  </button>
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => { setCopyTimesDay(copyTimesDay === day ? null : day); setCopyTimesTarget([]); }}
+                                      className={`p-1 rounded ${copyTimesDay === day ? 'text-purple-300 bg-purple-500/20' : 'text-purple-400/60 hover:text-purple-300'}`}
+                                      title="نسخ"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    </button>
+                                    {copyTimesDay === day && (
+                                      <div className="absolute right-0 top-full mt-1 bg-[#1a0a2e] border border-purple-500/30 rounded-xl p-3 shadow-xl z-20 min-w-[150px]">
+                                        <p className="text-purple-400/60 text-xs mb-2">نسخ إلى...</p>
+                                        {Object.entries(DAY_NAMES).filter(([d]) => d !== day).map(([d, n]) => (
+                                          <label key={d} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-purple-500/10 rounded px-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={copyTimesTarget.includes(d)}
+                                              onChange={(e) => e.target.checked ? setCopyTimesTarget([...copyTimesTarget, d]) : setCopyTimesTarget(copyTimesTarget.filter(t => t !== d))}
+                                              className="w-3 h-3 rounded"
+                                            />
+                                            <span className="text-white text-sm">{n}</span>
+                                          </label>
+                                        ))}
+                                        <button onClick={copyTimesToDays} disabled={copyTimesTarget.length === 0} className="w-full mt-2 px-2 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/30 text-white text-sm rounded">
+                                          تطبيق
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* أزرار */}
+                <div className="flex gap-3 mt-4">
+                  <button onClick={() => setShowWorkingHoursModal(false)} className="flex-1 px-4 py-2 bg-purple-900/50 text-purple-300 rounded-xl">إلغاء</button>
+                  <button onClick={() => { saveSettings(); setShowWorkingHoursModal(false); }} disabled={savingSettings} className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl">
+                    {savingSettings ? 'جاري الحفظ...' : 'حفظ'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

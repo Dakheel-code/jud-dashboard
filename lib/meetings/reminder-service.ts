@@ -10,9 +10,12 @@ import { createClient } from '@supabase/supabase-js';
 import { sendMeetingReminder } from './notification-service';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 function getSupabase() {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase credentials missing');
+  }
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
