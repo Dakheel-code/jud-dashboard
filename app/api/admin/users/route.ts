@@ -24,11 +24,29 @@ function getSupabaseClient() {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
+    const { searchParams } = new URL(request.url);
+    
+    // فلاتر اختيارية
+    const activeOnly = searchParams.get('active') === 'true';
+    const role = searchParams.get('role');
 
-    const { data: users, error } = await supabase
+    let query = supabase
       .from('admin_users')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, username, name, email, role, roles, permissions, is_active, avatar, created_at, updated_at')
+      .order('name', { ascending: true });
+
+    // فلترة المستخدمين النشطين فقط
+    if (activeOnly) {
+      query = query.eq('is_active', true);
+    }
+
+    // فلترة حسب الدور
+    if (role) {
+      // البحث في role أو roles array
+      query = query.or(`role.eq.${role},roles.cs.{${role}}`);
+    }
+
+    const { data: users, error } = await query;
 
     if (error) {
       console.error('Error fetching users:', error);

@@ -15,13 +15,18 @@ export async function GET() {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب المستخدمين الذين لديهم دور مدير حساب فقط
-    const { data: managers, error } = await supabase
+    // جلب المستخدمين الذين لديهم دور مدير حساب (من role أو من مصفوفة roles)
+    const { data: allUsers, error } = await supabase
       .from('admin_users')
-      .select('id, name, username, email, role')
+      .select('id, name, username, email, role, roles')
       .eq('is_active', true)
-      .eq('role', 'account_manager')
       .order('name');
+
+    // فلترة المستخدمين الذين لديهم دور account_manager
+    const managers = (allUsers || []).filter(user => 
+      user.role === 'account_manager' || 
+      (user.roles && user.roles.includes('account_manager'))
+    );
 
     if (error) {
       console.error('❌ Fetch account managers error:', error);

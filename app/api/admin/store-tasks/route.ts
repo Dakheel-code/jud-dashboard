@@ -157,43 +157,85 @@ export async function POST(request: Request) {
       store_id,
       title,
       description,
-      assigned_to,
+      assigned_to = [],
+      assigned_roles = [],
+      assign_to_all = false,
+      is_individual = false,
       priority = 'normal',
       due_date,
       type = 'manual'
     } = body;
 
     // التحقق من الحقول المطلوبة
-    if (!store_id || !title) {
+    if (!title) {
       return NextResponse.json({ 
-        error: 'الحقول المطلوبة: store_id, title' 
+        error: 'عنوان المهمة مطلوب' 
       }, { status: 400 });
     }
 
-    // التحقق من وجود المتجر
-    const { data: store, error: storeError } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('id', store_id)
-      .single();
-
-    if (storeError || !store) {
-      return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
+    // التحقق من المتجر إذا لم تكن مهمة فردية
+    if (!is_individual && !store_id) {
+      return NextResponse.json({ 
+        error: 'يرجى اختيار متجر أو تحديد المهمة كمهمة فردية' 
+      }, { status: 400 });
     }
 
-    // إنشاء المهمة
+    // التحقق من وجود المتجر إذا تم تحديده
+    if (store_id) {
+      const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('id', store_id)
+        .single();
+
+      if (storeError || !store) {
+        return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
+      }
+    }
+
+    // تحديد المكلفين
+    let assignedUsers: string[] = [];
+    
+    if (assign_to_all) {
+      // تكليف جميع المستخدمين
+      const { data: allUsers } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('is_active', true);
+      assignedUsers = allUsers?.map(u => u.id) || [];
+    } else if (assigned_roles && assigned_roles.length > 0) {
+      // تكليف حسب الأدوار
+      const { data: roleUsers } = await supabase
+        .from('admin_users')
+        .select('id, roles')
+        .eq('is_active', true);
+      
+      assignedUsers = roleUsers?.filter(u => 
+        u.roles?.some((r: string) => assigned_roles.includes(r))
+      ).map(u => u.id) || [];
+    } else if (assigned_to && assigned_to.length > 0) {
+      // تكليف مستخدمين محددين
+      assignedUsers = assigned_to;
+    }
+
+    // إنشاء المهمة الأساسية (للمكلف الأول أو null)
+    const primaryAssignee = assignedUsers.length > 0 ? assignedUsers[0] : null;
+    
     const { data: newTask, error: createError } = await supabase
       .from('store_tasks')
       .insert({
-        store_id,
+        store_id: is_individual ? null : store_id,
         title,
         description: description || null,
-        assigned_to: assigned_to || null,
+        assigned_to: primaryAssignee,
         priority,
-        due_date: due_date || null,
+        due_date: due_date ? (due_date.includes('-') ? due_date : new Date(Date.now() + parseInt(due_date) * 24 * 60 * 60 * 1000).toISOString()) : null,
         type,
         status: 'pending',
-        created_by: userId
+        created_by: userId,
+        is_individual: is_individual,
+        assign_to_all: assign_to_all,
+        assigned_roles: assigned_roles.length > 0 ? assigned_roles : null
       })
       .select(`
         *,
@@ -208,6 +250,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'فشل إنشاء المهمة' }, { status: 500 });
     }
 
+    // إضافة المشاركين الإضافيين إذا كان هناك أكثر من مكلف
+    if (assignedUsers.length > 1) {
+      const participantsToInsert = assignedUsers.slice(1).map(uid => ({
+        task_id: newTask.id,
+        user_id: uid,
+        role: 'assignee'
+      }));
+      
+      await supabase.from('task_participants').insert(participantsToInsert);
+    }
+
     // تسجيل في activity log
     await supabase.from('task_activity_log').insert({
       task_id: newTask.id,
@@ -215,8 +268,11 @@ export async function POST(request: Request) {
       action: 'created',
       meta: {
         title,
-        store_id,
-        assigned_to,
+        store_id: is_individual ? null : store_id,
+        is_individual,
+        assigned_to: assignedUsers,
+        assigned_roles,
+        assign_to_all,
         priority,
         type
       }

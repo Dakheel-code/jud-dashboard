@@ -67,13 +67,16 @@ export async function GET(request: Request) {
     const priority = searchParams.get('priority');
     const storeId = searchParams.get('store_id');
 
-    // 1. جلب المتاجر التي المستخدم مسؤول عنها
-    const { data: userStores } = await supabase
+    // 1. جلب المتاجر التي المستخدم مدير حساب لها
+    const { data: userStores, error: storesError } = await supabase
       .from('stores')
-      .select('id')
-      .or(`account_manager_id.eq.${userId},media_buyer_id.eq.${userId},team_leader_user_id.eq.${userId}`);
+      .select('id, store_name, store_url, account_manager_id')
+      .eq('account_manager_id', userId);
+    
+    console.log('User stores for userId:', userId, 'Found:', userStores?.length, 'Error:', storesError);
 
     const userStoreIds = userStores?.map(s => s.id) || [];
+    const myStoresDetails = userStores || [];
 
     // 2. جلب المهام التي المستخدم مشارك فيها
     const { data: participations } = await supabase
@@ -107,6 +110,9 @@ export async function GET(request: Request) {
 
     const { data: allTasks, error: tasksError } = await query;
 
+    console.log('All tasks fetched:', allTasks?.length, 'for userId:', userId);
+    console.log('Sample tasks assigned_to:', allTasks?.slice(0, 3).map(t => ({ id: t.id, assigned_to: t.assigned_to, title: t.title })));
+
     if (tasksError) {
       console.error('Error fetching tasks:', tasksError);
       return NextResponse.json({ error: 'فشل جلب المهام' }, { status: 500 });
@@ -114,17 +120,25 @@ export async function GET(request: Request) {
 
     // 4. فلترة المهام حسب الشروط
     const myTasks = (allTasks || []).filter(task => {
-      // الشرط 1: المهمة مسندة للمستخدم
+      // الشرط 1: المهمة مسندة للمستخدم مباشرة
       if (task.assigned_to === userId) return true;
       
       // الشرط 2: المستخدم مشارك في المهمة
       if (participatedTaskIds.includes(task.id)) return true;
       
       // الشرط 3: المهمة تابعة لمتجر المستخدم مسؤول عنه
-      if (userStoreIds.includes(task.store_id)) return true;
+      if (task.store_id && userStoreIds.includes(task.store_id)) return true;
+      
+      // الشرط 4: المهمة مكلف بها الجميع (assign_to_all)
+      if (task.assign_to_all === true) return true;
+      
+      // الشرط 5: المهمة مكلف بها حسب الدور (assigned_roles)
+      // سنحتاج جلب أدوار المستخدم لهذا الشرط لاحقاً
       
       return false;
     });
+    
+    console.log('Filtered tasks for user:', userId, 'Total:', myTasks.length);
 
     // 5. حساب الإحصائيات
     const now = new Date();
@@ -154,10 +168,51 @@ export async function GET(request: Request) {
       is_participant: participatedTaskIds.includes(task.id)
     }));
 
+    // 7. جلب مهام المتاجر الأساسية (checklist) لكل متجر مسند للمستخدم
+    const storesWithTasks: Array<{
+      id: string;
+      store_name: string;
+      store_url: string;
+      total_tasks: number;
+      completed_tasks: number;
+      remaining_tasks: number;
+    }> = [];
+
+    // جلب عدد المهام الأساسية الكلي
+    const { data: allBaseTasks, error: baseTasksError } = await supabase
+      .from('tasks')
+      .select('id');
+    const totalBaseTasks = allBaseTasks?.length || 0;
+    
+    console.log('Base tasks count:', totalBaseTasks, 'Error:', baseTasksError);
+    console.log('My stores details:', myStoresDetails?.length);
+    
+    for (const store of myStoresDetails) {
+      // جلب تقدم المهام للمتجر من جدول tasks_progress
+      const { data: storeProgress } = await supabase
+        .from('tasks_progress')
+        .select('id, is_done')
+        .eq('store_id', store.id);
+      
+      const completedTasks = storeProgress?.filter(t => t.is_done).length || 0;
+      
+      storesWithTasks.push({
+        id: store.id,
+        store_name: store.store_name,
+        store_url: store.store_url,
+        total_tasks: totalBaseTasks,
+        completed_tasks: completedTasks,
+        remaining_tasks: totalBaseTasks - completedTasks
+      });
+    }
+
+    console.log('Stores with tasks:', storesWithTasks.length);
+
     return NextResponse.json({
       tasks: tasksWithMeta,
       counts,
-      user_id: userId
+      user_id: userId,
+      my_stores: storesWithTasks
     });
 
   } catch (error) {

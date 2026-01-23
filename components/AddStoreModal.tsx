@@ -367,7 +367,7 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
                 <option value="" className="bg-[#1a0a2e]">غير محدد</option>
                 {accountManagers.map((manager) => (
                   <option key={manager.id} value={manager.id} className="bg-[#1a0a2e]">
-                    {manager.name} ({manager.username})
+                    {manager.name}
                   </option>
                 ))}
               </select>

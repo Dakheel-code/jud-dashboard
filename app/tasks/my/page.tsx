@@ -41,6 +41,15 @@ interface Counts {
   overdue: number;
 }
 
+interface MyStore {
+  id: string;
+  store_name: string;
+  store_url: string;
+  total_tasks: number;
+  completed_tasks: number;
+  remaining_tasks: number;
+}
+
 type TabType = 'all' | 'overdue' | 'critical' | 'pending' | 'in_progress' | 'done';
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -65,6 +74,7 @@ export default function MyTasksPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [myStores, setMyStores] = useState<MyStore[]>([]);
 
   useEffect(() => {
     fetchTasks();
@@ -78,6 +88,7 @@ export default function MyTasksPage() {
       if (response.ok) {
         setTasks(data.tasks || []);
         setCounts(data.counts || null);
+        setMyStores(data.my_stores || []);
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
@@ -244,6 +255,80 @@ export default function MyTasksPage() {
               <p className="text-2xl font-bold text-green-400">{counts.done}</p>
               <p className="text-sm text-green-300/80">مكتملة</p>
             </button>
+          </div>
+        )}
+
+        {/* متاجري - بطاقات بسيطة */}
+        {myStores.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              متاجري
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {myStores.map((store) => {
+                const percentage = store.total_tasks > 0 
+                  ? Math.round((store.completed_tasks / store.total_tasks) * 100) 
+                  : 0;
+
+                return (
+                  <Link
+                    key={store.id}
+                    href={`/store/${store.store_url}`}
+                    className="bg-purple-950/40 rounded-xl border border-purple-500/20 p-4 hover:bg-purple-900/40 hover:border-purple-400/50 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <img
+                        src={`https://www.google.com/s2/favicons?domain=${store.store_url}&sz=32`}
+                        alt=""
+                        className="w-10 h-10 rounded-lg"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-medium truncate group-hover:text-purple-300 transition-colors">
+                          {store.store_name}
+                        </h3>
+                        <p className="text-purple-400/60 text-xs truncate">{store.store_url}</p>
+                      </div>
+                    </div>
+                    
+                    {/* المهام المتبقية */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {store.remaining_tasks > 0 ? (
+                          <>
+                            <span className="w-6 h-6 flex items-center justify-center bg-orange-500/20 text-orange-400 rounded-full text-xs font-bold">
+                              {store.remaining_tasks}
+                            </span>
+                            <span className="text-orange-300/80 text-sm">مهمة متبقية</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="w-6 h-6 flex items-center justify-center bg-green-500/20 text-green-400 rounded-full text-xs">
+                              ✓
+                            </span>
+                            <span className="text-green-300/80 text-sm">مكتمل</span>
+                          </>
+                        )}
+                      </div>
+                      <span className={`text-xs ${percentage === 100 ? 'text-green-400' : 'text-purple-300/60'}`}>
+                        {percentage}%
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mt-2 h-1.5 bg-purple-900/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${percentage === 100 ? 'bg-green-500' : 'bg-gradient-to-r from-purple-500 to-fuchsia-500'}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
 

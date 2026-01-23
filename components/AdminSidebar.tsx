@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import AnnouncementBell from './AnnouncementBell';
+import NotificationBell from './notifications/NotificationBell';
 import { getAvatarUrl, getAvatarInitial } from '@/lib/avatar';
 
 interface UserInfo {
@@ -367,6 +368,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <NotificationBell />
                 <AnnouncementBell />
                 <button 
                   onClick={onClose}

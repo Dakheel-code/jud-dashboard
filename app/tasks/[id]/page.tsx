@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { TaskComments, TaskAttachments, HelpRequestModal, ReassignModal, TaskActivityLog } from '@/components/tasks';
 
 interface Task {
   id: string;
@@ -100,13 +101,30 @@ export default function TaskDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
     fetchTask();
     fetchUsers();
+    fetchCurrentUser();
   }, [taskId]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      const data = await response.json();
+      if (response.ok && data.user) {
+        setCurrentUserId(data.user.id);
+        setUserRole(data.user.role || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
+    }
+  };
 
   const fetchTask = async () => {
     try {
@@ -336,16 +354,49 @@ export default function TaskDetailsPage() {
             </div>
           </div>
 
-          {/* Help Request Button */}
-          <button
-            onClick={() => setShowHelpModal(true)}
-            className="w-full py-3 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 rounded-xl border border-cyan-500/30 transition-all flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            طلب مساعدة
-          </button>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="flex-1 min-w-[140px] py-3 bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 rounded-xl border border-cyan-500/30 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              طلب مساعدة
+            </button>
+            
+            {/* Reassign Button - للمديرين والأدمن فقط */}
+            {['super_admin', 'admin', 'team_leader', 'manager'].includes(userRole) && (
+              <button
+                onClick={() => setShowReassignModal(true)}
+                className="flex-1 min-w-[140px] py-3 bg-orange-600/30 hover:bg-orange-600/50 text-orange-300 rounded-xl border border-orange-500/30 transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                إعادة إسناد
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="mb-6">
+          <TaskComments
+            taskId={taskId}
+            currentUserId={currentUserId}
+            userRole={userRole}
+          />
+        </div>
+
+        {/* Attachments Section */}
+        <div className="mb-6">
+          <TaskAttachments
+            taskId={taskId}
+            currentUserId={currentUserId}
+            userRole={userRole}
+          />
         </div>
 
         {/* Participants */}
@@ -371,70 +422,40 @@ export default function TaskDetailsPage() {
         )}
 
         {/* Activity Log */}
-        {task.activity_log && task.activity_log.length > 0 && (
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6">
-            <h3 className="text-lg font-bold text-white mb-4">سجل النشاط</h3>
-            <div className="space-y-3">
-              {task.activity_log.map(log => (
-                <div key={log.id} className="flex items-start gap-3 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-purple-400 mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-white">
-                      <span className="text-purple-300">{log.user?.name || 'النظام'}</span>
-                      {' '}
-                      {actionLabels[log.action] || log.action}
-                    </p>
-                    <p className="text-purple-300/60 text-xs">{formatDate(log.created_at)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="mb-6">
+          <TaskActivityLog taskId={taskId} />
+        </div>
       </div>
 
-      {/* Help Modal */}
-      {showHelpModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-white mb-4">طلب مساعدة</h3>
-            <p className="text-purple-300/80 mb-4">اختر شخص لمساعدتك في هذه المهمة</p>
-            
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl mb-4 outline-none focus:border-purple-400"
-            >
-              <option value="">اختر مستخدم...</option>
-              {users
-                .filter(u => !task.participants?.some(p => p.user?.id === u.id))
-                .map(user => (
-                  <option key={user.id} value={user.id}>{user.name}</option>
-                ))
-              }
-            </select>
+      {/* Help Request Modal */}
+      <HelpRequestModal
+        taskId={taskId}
+        taskTitle={task?.title || ''}
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        currentUserId={currentUserId}
+        userRole={userRole}
+      />
 
-            <div className="flex gap-3">
-              <button
-                onClick={addParticipant}
-                disabled={!selectedUserId || updating}
-                className="flex-1 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl transition-all disabled:opacity-50"
-              >
-                {updating ? 'جاري الإضافة...' : 'إضافة'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowHelpModal(false);
-                  setSelectedUserId('');
-                }}
-                className="flex-1 py-3 bg-purple-900/50 hover:bg-purple-900/70 text-white rounded-xl transition-all"
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reassign Modal */}
+      <ReassignModal
+        taskId={taskId}
+        taskTitle={task?.title || ''}
+        currentAssigneeId={task?.assigned_user?.id}
+        isOpen={showReassignModal}
+        onClose={() => setShowReassignModal(false)}
+        onSuccess={(newAssignee) => {
+          setTask(prev => prev ? {
+            ...prev,
+            assigned_user: {
+              id: newAssignee.id,
+              name: newAssignee.name,
+              username: newAssignee.username,
+              avatar: newAssignee.avatar
+            }
+          } : null);
+        }}
+      />
     </div>
   );
 }

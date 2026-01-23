@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { TasksByCategory } from '@/types';
 import AdminAuth from '@/components/AdminAuth';
 import SnapchatCampaignsSection from '@/components/SnapchatCampaignsSection';
+import AddStoreModal from '@/components/AddStoreModal';
 
 interface StoreFullData {
   id: string;
@@ -88,24 +89,6 @@ function StoreDetailsContent() {
   const [showManualCampaignModal, setShowManualCampaignModal] = useState(false);
   const [manualCampaignForm, setManualCampaignForm] = useState({ sales: '', revenue: '', spend: '' });
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({
-    store_name: '',
-    owner_name: '',
-    owner_phone: '',
-    owner_email: '',
-    store_group_url: '',
-    notes: '',
-    priority: 'medium',
-    status: 'new',
-    subscription_start_date: '',
-    snapchat_account: '',
-    tiktok_account: '',
-    google_account: '',
-    meta_account: '',
-    media_buyer_id: ''
-  });
-  const [editLoading, setEditLoading] = useState(false);
-  const [mediaBuyers, setMediaBuyers] = useState<{id: string; name: string}[]>([]);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [adAccountsList, setAdAccountsList] = useState<string[]>([]);
   const [editingAdAccounts, setEditingAdAccounts] = useState(false);
@@ -134,23 +117,6 @@ function StoreDetailsContent() {
   const [datePreset, setDatePreset] = useState<string>('last_7d');
   const [customDateRange, setCustomDateRange] = useState<{start: string; end: string}>({ start: '', end: '' });
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
-
-  // جلب قائمة الميديا باير
-  useEffect(() => {
-    const fetchMediaBuyers = async () => {
-      try {
-        const response = await fetch('/api/admin/users');
-        const data = await response.json();
-        const buyers = (data.users || []).filter((user: any) => 
-          user.roles?.includes('media_buyer') || user.role === 'media_buyer'
-        );
-        setMediaBuyers(buyers.map((u: any) => ({ id: u.id, name: u.name })));
-      } catch (err) {
-        console.error('Failed to fetch media buyers:', err);
-      }
-    };
-    fetchMediaBuyers();
-  }, []);
 
   // جلب قالب رسالة التحديث اليومي
   useEffect(() => {
@@ -712,54 +678,13 @@ function StoreDetailsContent() {
   };
 
   const openEditModal = () => {
-    if (storeData) {
-      setEditForm({
-        store_name: storeData.store_name || '',
-        owner_name: storeData.owner_name || '',
-        owner_phone: storeData.owner_phone || '',
-        owner_email: storeData.owner_email || '',
-        store_group_url: storeData.store_group_url || '',
-        notes: storeData.notes || '',
-        priority: storeData.priority || 'medium',
-        status: storeData.status || 'new',
-        subscription_start_date: storeData.subscription_start_date || '',
-        snapchat_account: storeData.snapchat_account || '',
-        tiktok_account: storeData.tiktok_account || '',
-        google_account: storeData.google_account || '',
-        meta_account: storeData.meta_account || '',
-        media_buyer_id: storeData.media_buyer?.id || ''
-      });
-      setShowEditModal(true);
-    }
+    setShowEditModal(true);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!storeId) return;
-
-    setEditLoading(true);
-    try {
-      const response = await fetch(`/api/admin/stores/${storeId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm)
-      });
-
-      if (response.ok) {
-        // تحديث البيانات المحلية
-        const selectedMediaBuyer = mediaBuyers.find(b => b.id === editForm.media_buyer_id);
-        setStoreData(prev => prev ? { 
-          ...prev, 
-          ...editForm,
-          media_buyer: editForm.media_buyer_id ? selectedMediaBuyer : undefined
-        } : null);
-        setShowEditModal(false);
-      }
-    } catch (err) {
-      console.error('Failed to update store:', err);
-    } finally {
-      setEditLoading(false);
-    }
+  const handleEditSuccess = () => {
+    // إعادة جلب بيانات المتجر بعد التعديل
+    fetchStoreData();
+    setShowEditModal(false);
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -2078,168 +2003,27 @@ function StoreDetailsContent() {
         </div>
       )}
 
-      {/* Edit Store Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
-          <div 
-            className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="p-6 border-b border-purple-500/20">
-              <h3 className="text-xl font-bold text-white">تعديل بيانات المتجر</h3>
-            </div>
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-              {/* اسم المتجر */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">اسم المتجر</label>
-                <input
-                  type="text"
-                  value={editForm.store_name}
-                  onChange={e => setEditForm(prev => ({ ...prev, store_name: e.target.value }))}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                />
-              </div>
-
-              {/* صاحب المتجر */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">صاحب المتجر</label>
-                <input
-                  type="text"
-                  value={editForm.owner_name}
-                  onChange={e => setEditForm(prev => ({ ...prev, owner_name: e.target.value }))}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                />
-              </div>
-
-              {/* رقم الهاتف والبريد */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-purple-300 mb-2">رقم الهاتف</label>
-                  <input
-                    type="text"
-                    value={editForm.owner_phone}
-                    onChange={e => setEditForm(prev => ({ ...prev, owner_phone: e.target.value }))}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-purple-300 mb-2">البريد الإلكتروني</label>
-                  <input
-                    type="email"
-                    value={editForm.owner_email}
-                    onChange={e => setEditForm(prev => ({ ...prev, owner_email: e.target.value }))}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* الأولوية والحالة */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-purple-300 mb-2">الأولوية</label>
-                  <select
-                    value={editForm.priority}
-                    onChange={e => setEditForm(prev => ({ ...prev, priority: e.target.value }))}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  >
-                    <option value="high" className="bg-[#1a0a2e]">مرتفع</option>
-                    <option value="medium" className="bg-[#1a0a2e]">متوسط</option>
-                    <option value="low" className="bg-[#1a0a2e]">منخفض</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-purple-300 mb-2">الحالة</label>
-                  <select
-                    value={editForm.status}
-                    onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  >
-                    <option value="new" className="bg-[#1a0a2e]">جديد</option>
-                    <option value="active" className="bg-[#1a0a2e]">نشط</option>
-                    <option value="paused" className="bg-[#1a0a2e]">متوقف</option>
-                    <option value="expired" className="bg-[#1a0a2e]">منتهي</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* ميديا باير */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">ميديا باير</label>
-                <select
-                  value={editForm.media_buyer_id}
-                  onChange={e => setEditForm(prev => ({ ...prev, media_buyer_id: e.target.value }))}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                >
-                  <option value="" className="bg-[#1a0a2e]">غير محدد</option>
-                  {mediaBuyers.map(buyer => (
-                    <option key={buyer.id} value={buyer.id} className="bg-[#1a0a2e]">{buyer.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* تاريخ بداية الاشتراك */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">تاريخ بداية الاشتراك</label>
-                <div className="relative" dir="ltr" lang="en-US">
-                  <input
-                    type="date"
-                    value={editForm.subscription_start_date ? editForm.subscription_start_date.split('T')[0] : ''}
-                    onChange={e => setEditForm(prev => ({ ...prev, subscription_start_date: e.target.value }))}
-                    className={`w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert ${!editForm.subscription_start_date ? 'text-transparent' : ''}`}
-                    style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-                    lang="en-US"
-                  />
-                  {!editForm.subscription_start_date && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/70 pointer-events-none" dir="rtl">تاريخ بداية اطلاق اول حملة</span>
-                  )}
-                </div>
-              </div>
-
-              {/* رابط قناة التواصل */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">رابط قناة التواصل</label>
-                <input
-                  type="url"
-                  value={editForm.store_group_url}
-                  onChange={e => setEditForm(prev => ({ ...prev, store_group_url: e.target.value }))}
-                  placeholder="https://chat.whatsapp.com/..."
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  dir="ltr"
-                />
-              </div>
-
-              {/* ملاحظات */}
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">ملاحظات</label>
-                <textarea
-                  value={editForm.notes}
-                  onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none resize-none"
-                />
-              </div>
-
-              {/* أزرار */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-fuchsia-500 transition-all disabled:opacity-50"
-                >
-                  {editLoading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-6 py-3 border border-purple-500/30 text-purple-300 rounded-xl hover:bg-purple-500/10 transition-all"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Edit Store Modal - استخدام القالب الموحد */}
+      <AddStoreModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={handleEditSuccess}
+        editingStore={storeData ? {
+          id: storeData.id,
+          store_name: storeData.store_name,
+          store_url: storeData.store_url,
+          owner_name: storeData.owner_name,
+          owner_phone: storeData.owner_phone,
+          owner_email: storeData.owner_email,
+          account_manager_id: storeData.account_manager?.id,
+          media_buyer_id: storeData.media_buyer?.id,
+          priority: storeData.priority as 'high' | 'medium' | 'low',
+          status: storeData.status as 'new' | 'active' | 'paused' | 'expired',
+          notes: storeData.notes,
+          subscription_start_date: storeData.subscription_start_date,
+          store_group_url: storeData.store_group_url
+        } : null}
+      />
 
       {/* نافذة التحديث اليومي */}
       {showDailyUpdateModal && (

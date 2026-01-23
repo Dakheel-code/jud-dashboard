@@ -52,36 +52,85 @@ export async function GET(
     const supabase = getSupabaseClient();
     const taskId = params.id;
 
+    // جلب المهمة الأساسية
     const { data: task, error } = await supabase
       .from('store_tasks')
-      .select(`
-        *,
-        store:stores(id, store_name, store_url),
-        assigned_user:admin_users!store_tasks_assigned_to_fkey(id, name, username, avatar),
-        created_user:admin_users!store_tasks_created_by_fkey(id, name, username),
-        participants:task_participants(
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching task:', error);
+      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
+    }
+
+    if (!task) {
+      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
+    }
+
+    // جلب المتجر إذا موجود
+    let store = null;
+    if (task.store_id) {
+      const { data: storeData } = await supabase
+        .from('stores')
+        .select('id, store_name, store_url')
+        .eq('id', task.store_id)
+        .single();
+      store = storeData;
+    }
+
+    // جلب المستخدم المسند إليه
+    let assignedUser = null;
+    if (task.assigned_to) {
+      const { data: userData } = await supabase
+        .from('admin_users')
+        .select('id, name, username, avatar')
+        .eq('id', task.assigned_to)
+        .single();
+      assignedUser = userData;
+    }
+
+    // جلب المشاركين بشكل منفصل (تجاهل الخطأ إذا الجدول غير موجود)
+    let participants: any[] = [];
+    try {
+      const { data: parts } = await supabase
+        .from('task_participants')
+        .select(`
           id,
           role,
-          notes,
-          added_at,
           user:admin_users(id, name, username, avatar)
-        ),
-        activity_log:task_activity_log(
+        `)
+        .eq('task_id', taskId);
+      participants = parts || [];
+    } catch (e) {}
+
+    // جلب سجل النشاط بشكل منفصل
+    let activityLog: any[] = [];
+    try {
+      const { data: logs } = await supabase
+        .from('task_activity_log')
+        .select(`
           id,
           action,
           meta,
           created_at,
           user:admin_users(id, name, username)
-        )
-      `)
-      .eq('id', taskId)
-      .single();
+        `)
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      activityLog = logs || [];
+    } catch (e) {}
 
-    if (error || !task) {
-      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
-    }
-
-    return NextResponse.json({ task });
+    return NextResponse.json({ 
+      task: {
+        ...task,
+        store,
+        assigned_user: assignedUser,
+        participants,
+        activity_log: activityLog
+      }
+    });
 
   } catch (error) {
     console.error('GET /api/admin/store-tasks/:id error:', error);
