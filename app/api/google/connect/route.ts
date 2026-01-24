@@ -33,17 +33,31 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
 ].join(' ');
 
-// جلب معرف المستخدم الحالي
-async function getCurrentUserId(): Promise<string | null> {
+// جلب معرف المستخدم الحالي من NextAuth session أو admin_user cookie
+async function getCurrentUserId(request: NextRequest): Promise<string | null> {
   try {
+    // أولاً: جرب جلب من NextAuth JWT token
+    const { getToken } = await import('next-auth/jwt');
+    const token = await getToken({ 
+      req: request, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+    
+    if (token?.uid) {
+      return token.uid as string;
+    }
+    
+    // ثانياً: جرب من admin_user cookie (للتوافق مع النظام القديم)
     const cookieStore = cookies();
     const userCookie = cookieStore.get('admin_user');
     if (userCookie?.value) {
-      const user = JSON.parse(userCookie.value);
+      const user = JSON.parse(decodeURIComponent(userCookie.value));
       return user.id || null;
     }
+    
     return null;
-  } catch {
+  } catch (error) {
+    console.error('Error getting current user:', error);
     return null;
   }
 }
@@ -61,7 +75,7 @@ function generateCodeChallenge(verifier: string): string {
 export async function GET(request: NextRequest) {
   try {
     // التحقق من المصادقة
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'غير مصرح', code: 'UNAUTHORIZED' },
