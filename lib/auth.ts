@@ -153,25 +153,19 @@ export const authOptions: NextAuthOptions = {
             console.log('Google user created successfully:', newUser);
           }
         } else {
-          // تحديث آخر تسجيل دخول والبيانات
-          const userAvatar = (profile as any)?.picture || user?.image;
-          const userName = (profile as any)?.name || user?.name;
-          
-          console.log('Updating existing Google user:', { email, userName, userAvatar });
+          // تحديث آخر تسجيل دخول فقط - لا نغير الاسم أو الصورة إذا كان المستخدم موجود
+          console.log('Updating last_login for existing Google user:', { email });
           
           const { error: updateError } = await supabase
             .from('admin_users')
             .update({ 
               last_login: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-              avatar: userAvatar,
-              name: userName || undefined,
-              is_active: true,
             })
             .ilike('email', emailLower);
             
           if (updateError) {
-            console.error('Error updating Google user:', updateError);
+            console.error('Error updating Google user last_login:', updateError);
           }
         }
       }
