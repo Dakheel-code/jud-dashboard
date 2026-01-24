@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // بناء رابط OAuth مع PKCE
+    // بناء رابط OAuth (بدون PKCE - Google مع client_secret لا يحتاج PKCE)
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
@@ -135,8 +135,6 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('code_challenge', codeChallenge);
-    authUrl.searchParams.set('code_challenge_method', 'S256');
 
     // إرجاع الرابط أو التوجيه مباشرة
     const returnUrl = request.nextUrl.searchParams.get('return_url');
