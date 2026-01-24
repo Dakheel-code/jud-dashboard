@@ -143,26 +143,38 @@ export async function GET(request: NextRequest) {
 
     const userInfo: GoogleUserInfo = await userInfoResponse.json();
 
-    // تشفير refresh_token فقط - لا نخزن access_token
+    // تشفير refresh_token فقط
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
-    // حفظ في قاعدة البيانات
+    // حفظ في جدول user_integrations (منفصل عن NextAuth)
     const { error: dbError } = await supabase
-      .from('google_oauth_accounts')
+      .from('user_integrations')
       .upsert({
-        employee_id: userId,
-        google_email: userInfo.email,
-        google_id: userInfo.id,
+        user_id: userId,
+        provider: 'google_calendar',
         refresh_token: encryptedRefreshToken,
-        access_token: null,
-        token_expires_at: null,
-        calendar_id: 'primary',
-        sync_enabled: true,
-        last_sync_at: new Date().toISOString(),
-        sync_error: null,
+        access_token: null, // لا نخزن access_token - سيتم جلبه عند الحاجة
+        expires_at: null,
+        scope: tokens.scope,
+        email: userInfo.email,
+        extra_data: {
+          google_id: userInfo.id,
+          calendar_id: 'primary',
+          sync_enabled: true,
+          last_sync_at: new Date().toISOString(),
+        },
       }, {
-        onConflict: 'employee_id',
+        onConflict: 'user_id,provider',
       });
+    
+    // تحديث حالة الاتصال في employee_meeting_settings
+    await supabase
+      .from('employee_meeting_settings')
+      .update({
+        google_calendar_connected: true,
+        google_email: userInfo.email,
+      })
+      .eq('employee_id', userId);
 
     if (dbError) {
       console.error('Database error:', dbError);

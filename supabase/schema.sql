@@ -440,6 +440,37 @@ CREATE POLICY "Allow all on google_oauth_states" ON google_oauth_states FOR ALL 
 -- DELETE FROM google_oauth_states WHERE expires_at < NOW();
 
 -- =====================================================
+-- جدول user_integrations لتخزين tokens التقويم (منفصل عن NextAuth)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS user_integrations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL DEFAULT 'google_calendar',
+    access_token TEXT,
+    refresh_token TEXT NOT NULL,
+    expires_at TIMESTAMPTZ,
+    scope TEXT,
+    email TEXT,
+    extra_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, provider)
+);
+
+-- Index للبحث السريع
+CREATE INDEX IF NOT EXISTS idx_user_integrations_user_provider ON user_integrations(user_id, provider);
+
+-- RLS
+ALTER TABLE user_integrations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on user_integrations" ON user_integrations FOR ALL USING (true);
+
+-- Trigger لتحديث updated_at
+CREATE TRIGGER update_user_integrations_updated_at
+    BEFORE UPDATE ON user_integrations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
 -- Trigger لتحديث updated_at
 -- =====================================================
 
