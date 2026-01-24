@@ -670,7 +670,7 @@ function UsersManagementContent() {
                         </button>
                       </td>
                       <td className="p-4">
-                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 5 * 60 * 1000 ? (
+                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 30 * 60 * 1000 ? (
                           <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل"></span>
                         ) : (
                           <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>
