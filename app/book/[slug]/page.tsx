@@ -498,6 +498,12 @@ export default function BookingPage() {
           </div>
         )}
 
+        {/* Powered By Footer */}
+        <div className="mt-8 flex items-center justify-center gap-2 text-purple-400/60 text-sm">
+          <span>بواسطة</span>
+          <img src="/logo.png" alt="Jud" className="h-6 w-auto" />
+        </div>
+
         {/* Step 3: Success */}
         {step === 'success' && bookingResult && (
           <div className="bg-white/5 backdrop-blur-xl border border-purple-500/20 rounded-2xl p-8 text-center shadow-2xl">
