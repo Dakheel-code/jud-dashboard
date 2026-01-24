@@ -185,39 +185,31 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account, profile }) {
+      // تخزين الحد الأدنى من البيانات في JWT لتجنب خطأ 400 (حجم cookies كبير)
       if (user) {
         token.uid = user.id;
         token.role = (user as any).role;
-        token.roles = (user as any).roles;
         token.username = (user as any).username;
-        token.permissions = (user as any).permissions;
-        token.avatar = (user as any).avatar;
       }
 
-      // خزّن مزود الدخول
       if (account?.provider) token.provider = account.provider;
 
-      // لو Google: خزّن البريد/الاسم وجلب بيانات المستخدم من قاعدة البيانات
+      // لو Google: جلب بيانات المستخدم من DB
       if (account?.provider === "google") {
         token.email = (profile as any)?.email || token.email;
         token.name = (profile as any)?.name || token.name;
-        token.picture = (profile as any)?.picture;
 
-        // جلب بيانات المستخدم من قاعدة البيانات
         const supabase = getSupabaseClient();
         const { data: dbUser } = await supabase
           .from('admin_users')
-          .select('id, role, roles, permissions, username, avatar')
+          .select('id, role, username')
           .ilike('email', (token.email as string)?.toLowerCase() || '')
           .single();
 
         if (dbUser) {
           token.uid = dbUser.id;
           token.role = dbUser.role;
-          token.roles = dbUser.roles;
-          token.permissions = dbUser.permissions;
           token.username = dbUser.username;
-          token.avatar = dbUser.avatar;
         }
       }
       return token;
@@ -227,11 +219,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.uid;
         (session.user as any).role = token.role;
-        (session.user as any).roles = token.roles;
         (session.user as any).provider = token.provider;
         (session.user as any).username = token.username;
-        (session.user as any).permissions = token.permissions;
-        (session.user as any).avatar = token.avatar || token.picture;
       }
       return session;
     },
