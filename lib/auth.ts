@@ -19,12 +19,19 @@ function getSupabaseClient() {
 const providers: any[] = [];
 
 // Only add Google provider if credentials are available
+// ملاحظة: Scopes مقفلة على الهوية فقط (openid, email, profile)
+// التقويم يتم ربطه عبر /api/google/connect منفصلاً
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   providers.push(
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: { params: { prompt: "select_account" } },
+      authorization: {
+        params: {
+          prompt: "select_account",
+          scope: "openid email profile", // هوية فقط - ممنوع calendar scopes هنا
+        },
+      },
     })
   );
 }
