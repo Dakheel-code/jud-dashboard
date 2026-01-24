@@ -19,6 +19,31 @@ export default function AdminAuth({ children }: AdminAuthProps) {
     checkAuth();
   }, [session, status]);
 
+  // Heartbeat: تحديث last_login كل 30 ثانية لعرض حالة الاتصال بشكل لحظي
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    
+    const sendHeartbeat = async () => {
+      try {
+        await fetch('/api/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        });
+      } catch (error) {
+        // تجاهل الأخطاء
+      }
+    };
+    
+    // إرسال heartbeat فوراً
+    sendHeartbeat();
+    
+    // إرسال heartbeat كل 30 ثانية
+    const interval = setInterval(sendHeartbeat, 30000);
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated, userId]);
+
   const checkAuth = async () => {
     // انتظر حتى يتم تحميل حالة الجلسة
     if (status === 'loading') {

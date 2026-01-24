@@ -85,6 +85,13 @@ function UsersManagementContent() {
 
   useEffect(() => {
     fetchUsers();
+    
+    // تحديث تلقائي كل 10 ثواني لعرض حالة الاتصال بشكل لحظي
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // فلترة المستخدمين
@@ -670,8 +677,8 @@ function UsersManagementContent() {
                         </button>
                       </td>
                       <td className="p-4">
-                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 30 * 60 * 1000 ? (
-                          <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل"></span>
+                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 60 * 1000 ? (
+                          <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل الآن"></span>
                         ) : (
                           <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>
                         )}
