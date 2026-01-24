@@ -5,6 +5,11 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // استثناء مسارات NextAuth و API
+  if (pathname.startsWith('/api/auth') || pathname.includes('callback')) {
+    return NextResponse.next();
+  }
+
   // المسارات المحمية
   const protectedPaths = ['/admin', '/announcements'];
   const isProtectedPath = protectedPaths.some(path => 
