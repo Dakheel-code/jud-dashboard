@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
 
   // صفحة الإعدادات للتوجيه بعد الانتهاء
-  const settingsUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/admin/meetings/settings`;
+  const settingsUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://jud-dashboard.netlify.app'}/dashboard/my-calendar`;
 
   try {
     // التحقق من الأخطاء من Google
