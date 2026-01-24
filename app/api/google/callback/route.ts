@@ -120,7 +120,14 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
       console.error('Token exchange failed:', errorData);
-      return NextResponse.redirect(`${settingsUrl}?error=token_exchange_failed`);
+      console.error('Token params used:', {
+        client_id: GOOGLE_CLIENT_ID?.substring(0, 20) + '...',
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        code_length: code?.length,
+      });
+      // إرجاع الخطأ في URL للتشخيص
+      const errorMsg = encodeURIComponent(errorData.substring(0, 100));
+      return NextResponse.redirect(`${settingsUrl}?error=token_exchange_failed&details=${errorMsg}`);
     }
 
     const tokens: GoogleTokenResponse = await tokenResponse.json();
