@@ -8,3 +8,17 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# زيادة حجم الـ headers المسموح به لإصلاح خطأ 400
+[[headers]]
+  for = "/api/auth/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
