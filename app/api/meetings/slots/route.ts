@@ -60,8 +60,19 @@ export async function POST(request: NextRequest) {
     
     const supabase = getSupabase();
     
-    // البحث عن الموظف باستخدام booking_slug أو employee_id
+    // البحث عن الموظف باستخدام booking_slug أو username أو employee_id
     let actualEmployeeId = employee_id;
+    
+    // أولاً: البحث عن الموظف بالـ username للحصول على الـ ID الفعلي
+    const { data: userByUsername } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('username', employee_id)
+      .single();
+    
+    if (userByUsername) {
+      actualEmployeeId = userByUsername.id;
+    }
     
     // محاولة البحث بالـ slug أولاً
     const { data: settingsBySlug } = await supabase
@@ -79,7 +90,7 @@ export async function POST(request: NextRequest) {
       const { data: settingsById } = await supabase
         .from('employee_meeting_settings')
         .select('employee_id, slot_duration, min_notice_hours, max_advance_days, buffer_before, buffer_after, welcome_message')
-        .eq('employee_id', employee_id)
+        .eq('employee_id', actualEmployeeId)
         .single();
       settingsData = settingsById;
     }
@@ -190,17 +201,40 @@ export async function POST(request: NextRequest) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // جلب بيانات الموظف
-    const { data: employeeData } = await supabase
+    // جلب بيانات الموظف - البحث بالـ ID أو بالـ slug
+    let employeeData = null;
+    
+    // محاولة البحث بالـ ID أولاً
+    const { data: empById } = await supabase
       .from('admin_users')
-      .select('id, name, avatar, title')
+      .select('id, name, username, avatar, title')
       .eq('id', actualEmployeeId)
       .single();
+    
+    console.log('Employee by ID:', empById);
+    
+    if (empById) {
+      employeeData = empById;
+    } else {
+      // محاولة البحث بالـ slug (username)
+      const { data: empBySlug } = await supabase
+        .from('admin_users')
+        .select('id, name, username, avatar, title')
+        .eq('username', employee_id)
+        .single();
+      console.log('Employee by slug:', empBySlug);
+      employeeData = empBySlug;
+    }
+    
+    // إذا كان name فارغ أو يساوي username، استخدم username كـ fallback
+    if (employeeData && (!employeeData.name || employeeData.name === employeeData.username)) {
+      console.log('Name is empty or equals username, keeping as is');
+    }
 
     return NextResponse.json({
       success: true,
       available_slots: slots,
-      employee: employeeData || { id: actualEmployeeId, name: 'Unknown' },
+      employee: employeeData || { id: actualEmployeeId, name: employee_id },
       settings: {
         slot_duration: slotDuration,
         min_notice_hours: minNoticeHours,

@@ -595,14 +595,15 @@ function UsersManagementContent() {
                   <th className="text-right text-purple-300 font-medium p-4">الدور</th>
                   <th className="text-right text-purple-300 font-medium p-4">الصلاحيات</th>
                   <th className="text-right text-purple-300 font-medium p-4">الحالة</th>
-                  <th className="text-right text-purple-300 font-medium p-4">آخر دخول</th>
+                  <th className="text-right text-purple-300 font-medium p-4">متصل</th>
+                  <th className="text-right text-purple-300 font-medium p-4">آخر اتصال</th>
                   <th className="text-right text-purple-300 font-medium p-4">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-purple-400 py-8">
+                    <td colSpan={7} className="text-center text-purple-400 py-8">
                       {users.length === 0 ? 'لا يوجد مستخدمين' : 'لا توجد نتائج مطابقة للبحث'}
                     </td>
                   </tr>
@@ -668,9 +669,16 @@ function UsersManagementContent() {
                           {user.is_active ? 'نشط' : 'معطل'}
                         </button>
                       </td>
+                      <td className="p-4">
+                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 5 * 60 * 1000 ? (
+                          <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل"></span>
+                        ) : (
+                          <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>
+                        )}
+                      </td>
                       <td className="p-4 text-purple-400 text-sm">
                         {user.last_login
-                          ? new Date(user.last_login).toLocaleDateString('ar-SA')
+                          ? new Date(user.last_login).toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' })
                           : 'لم يسجل دخول'}
                       </td>
                       <td className="p-4">
