@@ -200,25 +200,40 @@ export const authOptions: NextAuthOptions = {
         token.name = (profile as any)?.name || token.name;
 
         const supabase = getSupabaseClient();
-        const emailToSearch = (token.email as string)?.toLowerCase()?.trim() || '';
+        const emailToSearch = (token.email as string)?.trim() || '';
         
-        console.log('Google login - searching for email:', emailToSearch);
+        console.log('JWT callback - Google login, searching for email:', emailToSearch);
         
+        // البحث بدون تحويل لـ lowercase لأن ilike يتجاهل حالة الأحرف
         const { data: dbUser, error: dbError } = await supabase
           .from('admin_users')
           .select('id, role, username, email')
           .ilike('email', emailToSearch)
           .single();
 
-        console.log('DB search result:', { dbUser, dbError });
+        console.log('JWT callback - DB search result:', JSON.stringify({ dbUser, dbError }));
 
         if (dbUser) {
           token.uid = dbUser.id;
           token.role = dbUser.role;
           token.username = dbUser.username;
-          console.log('User found in DB:', dbUser.id, dbUser.email);
+          console.log('JWT callback - User found:', dbUser.id);
         } else {
-          console.log('User NOT found in DB for email:', emailToSearch);
+          // محاولة ثانية: البحث بـ eq مع lowercase
+          const { data: dbUser2 } = await supabase
+            .from('admin_users')
+            .select('id, role, username, email')
+            .eq('email', emailToSearch)
+            .single();
+          
+          if (dbUser2) {
+            token.uid = dbUser2.id;
+            token.role = dbUser2.role;
+            token.username = dbUser2.username;
+            console.log('JWT callback - User found with eq:', dbUser2.id);
+          } else {
+            console.log('JWT callback - User NOT found for email:', emailToSearch);
+          }
         }
       }
       return token;
