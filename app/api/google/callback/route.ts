@@ -1,28 +1,29 @@
 /**
- * API: معالجة callback من Google OAuth
+ * API: معالجة callback من Google OAuth (ربط التقويم)
  * GET /api/google/callback
  * 
  * يستقبل الـ code من Google ويحفظ refresh_token مشفراً
+ * 
+ * ملاحظة: هذا الفلو منفصل تماماً عن NextAuth (تسجيل الدخول)
+ * - يستخدم state مخزن في Supabase (ليس cookies)
+ * - لا يتداخل مع cookies حق NextAuth
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { encrypt } from '@/lib/meetings/encryption';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+function getSupabaseClient() {
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
+
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/google/callback`;
-
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/userinfo.email',
-].join(' ');
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -55,57 +56,65 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${settingsUrl}?error=google_denied`);
     }
 
-    // التحقق من وجود الـ code
+    // التحقق من وجود الـ code و state
     if (!code) {
       return NextResponse.redirect(`${settingsUrl}?error=no_code`);
     }
 
-    // التحقق من الـ state (CSRF protection)
-    const cookieStore = cookies();
-    const stateCookie = cookieStore.get('google_oauth_state');
-    
-    if (!stateCookie?.value) {
+    if (!state) {
+      return NextResponse.redirect(`${settingsUrl}?error=no_state`);
+    }
+
+    const supabase = getSupabaseClient();
+
+    // التحقق من الـ state من Supabase (ليس cookies)
+    const { data: savedState, error: stateError } = await supabase
+      .from('google_oauth_states')
+      .select('*')
+      .eq('state', state)
+      .single();
+
+    if (stateError || !savedState) {
+      console.error('State not found in DB:', stateError);
       return NextResponse.redirect(`${settingsUrl}?error=invalid_state`);
     }
 
-    let savedState: { state: string; userId: string; timestamp: number };
-    try {
-      savedState = JSON.parse(stateCookie.value);
-    } catch {
-      return NextResponse.redirect(`${settingsUrl}?error=invalid_state`);
-    }
-
-    // التحقق من تطابق الـ state
-    if (savedState.state !== state) {
-      return NextResponse.redirect(`${settingsUrl}?error=state_mismatch`);
-    }
-
-    // التحقق من انتهاء صلاحية الـ state (10 دقائق)
-    if (Date.now() - savedState.timestamp > 600000) {
+    // التحقق من انتهاء صلاحية الـ state
+    if (new Date(savedState.expires_at) < new Date()) {
+      // حذف الـ state المنتهي
+      await supabase.from('google_oauth_states').delete().eq('id', savedState.id);
       return NextResponse.redirect(`${settingsUrl}?error=state_expired`);
     }
 
-    const userId = savedState.userId;
+    const userId = savedState.user_id;
+    const codeVerifier = savedState.code_verifier;
 
-    // حذف الـ cookie
-    cookieStore.delete('google_oauth_state');
+    // حذف الـ state من DB (one-time use)
+    await supabase.from('google_oauth_states').delete().eq('id', savedState.id);
 
     // التحقق من إعدادات Google
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       return NextResponse.redirect(`${settingsUrl}?error=google_not_configured`);
     }
 
-    // تبادل الـ code بـ tokens
+    // تبادل الـ code بـ tokens (مع PKCE code_verifier)
+    const tokenParams: Record<string, string> = {
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: GOOGLE_REDIRECT_URI,
+    };
+
+    // إضافة code_verifier إذا كان موجوداً (PKCE)
+    if (codeVerifier) {
+      tokenParams.code_verifier = codeVerifier;
+    }
+
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: GOOGLE_REDIRECT_URI,
-      }),
+      body: new URLSearchParams(tokenParams),
     });
 
     if (!tokenResponse.ok) {
@@ -134,12 +143,10 @@ export async function GET(request: NextRequest) {
 
     const userInfo: GoogleUserInfo = await userInfoResponse.json();
 
-    // حفظ في قاعدة البيانات
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     // تشفير refresh_token فقط - لا نخزن access_token
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
+    // حفظ في قاعدة البيانات
     const { error: dbError } = await supabase
       .from('google_oauth_accounts')
       .upsert({
@@ -147,7 +154,6 @@ export async function GET(request: NextRequest) {
         google_email: userInfo.email,
         google_id: userInfo.id,
         refresh_token: encryptedRefreshToken,
-        // لا نخزن access_token - سيتم جلبه عند الحاجة
         access_token: null,
         token_expires_at: null,
         calendar_id: 'primary',

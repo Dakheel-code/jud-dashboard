@@ -416,6 +416,30 @@ CREATE POLICY "Allow all on meeting_logs" ON meeting_logs FOR ALL USING (true);
 CREATE POLICY "Allow all on meeting_rate_limits" ON meeting_rate_limits FOR ALL USING (true);
 
 -- =====================================================
+-- جدول google_oauth_states لفصل فلو التقويم عن NextAuth
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS google_oauth_states (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    state TEXT UNIQUE NOT NULL,
+    code_verifier TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index للبحث السريع بالـ state
+CREATE INDEX IF NOT EXISTS idx_google_oauth_states_state ON google_oauth_states(state);
+CREATE INDEX IF NOT EXISTS idx_google_oauth_states_expires ON google_oauth_states(expires_at);
+
+-- RLS
+ALTER TABLE google_oauth_states ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on google_oauth_states" ON google_oauth_states FOR ALL USING (true);
+
+-- حذف الـ states المنتهية تلقائياً (يمكن تشغيله كـ cron job)
+-- DELETE FROM google_oauth_states WHERE expires_at < NOW();
+
+-- =====================================================
 -- Trigger لتحديث updated_at
 -- =====================================================
 

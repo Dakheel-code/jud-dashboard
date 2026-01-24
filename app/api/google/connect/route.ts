@@ -3,17 +3,30 @@
  * GET /api/google/connect
  * 
  * يُنشئ رابط OAuth ويوجه الموظف إلى Google للموافقة
+ * 
+ * ملاحظة: هذا الفلو منفصل تماماً عن NextAuth (تسجيل الدخول)
+ * - يستخدم state مخزن في Supabase (ليس cookies)
+ * - لا يتداخل مع cookies حق NextAuth
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+
+// Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+function getSupabaseClient() {
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/google/callback`;
 
-// Scopes المطلوبة
+// Scopes المطلوبة للتقويم فقط (منفصلة عن Login)
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/calendar.events',
@@ -35,6 +48,16 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
+// إنشاء code_verifier لـ PKCE
+function generateCodeVerifier(): string {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+// إنشاء code_challenge من code_verifier
+function generateCodeChallenge(verifier: string): string {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
 export async function GET(request: NextRequest) {
   try {
     // التحقق من المصادقة
@@ -54,32 +77,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // إنشاء state token للحماية من CSRF
+    const supabase = getSupabaseClient();
+
+    // حذف أي states قديمة لهذا المستخدم (تنظيف)
+    await supabase
+      .from('google_oauth_states')
+      .delete()
+      .eq('user_id', userId);
+
+    // إنشاء state عشوائي قوي
     const state = crypto.randomBytes(32).toString('hex');
     
-    // حفظ الـ state في cookie مؤقت (10 دقائق)
-    const cookieStore = cookies();
-    cookieStore.set('google_oauth_state', JSON.stringify({
-      state,
-      userId,
-      timestamp: Date.now(),
-    }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 600, // 10 دقائق
-      path: '/',
-    });
+    // إنشاء PKCE code_verifier
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
 
-    // بناء رابط OAuth
+    // حفظ الـ state في Supabase (ليس cookies) - ينتهي بعد 10 دقائق
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    
+    const { error: insertError } = await supabase
+      .from('google_oauth_states')
+      .insert({
+        user_id: userId,
+        state: state,
+        code_verifier: codeVerifier,
+        expires_at: expiresAt,
+      });
+
+    if (insertError) {
+      console.error('Error saving OAuth state:', insertError);
+      return NextResponse.json(
+        { error: 'فشل في حفظ حالة المصادقة', code: 'STATE_SAVE_ERROR' },
+        { status: 500 }
+      );
+    }
+
+    // بناء رابط OAuth مع PKCE
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', SCOPES);
-    authUrl.searchParams.set('access_type', 'offline'); // للحصول على refresh_token
-    authUrl.searchParams.set('prompt', 'consent'); // لضمان الحصول على refresh_token
+    authUrl.searchParams.set('access_type', 'offline');
+    authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('code_challenge', codeChallenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
 
     // إرجاع الرابط أو التوجيه مباشرة
     const returnUrl = request.nextUrl.searchParams.get('return_url');
