@@ -200,16 +200,25 @@ export const authOptions: NextAuthOptions = {
         token.name = (profile as any)?.name || token.name;
 
         const supabase = getSupabaseClient();
-        const { data: dbUser } = await supabase
+        const emailToSearch = (token.email as string)?.toLowerCase()?.trim() || '';
+        
+        console.log('Google login - searching for email:', emailToSearch);
+        
+        const { data: dbUser, error: dbError } = await supabase
           .from('admin_users')
-          .select('id, role, username')
-          .ilike('email', (token.email as string)?.toLowerCase() || '')
+          .select('id, role, username, email')
+          .ilike('email', emailToSearch)
           .single();
+
+        console.log('DB search result:', { dbUser, dbError });
 
         if (dbUser) {
           token.uid = dbUser.id;
           token.role = dbUser.role;
           token.username = dbUser.username;
+          console.log('User found in DB:', dbUser.id, dbUser.email);
+        } else {
+          console.log('User NOT found in DB for email:', emailToSearch);
         }
       }
       return token;
