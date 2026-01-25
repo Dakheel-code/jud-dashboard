@@ -397,64 +397,62 @@ function AdminPageContent() {
           <DashboardSkeleton />
         ) : (
           <div className="space-y-6">
-            {/* KPI Bar - شريط المؤشرات العلوي */}
-            {widgetSettings.kpi_bar?.enabled && dashboardData?.kpis && (
-              <DashboardKPIBar kpis={dashboardData.kpis} />
-            )}
-
-            {/* Action Center - يحتاج تدخل الآن */}
-            {widgetSettings.action_center?.enabled && dashboardData?.action_center && (
-              <DashboardActionCenter items={dashboardData.action_center} />
-            )}
-
-            {/* Store Performance Widget - Full Width */}
-            {widgetSettings.store_performance?.enabled && dashboardData?.top_stores && (
-              <StorePerformanceWidget stores={dashboardData.top_stores} />
-            )}
-
-            {/* Team Performance Widget - Full Width */}
-            {widgetSettings.team_performance?.enabled && dashboardData?.team && (
-              <TeamPerformanceWidget team={dashboardData.team} />
-            )}
-
-            {/* Marketing Pulse Widget - Full Width */}
-            {widgetSettings.marketing_pulse?.enabled && dashboardData?.campaigns_pulse && (
-              <MarketingPulseWidget data={dashboardData.campaigns_pulse} />
-            )}
-
-            {/* Account Managers Widget - Full Width */}
-            {widgetSettings.account_managers?.enabled && dashboardData?.account_managers && (
-              <AccountManagersWidget data={dashboardData.account_managers} />
-            )}
-
-            {/* Managers Charts Widget - Full Width */}
-            {widgetSettings.managers_charts?.enabled && dashboardData?.account_managers && (
-              <ManagersChartsWidget data={{
-                overall_completion_rate: dashboardData.account_managers.overall_completion_rate,
-                total_managers: dashboardData.account_managers.total_managers,
-                total_stores_assigned: dashboardData.account_managers.total_stores_assigned,
-                unassigned_stores: dashboardData.account_managers.unassigned_stores,
-                top_10: dashboardData.account_managers.top_10,
-              }} />
-            )}
-
-            {/* Main Grid - 2 columns on desktop, 1 on mobile */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Today Tasks Widget */}
-              {widgetSettings.today_tasks?.enabled && dashboardData?.today_tasks && (
-                <TodayTasksWidget tasks={dashboardData.today_tasks} />
-              )}
-
-              {/* Announcements Widget */}
-              {widgetSettings.announcements?.enabled && dashboardData?.announcements && (
-                <AnnouncementsWidget announcements={dashboardData.announcements} canSendAnnouncement={true} />
-              )}
-            </div>
-
-            {/* Smart Insights Widget - Full Width */}
-            {widgetSettings.smart_insights?.enabled && dashboardData?.insights && (
-              <SmartInsightsWidget insights={dashboardData.insights} onRefresh={fetchDashboardSummary} />
-            )}
+            {/* Render widgets dynamically based on order */}
+            {Object.entries(widgetSettings)
+              .filter(([_, widget]) => widget.enabled)
+              .sort((a, b) => a[1].order - b[1].order)
+              .map(([key, widget]) => {
+                switch (key) {
+                  case 'kpi_bar':
+                    return dashboardData?.kpis ? (
+                      <DashboardKPIBar key={key} kpis={dashboardData.kpis} />
+                    ) : null;
+                  case 'action_center':
+                    return dashboardData?.action_center ? (
+                      <DashboardActionCenter key={key} items={dashboardData.action_center} />
+                    ) : null;
+                  case 'store_performance':
+                    return dashboardData?.top_stores ? (
+                      <StorePerformanceWidget key={key} stores={dashboardData.top_stores} />
+                    ) : null;
+                  case 'team_performance':
+                    return dashboardData?.team ? (
+                      <TeamPerformanceWidget key={key} team={dashboardData.team} />
+                    ) : null;
+                  case 'marketing_pulse':
+                    return dashboardData?.campaigns_pulse ? (
+                      <MarketingPulseWidget key={key} data={dashboardData.campaigns_pulse} />
+                    ) : null;
+                  case 'account_managers':
+                    return dashboardData?.account_managers ? (
+                      <AccountManagersWidget key={key} data={dashboardData.account_managers} />
+                    ) : null;
+                  case 'managers_charts':
+                    return dashboardData?.account_managers ? (
+                      <ManagersChartsWidget key={key} data={{
+                        overall_completion_rate: dashboardData.account_managers.overall_completion_rate,
+                        total_managers: dashboardData.account_managers.total_managers,
+                        total_stores_assigned: dashboardData.account_managers.total_stores_assigned,
+                        unassigned_stores: dashboardData.account_managers.unassigned_stores,
+                        top_10: dashboardData.account_managers.top_10,
+                      }} />
+                    ) : null;
+                  case 'today_tasks':
+                    return dashboardData?.today_tasks ? (
+                      <TodayTasksWidget key={key} tasks={dashboardData.today_tasks} />
+                    ) : null;
+                  case 'announcements':
+                    return dashboardData?.announcements ? (
+                      <AnnouncementsWidget key={key} announcements={dashboardData.announcements} canSendAnnouncement={true} />
+                    ) : null;
+                  case 'smart_insights':
+                    return dashboardData?.insights ? (
+                      <SmartInsightsWidget key={key} insights={dashboardData.insights} onRefresh={fetchDashboardSummary} />
+                    ) : null;
+                  default:
+                    return null;
+                }
+              })}
           </div>
         )}
 

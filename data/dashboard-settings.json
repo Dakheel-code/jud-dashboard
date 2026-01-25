@@ -5,35 +5,35 @@
       "order": 1,
       "label": "شريط المؤشرات"
     },
-    "action_center": {
+    "managers_charts": {
       "enabled": true,
       "order": 2,
+      "label": "تحليلات الأداء"
+    },
+    "account_managers": {
+      "enabled": true,
+      "order": 3,
+      "label": "مدراء العلاقات"
+    },
+    "action_center": {
+      "enabled": true,
+      "order": 4,
       "label": "يحتاج تدخل الآن"
     },
     "store_performance": {
       "enabled": false,
-      "order": 3,
+      "order": 5,
       "label": "أداء المتاجر"
     },
     "team_performance": {
-      "enabled": true,
-      "order": 4,
+      "enabled": false,
+      "order": 6,
       "label": "أداء الفريق"
     },
     "marketing_pulse": {
       "enabled": false,
-      "order": 5,
-      "label": "نبض التسويق"
-    },
-    "account_managers": {
-      "enabled": true,
-      "order": 6,
-      "label": "مدراء العلاقات"
-    },
-    "managers_charts": {
-      "enabled": true,
       "order": 7,
-      "label": "تحليلات الأداء"
+      "label": "نبض التسويق"
     },
     "today_tasks": {
       "enabled": false,
@@ -51,5 +51,5 @@
       "label": "الرؤى الذكية"
     }
   },
-  "updatedAt": "2026-01-25T22:52:53.517Z"
+  "updatedAt": "2026-01-25T23:25:22.700Z"
 }
