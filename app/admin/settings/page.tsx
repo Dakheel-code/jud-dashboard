@@ -894,31 +894,88 @@ function SettingsPageContent() {
                 تحكم في إظهار وإخفاء المربعات في الصفحة الرئيسية للوحة التحكم.
               </p>
               
-              {/* Widgets Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                {Object.entries(dashboardWidgets).map(([key, widget]) => (
+              {/* Widgets List - Vertical with Drag & Drop */}
+              <div className="space-y-2 mb-4">
+                {Object.entries(dashboardWidgets)
+                  .sort((a, b) => a[1].order - b[1].order)
+                  .map(([key, widget], index) => (
                   <div
                     key={key}
-                    onClick={() => toggleWidget(key)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('widgetKey', key);
+                      e.currentTarget.classList.add('opacity-50');
+                    }}
+                    onDragEnd={(e) => {
+                      e.currentTarget.classList.remove('opacity-50');
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('border-purple-400');
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('border-purple-400');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-purple-400');
+                      const draggedKey = e.dataTransfer.getData('widgetKey');
+                      if (draggedKey !== key) {
+                        const entries = Object.entries(dashboardWidgets).sort((a, b) => a[1].order - b[1].order);
+                        const draggedIndex = entries.findIndex(([k]) => k === draggedKey);
+                        const targetIndex = entries.findIndex(([k]) => k === key);
+                        const newEntries = [...entries];
+                        const [removed] = newEntries.splice(draggedIndex, 1);
+                        newEntries.splice(targetIndex, 0, removed);
+                        const newWidgets: Record<string, { enabled: boolean; order: number; label: string }> = {};
+                        newEntries.forEach(([k, v], i) => {
+                          newWidgets[k] = { ...v, order: i + 1 };
+                        });
+                        setDashboardWidgets(newWidgets);
+                      }
+                    }}
+                    className={`p-4 rounded-xl border cursor-grab active:cursor-grabbing transition-all flex items-center gap-4 ${
                       widget.enabled
                         ? 'bg-purple-600/20 border-purple-500/50 hover:bg-purple-600/30'
                         : 'bg-purple-900/20 border-purple-500/20 hover:bg-purple-900/30 opacity-60'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-white text-sm font-medium">{widget.label}</span>
-                      <div className={`w-10 h-6 rounded-full transition-all relative ${
+                    {/* Drag Handle */}
+                    <div className="text-purple-400/60 hover:text-purple-300">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                      </svg>
+                    </div>
+                    
+                    {/* Order Number */}
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-300 text-sm font-bold">
+                      {widget.order}
+                    </div>
+                    
+                    {/* Widget Name */}
+                    <span className="text-white font-medium flex-1">{widget.label}</span>
+                    
+                    {/* Toggle Switch */}
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWidget(key);
+                      }}
+                      className={`w-12 h-7 rounded-full transition-all relative cursor-pointer ${
                         widget.enabled ? 'bg-purple-500' : 'bg-purple-900/50'
-                      }`}>
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
-                          widget.enabled ? 'right-1' : 'left-1'
-                        }`}></div>
-                      </div>
+                      }`}
+                    >
+                      <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-md ${
+                        widget.enabled ? 'right-1' : 'left-1'
+                      }`}></div>
                     </div>
                   </div>
                 ))}
               </div>
+              
+              <p className="text-purple-300/50 text-xs mb-4">
+                💡 اسحب وأفلت العناصر لتغيير ترتيبها في لوحة التحكم
+              </p>
 
               {/* Save Button */}
               <button
