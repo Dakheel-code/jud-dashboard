@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Employee {
   id: string;
@@ -36,6 +37,7 @@ const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 const DAYS_FULL_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 export default function BookingPage() {
+  const { branding } = useBranding();
   const params = useParams();
   const slug = params.slug as string;
 
@@ -104,8 +106,8 @@ export default function BookingPage() {
 
   // تغيير عنوان الصفحة
   useEffect(() => {
-    document.title = 'حجز اجتماع | جود';
-  }, []);
+    document.title = `حجز اجتماع | ${branding.companyName || 'جود'}`;
+  }, [branding.companyName]);
 
   // تجميع الأوقات حسب التاريخ (YYYY-MM-DD)
   const slotsByDateKey = useMemo(() => {
@@ -257,7 +259,7 @@ export default function BookingPage() {
                 <div className="mb-6 flex items-center gap-4">
                   {/* Jud Logo */}
                   <div className="flex items-center border-l border-purple-500/30 pl-4">
-                    <img src="/logo.png" alt="Jud" className="h-12" />
+                    <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Jud'} className="h-12" />
                   </div>
                   {/* Employee Name & Title */}
                   <div className="text-right flex-1 min-w-0">
@@ -525,7 +527,7 @@ export default function BookingPage() {
         {/* Powered By Footer */}
         <div className="mt-4 flex items-center justify-center gap-2 text-white text-sm">
           <span>بواسطة</span>
-          <img src="/logo.png" alt="Jud" className="h-6 w-auto" />
+          <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Jud'} className="h-6 w-auto" />
         </div>
 
         {/* Step 3: Success */}

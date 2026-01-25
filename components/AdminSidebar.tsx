@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import UnifiedNotificationBell from './UnifiedNotificationBell';
 import { getAvatarUrl, getAvatarInitial } from '@/lib/avatar';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface UserInfo {
   id?: string;
@@ -166,6 +167,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { branding } = useBranding();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', phone: '', currentPassword: '', newPassword: '', avatar: '' });
@@ -356,7 +358,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
           <div className="p-6 border-b border-purple-500/20 overflow-visible">
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-                <img src="/logo.png" alt="Logo" className="object-contain w-12 h-12" />
+                <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="object-contain w-12 h-12" />
                 {!isCollapsed && (
                   <>
                     <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden lg:block"></div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Employee {
   id: string;
@@ -37,6 +38,7 @@ interface BookingForm {
 }
 
 export default function PublicBookingPage() {
+  const { branding } = useBranding();
   const params = useParams();
   const slug = params.slug as string;
 
@@ -292,7 +294,7 @@ export default function PublicBookingPage() {
             <p className="text-purple-300/60 text-sm">احجز موعدك بسهولة وسرعة</p>
           </div>
           <div className="border-r border-purple-500/30 h-12"></div>
-          <img src="/logo.png" alt="Jud" className="h-12 w-auto" onError={(e) => { 
+          <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Jud'} className="h-12 w-auto" onError={(e) => { 
             const parent = e.currentTarget.parentElement;
             if (parent) {
               e.currentTarget.outerHTML = '<div class="text-3xl font-bold"><span class="text-white">J</span><span class="text-yellow-500">u</span><span class="text-white">d</span></div>';
@@ -660,7 +662,7 @@ export default function PublicBookingPage() {
         <div className="text-center mt-8">
           <div className="flex items-center justify-center gap-2 text-purple-400/60 text-sm">
             <span>مدعوم من</span>
-            <img src="/logo.png" alt="Jud" className="h-5 w-auto opacity-60" onError={(e) => { e.currentTarget.outerHTML = '<span class="text-purple-400 font-bold">Jud</span>'; }} />
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Jud'} className="h-5 w-auto opacity-60" onError={(e) => { e.currentTarget.outerHTML = '<span class="text-purple-400 font-bold">Jud</span>'; }} />
           </div>
         </div>
       </div>

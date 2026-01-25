@@ -100,7 +100,7 @@ export interface Notification {
 }
 
 // =====================================================
-// أنواع المستخدمين والصلاحيات - وكالة جود
+// أنواع المستخدمين والصلاحيات
 // =====================================================
 
 export type UserRole = 'super_admin' | 'admin' | 'team_leader' | 'account_manager' | 'media_buyer' | 'programmer' | 'designer' | 'web_developer';

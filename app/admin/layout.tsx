@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminBottomNav from '@/components/AdminBottomNav';
+import { useBranding } from '@/contexts/BrandingContext';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { branding } = useBranding();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
@@ -43,8 +45,8 @@ export default function AdminLayout({
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
-              <span className="text-white font-bold">جود</span>
+              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-8 h-8 object-contain" />
+              <span className="text-white font-bold">{branding.companyName || 'جود'}</span>
             </div>
             <div className="w-10"></div>
           </div>

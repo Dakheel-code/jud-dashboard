@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Store {
   id: string;
@@ -45,6 +46,7 @@ interface CampaignsData {
 }
 
 function CampaignsContent() {
+  const { branding } = useBranding();
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlStoreId = searchParams.get('storeId');
@@ -244,7 +246,7 @@ function CampaignsContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>

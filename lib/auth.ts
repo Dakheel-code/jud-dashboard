@@ -50,8 +50,9 @@ providers.push(
 
       if (!identifier || !password) return null;
 
-      // بيانات افتراضية للمسؤول (مرحلة انتقالية)
+      // بيانات افتراضية للمسؤول (يُنصح بإزالتها في الإنتاج وإنشاء مستخدم في قاعدة البيانات)
       if ((identifier === 'admin' || identifier === 'admin@jud.sa') && password === 'admin123') {
+        console.warn('⚠️ تحذير: تم استخدام بيانات الدخول الافتراضية. يُنصح بإنشاء مستخدم في قاعدة البيانات.');
         return {
           id: 'default-admin',
           name: 'المسؤول الرئيسي',
@@ -85,8 +86,13 @@ providers.push(
 
       if (error || !user) return null;
 
-      // تحقق من كلمة المرور (تجاهل إذا كان password_hash فارغ - مستخدم Google)
-      if (user.password_hash && user.password_hash !== '' && user.password_hash !== passwordHash) {
+      // تحقق من كلمة المرور - مستخدمي Google يجب عليهم تسجيل الدخول عبر Google
+      if (!user.password_hash || user.password_hash === '') {
+        // مستخدم Google - لا يمكنه تسجيل الدخول بكلمة مرور
+        return null;
+      }
+      
+      if (user.password_hash !== passwordHash) {
         return null;
       }
 
@@ -114,7 +120,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development',
+  secret: process.env.NEXTAUTH_SECRET,
   providers,
   // استخدام الإعدادات الافتراضية للـ cookies
   useSecureCookies: process.env.NODE_ENV === 'production',

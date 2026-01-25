@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Announcement {
   id: string;
@@ -31,6 +32,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 function AnnouncementsListContent() {
+  const { branding } = useBranding();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -120,7 +122,7 @@ function AnnouncementsListContent() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>التعاميم</h1>

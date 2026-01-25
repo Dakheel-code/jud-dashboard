@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { requireAdmin } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,10 @@ function getSupabaseClient() {
 // GET - جلب جميع المستخدمين
 export async function GET(request: NextRequest) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     
@@ -63,6 +68,10 @@ export async function GET(request: NextRequest) {
 // POST - إضافة مستخدم جديد
 export async function POST(request: NextRequest) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const { username, password, name, email, role, roles, permissions } = await request.json();
 
     const userRoles = roles || (role ? [role] : ['account_manager']);
@@ -121,6 +130,10 @@ export async function POST(request: NextRequest) {
 // PUT - تحديث مستخدم
 export async function PUT(request: NextRequest) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const { id, username, password, name, email, role, roles, permissions, is_active } = await request.json();
 
     if (!id) {
@@ -168,6 +181,10 @@ export async function PUT(request: NextRequest) {
 // DELETE - حذف مستخدم
 export async function DELETE(request: NextRequest) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

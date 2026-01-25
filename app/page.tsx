@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useBranding } from '@/contexts/BrandingContext';
 
 export default function Home() {
   const router = useRouter();
+  const { branding } = useBranding();
 
   useEffect(() => {
     router.replace('/admin/login');
@@ -22,7 +24,7 @@ export default function Home() {
           <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
           <div className="absolute inset-4 flex items-center justify-center">
             <img 
-              src="/logo.png" 
+              src={branding.logo || '/logo.png'} 
               alt="Loading" 
               className="w-full h-full object-contain animate-pulse"
               style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.8))' }}

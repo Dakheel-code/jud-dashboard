@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminBottomNav from '@/components/AdminBottomNav';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Meeting {
   id: string;
@@ -94,6 +95,7 @@ const STATUS_OPTIONS = [
 ];
 
 function MyCalendarContent() {
+  const { branding } = useBranding();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [timeOffs, setTimeOffs] = useState<TimeOff[]>([]);
@@ -456,7 +458,7 @@ function MyCalendarContent() {
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
             <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             <div className="absolute inset-4 flex items-center justify-center">
-              <img src="/logo.png" alt="Loading" className="w-full h-full object-contain animate-pulse" />
+              <img src={branding.logo || '/logo.png'} alt="Loading" className="w-full h-full object-contain animate-pulse" />
             </div>
           </div>
           <div className="text-xl text-white font-semibold">جاري التحميل...</div>
@@ -489,8 +491,8 @@ function MyCalendarContent() {
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
-              <span className="text-white font-bold">جود</span>
+              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-8 h-8 object-contain" />
+              <span className="text-white font-bold">{branding.companyName || 'جود'}</span>
             </div>
             <div className="w-10"></div>
           </div>
@@ -506,7 +508,7 @@ function MyCalendarContent() {
       {/* Header */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
             <div className="flex items-center gap-3 sm:gap-4">
-              <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain hidden lg:block" />
+              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain hidden lg:block" />
               <div className="hidden lg:block h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
               <div>
                 <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>الاجتماعات</h1>

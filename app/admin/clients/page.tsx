@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Store {
   id: string;
@@ -25,6 +26,7 @@ interface Client {
 }
 
 function ClientsPageContent() {
+  const { branding } = useBranding();
   const searchParams = useSearchParams();
   const viewClientId = searchParams.get('view');
   
@@ -276,8 +278,8 @@ function ClientsPageContent() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
             <img 
-              src="/logo.png" 
-              alt="Logo" 
+              src={branding.logo || '/logo.png'} 
+              alt={branding.companyName || 'Logo'} 
               className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
             />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>

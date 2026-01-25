@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface SlackWebhook {
   id: string;
@@ -17,9 +18,24 @@ interface SlackWebhook {
 }
 
 function SettingsPageContent() {
+  const { branding, refreshBranding } = useBranding();
   const [webhooks, setWebhooks] = useState<SlackWebhook[]>([]);
   const [adAccounts, setAdAccounts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // إعدادات الشركة (Branding)
+  const [brandingForm, setBrandingForm] = useState({
+    companyName: '',
+    companyNameEn: '',
+    logo: '',
+    favicon: '',
+  });
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [brandingInitialized, setBrandingInitialized] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<SlackWebhook | null>(null);
   const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
@@ -171,6 +187,97 @@ function SettingsPageContent() {
     fetchWhatsappTemplates();
     fetchStoreCategories();
   }, []);
+
+  // تحديث نموذج الشركة عند تغير branding (مرة واحدة فقط عند التحميل)
+  useEffect(() => {
+    if (branding && !brandingInitialized) {
+      setBrandingForm({
+        companyName: branding.companyName || '',
+        companyNameEn: branding.companyNameEn || '',
+        logo: branding.logo || '',
+        favicon: branding.favicon || '',
+      });
+      setLogoPreview(branding.logo || null);
+      setFaviconPreview(branding.favicon || null);
+      setBrandingInitialized(true);
+    }
+  }, [branding, brandingInitialized]);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('حجم الشعار يجب أن يكون أقل من 2 ميجابايت');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setLogoPreview(base64);
+        setBrandingForm(prev => ({ ...prev, logo: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFaviconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024) {
+        setError('حجم الأيقونة يجب أن يكون أقل من 500 كيلوبايت');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setFaviconPreview(base64);
+        setBrandingForm(prev => ({ ...prev, favicon: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveBranding = async () => {
+    console.log('saveBranding called with:', brandingForm);
+    
+    if (!brandingForm.companyName.trim()) {
+      setError('اسم الشركة مطلوب');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    setSavingBranding(true);
+    try {
+      console.log('Sending PUT request...');
+      const response = await fetch('/api/admin/settings/branding', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(brandingForm)
+      });
+      console.log('Response status:', response.status);
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccess('تم حفظ إعدادات الشركة بنجاح');
+        setTimeout(() => setSuccess(''), 3000);
+        // تحديث الإعدادات في كل التطبيق
+        await refreshBranding();
+        window.dispatchEvent(new Event('branding-updated'));
+      } else {
+        setError(data.error || 'فشل في حفظ الإعدادات');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving branding:', err);
+      setError('فشل في حفظ الإعدادات');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingBranding(false);
+    }
+  };
 
   const fetchStoreCategories = async () => {
     try {
@@ -544,8 +651,8 @@ function SettingsPageContent() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
             <img 
-              src="/logo.png" 
-              alt="Logo" 
+              src={branding.logo || '/logo.png'} 
+              alt={branding.companyName || 'Logo'} 
               className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
             />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
@@ -580,6 +687,134 @@ function SettingsPageContent() {
             {success}
           </div>
         )}
+
+        {/* Company Branding Section */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">هوية الشركة</h3>
+              <p className="text-purple-300/70 text-sm mb-4">
+                قم بتخصيص اسم الشركة والشعار الذي يظهر في جميع صفحات النظام.
+              </p>
+              
+              {/* Company Name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-purple-300 text-sm mb-2">اسم الشركة (عربي)</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: جود"
+                    value={brandingForm.companyName}
+                    onChange={(e) => setBrandingForm(prev => ({ ...prev, companyName: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-purple-300 text-sm mb-2">اسم الشركة (إنجليزي)</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: JUD"
+                    value={brandingForm.companyNameEn}
+                    onChange={(e) => setBrandingForm(prev => ({ ...prev, companyNameEn: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 outline-none placeholder-purple-400/50"
+                  />
+                </div>
+              </div>
+
+              {/* Logo & Favicon */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                {/* Logo */}
+                <div>
+                  <label className="block text-purple-300 text-sm mb-2">شعار الشركة</label>
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => logoInputRef.current?.click()}
+                      className="w-20 h-20 bg-purple-900/50 border-2 border-dashed border-purple-500/30 rounded-xl flex items-center justify-center cursor-pointer hover:border-purple-400/50 transition-colors overflow-hidden"
+                    >
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
+                      ) : (
+                        <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </div>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                    <div className="text-purple-300/70 text-xs">
+                      <p>اضغط لتغيير الشعار</p>
+                      <p>PNG, JPG (حد أقصى 2MB)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favicon */}
+                <div>
+                  <label className="block text-purple-300 text-sm mb-2">أيقونة المتصفح (Favicon)</label>
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => faviconInputRef.current?.click()}
+                      className="w-20 h-20 bg-purple-900/50 border-2 border-dashed border-purple-500/30 rounded-xl flex items-center justify-center cursor-pointer hover:border-purple-400/50 transition-colors overflow-hidden"
+                    >
+                      {faviconPreview ? (
+                        <img src={faviconPreview} alt="Favicon" className="w-12 h-12 object-contain" />
+                      ) : (
+                        <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      )}
+                    </div>
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFaviconChange}
+                      className="hidden"
+                    />
+                    <div className="text-purple-300/70 text-xs">
+                      <p>اضغط لتغيير الأيقونة</p>
+                      <p>PNG, ICO, GIF (حد أقصى 500KB)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={saveBranding}
+                disabled={savingBranding}
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 text-white rounded-xl transition-all flex items-center gap-2"
+              >
+                {savingBranding ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    حفظ التغييرات
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Ad Accounts Section */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">

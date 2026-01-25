@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react';
 import { ReactNode } from 'react';
+import { BrandingProvider } from '@/contexts/BrandingContext';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -10,7 +11,9 @@ interface ProvidersProps {
 export default function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider>
-      {children}
+      <BrandingProvider>
+        {children}
+      </BrandingProvider>
     </SessionProvider>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { StoreStats, StoreWithProgress } from '@/types';
 import Modal from '@/components/ui/Modal';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 import AddStoreModal from '@/components/AddStoreModal';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeletons';
 import DashboardKPIBar from '@/components/dashboard/DashboardKPIBar';
@@ -59,6 +60,7 @@ const getTimeAgo = (dateString: string) => {
 
 function AdminPageContent() {
   const router = useRouter();
+  const { branding } = useBranding();
   const [stats, setStats] = useState<StoreStats | null>(null);
   const [stores, setStores] = useState<StoreWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -305,7 +307,7 @@ function AdminPageContent() {
             <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             <div className="absolute inset-4 flex items-center justify-center">
               <img 
-                src="/logo.png" 
+                src={branding.logo || '/logo.png'} 
                 alt="Loading" 
                 className="w-full h-full object-contain animate-pulse"
                 style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.8)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.6))' }}
@@ -331,7 +333,7 @@ function AdminPageContent() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
@@ -403,8 +405,8 @@ function AdminPageContent() {
         <footer className="mt-8 pt-6 border-t border-purple-500/20">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-purple-300/60">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Jud" className="w-6 h-6 object-contain opacity-60" />
-              <span>© {new Date().getFullYear()} Jud Agency. جميع الحقوق محفوظة.</span>
+              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-6 h-6 object-contain opacity-60" />
+              <span>© {new Date().getFullYear()} {branding.companyNameEn || 'zid'}. جميع الحقوق محفوظة.</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">

@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { useBranding } from '@/contexts/BrandingContext';
 
 export default function AdminLoginPage() {
+  const { branding } = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,8 +33,10 @@ export default function AdminLoginPage() {
         const data = await response.json();
         if (data.user) {
           localStorage.setItem('admin_user', JSON.stringify(data.user));
-          // تعيين الـ cookie أيضاً
+          // تعيين الـ cookies
           document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
+          // تعيين admin_token للـ middleware
+          document.cookie = `admin_token=${data.user.id}; path=/; max-age=${60 * 60 * 24 * 7}`;
         }
       }
     } catch (err) {
@@ -54,6 +58,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    console.log('Login attempt with:', email);
 
     try {
       const result = await signIn('credentials', {
@@ -61,14 +66,20 @@ export default function AdminLoginPage() {
         password,
         redirect: false,
       });
+      console.log('Login result:', result);
 
       if (result?.error) {
+        console.log('Login error:', result.error);
         setError('بيانات الدخول غير صحيحة');
       } else if (result?.ok) {
+        console.log('Login successful, syncing user...');
         await syncUserToLocalStorage();
+        console.log('Redirecting to /admin...');
         router.push('/admin');
+        router.refresh();
       }
     } catch (err) {
+      console.error('Login exception:', err);
       setError('حدث خطأ في الاتصال');
     } finally {
       setLoading(false);
@@ -98,8 +109,8 @@ export default function AdminLoginPage() {
             {/* Main circle */}
             <div className="relative w-full h-full bg-purple-950/90 backdrop-blur-xl rounded-full border-2 border-purple-500/30 flex items-center justify-center p-4">
               <img 
-                src="/logo.png" 
-                alt="Logo" 
+                src={branding.logo || '/logo.png'} 
+                alt={branding.companyName || 'Logo'} 
                 className="w-full h-full object-contain animate-[float_3s_ease-in-out_infinite]"
               />
             </div>
@@ -240,7 +251,7 @@ export default function AdminLoginPage() {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-purple-400/50 text-xs">
-            <span className="text-purple-300/70">وكالة جود</span> - جميع الحقوق محفوظة © 2026
+            <span className="text-purple-300/70">{branding.companyName || 'زد'}</span> - جميع الحقوق محفوظة © {new Date().getFullYear()}
           </p>
         </div>
       </div>

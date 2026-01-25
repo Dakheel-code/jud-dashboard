@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

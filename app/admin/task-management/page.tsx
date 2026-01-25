@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface Task {
   id: string;
@@ -20,6 +21,7 @@ interface DragState {
 }
 
 function TasksManagementContent() {
+  const { branding } = useBranding();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>([
     'الإعدادات الأساسية',
@@ -400,7 +402,7 @@ function TasksManagementContent() {
             <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             <div className="absolute inset-4 flex items-center justify-center">
               <img 
-                src="/logo.png" 
+                src={branding.logo || '/logo.png'} 
                 alt="Loading" 
                 className="w-full h-full object-contain animate-pulse"
                 style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.8)) drop-shadow(0 0 30px rgba(139, 92, 246, 0.6))' }}
@@ -426,8 +428,8 @@ function TasksManagementContent() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
             <img 
-              src="/logo.png" 
-              alt="Logo" 
+              src={branding.logo || '/logo.png'} 
+              alt={branding.companyName || 'Logo'} 
               className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
             />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminAuth from '@/components/AdminAuth';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface AttendanceRecord {
   id: string;
@@ -20,6 +21,7 @@ interface AttendanceRecord {
 }
 
 function AttendanceContent() {
+  const { branding } = useBranding();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [todayStatus, setTodayStatus] = useState<AttendanceRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -309,7 +311,7 @@ function AttendanceContent() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
-            <img src="/logo.png" alt="Logo" className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>الحضور والانصراف</h1>

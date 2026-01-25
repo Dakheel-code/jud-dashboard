@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireAuth, requireAdmin } from '@/lib/auth-guard';
 
 // GET - Get all tasks
 export async function GET() {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
@@ -25,6 +30,10 @@ export async function GET() {
 // POST - Create new task
 export async function POST(request: NextRequest) {
   try {
+    // التحقق من الجلسة - فقط المسؤولين يمكنهم إنشاء مهام
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const body = await request.json();
     const { title, category, order_index } = body;
 

@@ -94,7 +94,11 @@ export async function GET(request: Request) {
       query = query.eq('type', type);
     }
     if (q) {
-      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+      // تنظيف مدخلات البحث لمنع SQL Injection
+      const sanitizedQ = q.replace(/[%_\\'"]/g, '');
+      if (sanitizedQ.trim()) {
+        query = query.or(`title.ilike.%${sanitizedQ}%,description.ilike.%${sanitizedQ}%`);
+      }
     }
 
     const { data: tasks, error, count } = await query;

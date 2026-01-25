@@ -3,6 +3,7 @@ import { Cairo, Poppins } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
 import Providers from '@/components/Providers';
+import { getBrandingForMetadata } from '@/lib/branding';
 
 const UrgentAnnouncementModal = dynamic(
   () => import('@/components/UrgentAnnouncementModal'),
@@ -23,15 +24,18 @@ const poppins = Poppins({
   display: "swap",
 });
 
+// جلب بيانات الـ branding من الملف مباشرة (Server-Side)
+const brandingMeta = getBrandingForMetadata();
+
 export const metadata: Metadata = {
-  title: "إدارة المتاجر | جود",
-  description: "نظام إدارة المتاجر - وكالة جود",
+  title: brandingMeta.title,
+  description: brandingMeta.description,
   icons: {
     icon: [
-      { url: "/favicon.gif", type: "image/gif" },
+      { url: brandingMeta.favicon, type: "image/gif" },
       { url: "/favicon.ico" },
     ],
-    apple: "/favicon.gif",
+    apple: brandingMeta.favicon,
   },
 };
 

@@ -15,6 +15,7 @@ import {
 } from '@/components/icons';
 import Confetti from '@/components/Confetti';
 import ShareProgress from '@/components/ShareProgress';
+import { useBranding } from '@/contexts/BrandingContext';
 
 interface TasksStats {
   total: number;
@@ -99,6 +100,7 @@ const getGreeting = (): string => {
 };
 
 export default function TasksPage() {
+  const { branding } = useBranding();
   const [tasks, setTasks] = useState<TasksByCategory>({});
   const [stats, setStats] = useState<TasksStats>({ total: 0, completed: 0, percentage: 0 });
   const [loading, setLoading] = useState(true);
@@ -478,7 +480,7 @@ export default function TasksPage() {
             {/* Logo with pulse */}
             <div className="absolute inset-4 flex items-center justify-center">
               <img 
-                src="/logo.png" 
+                src={branding.logo || '/logo.png'} 
                 alt="Loading" 
                 className="w-full h-full object-contain animate-pulse"
                 style={{ 
@@ -599,8 +601,8 @@ export default function TasksPage() {
               <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-xl animate-pulse"></div>
               <div className="absolute inset-2 bg-violet-400/20 rounded-full blur-lg animate-pulse" style={{ animationDelay: '0.5s' }}></div>
               <img 
-                src="/logo.png" 
-                alt="Logo" 
+                src={branding.logo || '/logo.png'} 
+                alt={branding.companyName || 'Logo'} 
                 className="relative z-10 w-14 h-14 sm:w-20 sm:h-20 object-contain animate-pulse"
                 style={{ 
                   filter: 'drop-shadow(0 0 10px rgba(167, 139, 250, 0.6)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',

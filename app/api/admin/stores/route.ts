@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { StoreWithProgress } from '@/types';
+import { requireAuth, requireAdmin } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,6 +11,10 @@ const ALLOWED_ROLES_TO_ADD = ['super_admin', 'admin', 'team_leader'];
 
 export async function GET() {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
     console.log('=== FETCH STORES ===');
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -112,6 +117,10 @@ export async function GET() {
 // إضافة متجر جديد
 export async function POST(request: Request) {
   try {
+    // التحقق من الجلسة - فقط المسؤولين يمكنهم إضافة متاجر
+    const auth = await requireAdmin();
+    if (!auth.authenticated) return auth.error!;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -238,6 +247,10 @@ export async function POST(request: Request) {
 // تحديث بيانات متجر
 export async function PUT(request: Request) {
   try {
+    // التحقق من الجلسة
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
