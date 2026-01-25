@@ -108,34 +108,19 @@ export default function AdminLoginPage() {
       <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
       <div className="absolute w-64 h-64 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/4 animate-pulse"></div>
 
-      <div className="relative w-full max-w-md">
-        {/* Logo - نصف خارج المربع مع أنيميشن */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-14 z-10">
-          <div className="relative w-28 h-28 group">
-            {/* Outer glow ring */}
-            <div className="absolute inset-[-4px] bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-500 rounded-full opacity-10 blur-[2px] animate-spin" style={{ animationDuration: '10s' }}></div>
-            
-            {/* Main circle */}
-            <div className="relative w-full h-full bg-purple-950/90 backdrop-blur-xl rounded-full border-2 border-purple-500/30 flex items-center justify-center p-4">
-              <img 
-                src={branding.logo || '/logo.png'} 
-                alt={branding.companyName || 'Logo'} 
-                className="w-full h-full object-contain animate-[float_3s_ease-in-out_infinite]"
-              />
-            </div>
-          </div>
+      <div className="relative w-full max-w-lg">
+        {/* Logo على الزاوية اليمنى العليا - خارج المربع */}
+        <div className="absolute -top-12 -right-12 w-36 h-36 z-20">
+          <img 
+            src="/logo-zid2.png" 
+            alt="Logo" 
+            className="w-full h-full object-contain brightness-0 invert"
+          />
         </div>
-        
-        <style jsx>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-4px); }
-          }
-        `}</style>
 
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-8 pt-20 border border-purple-500/20 shadow-2xl">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-10 pt-10 border border-purple-500/20 shadow-2xl relative overflow-visible">
           {/* Title */}
-          <h1 className="text-2xl text-white text-center mb-8 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>تسجيل الدخول</h1>
+          <h1 className="text-2xl text-white text-center mb-10 uppercase relative z-10" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>تسجيل الدخول</h1>
 
           {/* Step 1: Email */}
           {step === 'email' && (

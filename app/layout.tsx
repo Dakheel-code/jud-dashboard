@@ -14,14 +14,16 @@ const cairo = Cairo({
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-cairo",
-  display: "swap",
+  display: "block",
+  preload: true,
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-poppins",
-  display: "swap",
+  display: "block",
+  preload: true,
 });
 
 // جلب بيانات الـ branding من الملف مباشرة (Server-Side)

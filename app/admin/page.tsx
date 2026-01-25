@@ -405,7 +405,7 @@ function AdminPageContent() {
         <footer className="mt-8 pt-6 border-t border-purple-500/20">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-purple-300/60">
             <div className="flex items-center gap-2">
-              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-6 h-6 object-contain opacity-60" />
+              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-8 h-8 object-contain opacity-60" />
               <span>© {new Date().getFullYear()} {branding.companyNameEn || 'zid'}. جميع الحقوق محفوظة.</span>
             </div>
             <div className="flex items-center gap-4">

@@ -11,7 +11,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { branding } = useBranding();
+  const { branding, loading: brandingLoading } = useBranding();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
@@ -19,6 +19,15 @@ export default function AdminLayout({
   // لا نعرض الـ layout في صفحة تسجيل الدخول
   if (pathname === '/admin/login') {
     return <>{children}</>;
+  }
+
+  // عرض شاشة تحميل حتى يتم جلب بيانات الـ branding
+  if (brandingLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0118] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
@@ -45,8 +54,8 @@ export default function AdminLayout({
               </svg>
             </button>
             <div className="flex items-center gap-2">
-              <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-8 h-8 object-contain" />
-              <span className="text-white font-bold">{branding.companyName || 'جود'}</span>
+              {branding.logo && <img src={branding.logo} alt={branding.companyName || 'Logo'} className="w-8 h-8 object-contain" />}
+              <span className="text-white font-bold">{branding.companyName}</span>
             </div>
             <div className="w-10"></div>
           </div>

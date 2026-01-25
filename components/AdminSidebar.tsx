@@ -358,7 +358,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
           <div className="p-6 border-b border-purple-500/20 overflow-visible">
             <div className="flex items-center justify-between">
               <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-                <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="object-contain w-12 h-12" />
+                {branding.logo && <img src={branding.logo} alt={branding.companyName || 'Logo'} className="object-contain w-12 h-12" />}
                 {!isCollapsed && (
                   <>
                     <div className="h-10 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden lg:block"></div>
