@@ -6,7 +6,7 @@ import { signIn } from 'next-auth/react';
 import { useBranding } from '@/contexts/BrandingContext';
 
 export default function AdminLoginPage() {
-  const { branding } = useBranding();
+  const { branding, loading: brandingLoading } = useBranding();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,6 +14,15 @@ export default function AdminLoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'password'>('email');
   const router = useRouter();
+
+  // عرض شاشة تحميل حتى يتم جلب بيانات الـ branding
+  if (brandingLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0118] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const handleGoogleLogin = async () => {
     setError('');
