@@ -1,45 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth-guard';
-import fs from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-// مسار ملف الإعدادات
-const DASHBOARD_SETTINGS_FILE = path.join(process.cwd(), 'data', 'dashboard-settings.json');
-
-// التأكد من وجود مجلد data
-function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+// إنشاء Supabase client
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase credentials');
   }
-}
-
-// قراءة الإعدادات من الملف
-function readSettingsFile(): any {
-  try {
-    ensureDataDir();
-    if (fs.existsSync(DASHBOARD_SETTINGS_FILE)) {
-      const content = fs.readFileSync(DASHBOARD_SETTINGS_FILE, 'utf-8');
-      return JSON.parse(content);
-    }
-  } catch (error) {
-    console.error('Error reading dashboard settings file:', error);
-  }
-  return null;
-}
-
-// كتابة الإعدادات إلى الملف
-function writeSettingsFile(data: any): boolean {
-  try {
-    ensureDataDir();
-    fs.writeFileSync(DASHBOARD_SETTINGS_FILE, JSON.stringify(data, null, 2), 'utf-8');
-    return true;
-  } catch (error) {
-    console.error('Error writing dashboard settings file:', error);
-    return false;
-  }
+  
+  return createClient(supabaseUrl, supabaseKey);
 }
 
 // إعدادات افتراضية - جميع الويدجتس مفعلة
@@ -62,7 +35,20 @@ const defaultSettings = {
 // GET - جلب إعدادات لوحة التحكم
 export async function GET() {
   try {
-    const savedSettings = readSettingsFile();
+    const supabase = getSupabaseClient();
+    
+    // جلب الإعدادات من جدول settings
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'dashboard_widgets')
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching settings:', error);
+    }
+    
+    const savedSettings = data?.value ? JSON.parse(data.value) : null;
     const settings = savedSettings ? { ...defaultSettings, ...savedSettings } : defaultSettings;
     
     return NextResponse.json({ settings });
@@ -75,6 +61,7 @@ export async function GET() {
 // PUT - تحديث إعدادات لوحة التحكم
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { widgets } = body;
 
@@ -83,11 +70,20 @@ export async function PUT(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    // حفظ في ملف JSON
-    const success = writeSettingsFile(settingsValue);
+    // حفظ في Supabase - upsert (إدراج أو تحديث)
+    const { error } = await supabase
+      .from('settings')
+      .upsert({
+        key: 'dashboard_widgets',
+        value: JSON.stringify(settingsValue),
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'key'
+      });
     
-    if (!success) {
-      return NextResponse.json({ success: false, error: 'فشل في حفظ الإعدادات' }, { status: 500 });
+    if (error) {
+      console.error('Error saving settings:', error);
+      return NextResponse.json({ success: false, error: 'فشل في حفظ الإعدادات: ' + error.message }, { status: 500 });
     }
 
     return NextResponse.json({ 
