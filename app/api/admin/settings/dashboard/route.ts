@@ -70,20 +70,40 @@ export async function PUT(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    // حفظ في Supabase - upsert (إدراج أو تحديث)
-    const { error } = await supabase
+    // التحقق من وجود السجل
+    const { data: existing } = await supabase
       .from('settings')
-      .upsert({
-        key: 'dashboard_widgets',
-        value: JSON.stringify(settingsValue),
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'key'
-      });
-    
-    if (error) {
-      console.error('Error saving settings:', error);
-      return NextResponse.json({ success: false, error: 'فشل في حفظ الإعدادات: ' + error.message }, { status: 500 });
+      .select('id')
+      .eq('key', 'dashboard_widgets')
+      .single();
+
+    if (existing) {
+      // تحديث السجل الموجود
+      const { error } = await supabase
+        .from('settings')
+        .update({ 
+          value: JSON.stringify(settingsValue), 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('key', 'dashboard_widgets');
+
+      if (error) {
+        console.error('Error updating settings:', error);
+        return NextResponse.json({ success: false, error: 'فشل في تحديث الإعدادات: ' + error.message }, { status: 500 });
+      }
+    } else {
+      // إنشاء سجل جديد
+      const { error } = await supabase
+        .from('settings')
+        .insert({ 
+          key: 'dashboard_widgets', 
+          value: JSON.stringify(settingsValue) 
+        });
+
+      if (error) {
+        console.error('Error creating settings:', error);
+        return NextResponse.json({ success: false, error: 'فشل في حفظ الإعدادات: ' + error.message }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ 
