@@ -227,14 +227,16 @@ function SettingsPageContent() {
         body: JSON.stringify({ widgets: dashboardWidgets }),
       });
       const data = await res.json();
-      if (data.success) {
+      console.log('Dashboard settings response:', data);
+      if (res.ok && data.success) {
         setSuccess('تم حفظ إعدادات لوحة التحكم بنجاح');
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError('فشل في حفظ الإعدادات');
+        setError(data.error || 'فشل في حفظ الإعدادات');
         setTimeout(() => setError(''), 3000);
       }
     } catch (err) {
+      console.error('Dashboard settings error:', err);
       setError('حدث خطأ في الاتصال');
       setTimeout(() => setError(''), 3000);
     } finally {

@@ -77,12 +77,15 @@ export async function PUT(request: NextRequest) {
   try {
     // التحقق من الجلسة - فقط المسؤولين
     const auth = await requireAdmin();
+    console.log('Auth result:', auth.authenticated, auth.user?.role);
     if (!auth.authenticated) {
+      console.log('Auth failed');
       return auth.error!;
     }
 
     const body = await request.json();
     const { widgets } = body;
+    console.log('Received widgets:', Object.keys(widgets || {}));
 
     const settingsValue = {
       widgets: widgets || defaultSettings.widgets,
@@ -91,6 +94,7 @@ export async function PUT(request: NextRequest) {
 
     // حفظ في ملف JSON
     const success = writeSettingsFile(settingsValue);
+    console.log('Write success:', success);
     
     if (!success) {
       return NextResponse.json({ error: 'فشل في حفظ الإعدادات' }, { status: 500 });
@@ -104,7 +108,7 @@ export async function PUT(request: NextRequest) {
       message: 'تم حفظ إعدادات لوحة التحكم بنجاح' 
     });
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
+    console.error('Error saving dashboard settings:', error);
+    return NextResponse.json({ error: 'حدث خطأ: ' + (error as Error).message }, { status: 500 });
   }
 }

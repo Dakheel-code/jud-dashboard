@@ -88,8 +88,8 @@ export async function requireRole(allowedRoles: string[]): Promise<AuthResult> {
 }
 
 /**
- * التحقق من صلاحية المسؤول (super_admin, admin, team_leader)
+ * التحقق من صلاحية المسؤول (super_admin, admin, team_leader, account_manager)
  */
 export async function requireAdmin(): Promise<AuthResult> {
-  return requireRole(['super_admin', 'admin', 'team_leader']);
+  return requireRole(['super_admin', 'admin', 'team_leader', 'account_manager']);
 }
