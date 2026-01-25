@@ -66,6 +66,21 @@ function SettingsPageContent() {
   const [savingCategories, setSavingCategories] = useState(false);
   const [editingCategory, setEditingCategory] = useState<{index: number; value: string} | null>(null);
 
+  // إعدادات تخصيص لوحة التحكم
+  const [dashboardWidgets, setDashboardWidgets] = useState<Record<string, { enabled: boolean; order: number; label: string }>>({
+    kpi_bar: { enabled: true, order: 1, label: 'شريط المؤشرات' },
+    action_center: { enabled: true, order: 2, label: 'يحتاج تدخل الآن' },
+    store_performance: { enabled: true, order: 3, label: 'أداء المتاجر' },
+    team_performance: { enabled: true, order: 4, label: 'أداء الفريق' },
+    marketing_pulse: { enabled: true, order: 5, label: 'نبض التسويق' },
+    account_managers: { enabled: true, order: 6, label: 'مدراء العلاقات' },
+    managers_charts: { enabled: true, order: 7, label: 'تحليلات الأداء' },
+    today_tasks: { enabled: true, order: 8, label: 'مهام اليوم' },
+    announcements: { enabled: true, order: 9, label: 'الإعلانات' },
+    smart_insights: { enabled: true, order: 10, label: 'الرؤى الذكية' },
+  });
+  const [savingDashboard, setSavingDashboard] = useState(false);
+
   const applyFormatting = (prefix: string, suffix: string) => {
     const textarea = templateTextareaRef.current;
     if (!textarea) return;
@@ -186,7 +201,54 @@ function SettingsPageContent() {
     fetchAdAccounts();
     fetchWhatsappTemplates();
     fetchStoreCategories();
+    fetchDashboardSettings();
   }, []);
+
+  // جلب إعدادات لوحة التحكم
+  const fetchDashboardSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/settings/dashboard');
+      const data = await res.json();
+      if (data.settings?.widgets) {
+        setDashboardWidgets(data.settings.widgets);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard settings:', err);
+    }
+  };
+
+  // حفظ إعدادات لوحة التحكم
+  const saveDashboardSettings = async () => {
+    setSavingDashboard(true);
+    try {
+      const res = await fetch('/api/admin/settings/dashboard', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ widgets: dashboardWidgets }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess('تم حفظ إعدادات لوحة التحكم بنجاح');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('فشل في حفظ الإعدادات');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err) {
+      setError('حدث خطأ في الاتصال');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingDashboard(false);
+    }
+  };
+
+  // تبديل حالة الويدجت
+  const toggleWidget = (key: string) => {
+    setDashboardWidgets(prev => ({
+      ...prev,
+      [key]: { ...prev[key], enabled: !prev[key].enabled }
+    }));
+  };
 
   // تحديث نموذج الشركة عند تغير branding (مرة واحدة فقط عند التحميل)
   useEffect(() => {
@@ -796,6 +858,73 @@ function SettingsPageContent() {
                 className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 text-white rounded-xl transition-all flex items-center gap-2"
               >
                 {savingBranding ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    حفظ التغييرات
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Dashboard Customization Section */}
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white mb-2">تخصيص لوحة التحكم</h3>
+              <p className="text-purple-300/70 text-sm mb-4">
+                تحكم في إظهار وإخفاء المربعات في الصفحة الرئيسية للوحة التحكم.
+              </p>
+              
+              {/* Widgets Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                {Object.entries(dashboardWidgets).map(([key, widget]) => (
+                  <div
+                    key={key}
+                    onClick={() => toggleWidget(key)}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      widget.enabled
+                        ? 'bg-purple-600/20 border-purple-500/50 hover:bg-purple-600/30'
+                        : 'bg-purple-900/20 border-purple-500/20 hover:bg-purple-900/30 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-white text-sm font-medium">{widget.label}</span>
+                      <div className={`w-10 h-6 rounded-full transition-all relative ${
+                        widget.enabled ? 'bg-purple-500' : 'bg-purple-900/50'
+                      }`}>
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
+                          widget.enabled ? 'right-1' : 'left-1'
+                        }`}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={saveDashboardSettings}
+                disabled={savingDashboard}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white rounded-xl transition-all flex items-center gap-2"
+              >
+                {savingDashboard ? (
                   <>
                     <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

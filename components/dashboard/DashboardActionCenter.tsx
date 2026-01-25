@@ -75,6 +75,61 @@ const ACTION_TYPE_CONFIG: Record<string, {
     bgClass: 'bg-emerald-500/20',
     textClass: 'text-emerald-400',
     borderClass: 'border-emerald-500/30'
+  },
+  low_performance: {
+    label: 'أداء منخفض',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+      </svg>
+    ),
+    bgClass: 'bg-red-500/20',
+    textClass: 'text-red-400',
+    borderClass: 'border-red-500/30'
+  },
+  unassigned_stores: {
+    label: 'متاجر غير مسندة',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
+      </svg>
+    ),
+    bgClass: 'bg-orange-500/20',
+    textClass: 'text-orange-400',
+    borderClass: 'border-orange-500/30'
+  },
+  overload: {
+    label: 'حمل زائد',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+    bgClass: 'bg-yellow-500/20',
+    textClass: 'text-yellow-400',
+    borderClass: 'border-yellow-500/30'
+  },
+  overdue_tasks: {
+    label: 'مهام متأخرة',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    bgClass: 'bg-red-500/20',
+    textClass: 'text-red-400',
+    borderClass: 'border-red-500/30'
+  },
+  inactive_manager: {
+    label: 'مدير غير نشط',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+    bgClass: 'bg-gray-500/20',
+    textClass: 'text-gray-400',
+    borderClass: 'border-gray-500/30'
   }
 };
 

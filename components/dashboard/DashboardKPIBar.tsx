@@ -12,44 +12,55 @@ const KPI_CONFIG: Record<string, {
   format?: (value: number) => string;
   statusThresholds?: { warning: number; danger: number; reverse?: boolean };
 }> = {
-  overdue_tasks: {
-    label: 'مهام متأخرة',
+  total_managers: {
+    label: 'مدراء العلاقات',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
-    link: '/admin/tasks?filter=overdue',
-    colorClass: 'text-red-400',
-    bgClass: 'bg-red-500/20',
-    statusThresholds: { warning: 5, danger: 10 }
+    link: '/admin/team',
+    colorClass: 'text-cyan-400',
+    bgClass: 'bg-cyan-500/20'
   },
-  due_today: {
-    label: 'مستحقة اليوم',
+  avg_completion_rate: {
+    label: 'متوسط الإنجاز',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
     ),
-    link: '/admin/tasks?filter=today',
-    colorClass: 'text-yellow-400',
-    bgClass: 'bg-yellow-500/20',
-    statusThresholds: { warning: 10, danger: 20 }
+    link: '/admin/team',
+    colorClass: 'text-purple-400',
+    bgClass: 'bg-purple-500/20',
+    format: (v) => `${v}%`,
+    statusThresholds: { warning: 60, danger: 40, reverse: true }
   },
-  completed_this_week: {
-    label: 'مكتملة هذا الأسبوع',
+  top_performers: {
+    label: 'أداء ممتاز',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
       </svg>
     ),
-    link: '/admin/tasks?filter=completed',
+    link: '/admin/team?filter=top',
     colorClass: 'text-green-400',
-    bgClass: 'bg-green-500/20',
-    statusThresholds: { warning: 20, danger: 10, reverse: true }
+    bgClass: 'bg-green-500/20'
+  },
+  needs_attention: {
+    label: 'يحتاج متابعة',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+    link: '/admin/team?filter=low',
+    colorClass: 'text-orange-400',
+    bgClass: 'bg-orange-500/20',
+    statusThresholds: { warning: 2, danger: 5 }
   },
   active_stores: {
-    label: 'متاجر نشطة',
+    label: 'متاجر مسندة',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -59,42 +70,40 @@ const KPI_CONFIG: Record<string, {
     colorClass: 'text-blue-400',
     bgClass: 'bg-blue-500/20'
   },
-  active_campaigns: {
-    label: 'حملات نشطة',
+  unassigned_stores: {
+    label: 'بدون مدير',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
       </svg>
     ),
-    link: '/admin/campaigns',
-    colorClass: 'text-purple-400',
-    bgClass: 'bg-purple-500/20'
+    link: '/admin/stores?filter=unassigned',
+    colorClass: 'text-red-400',
+    bgClass: 'bg-red-500/20',
+    statusThresholds: { warning: 3, danger: 8 }
   },
-  total_spend_today: {
-    label: 'صرف اليوم',
+  tasks_completed_week: {
+    label: 'مهام منجزة (أسبوع)',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    link: '/admin/campaigns',
+    link: '/admin/tasks?filter=completed',
     colorClass: 'text-emerald-400',
-    bgClass: 'bg-emerald-500/20',
-    format: (v) => `${(v / 1000).toFixed(1)}K ر.س`
+    bgClass: 'bg-emerald-500/20'
   },
-  average_roas: {
-    label: 'متوسط ROAS',
+  overdue_tasks: {
+    label: 'مهام متأخرة',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    link: '/admin/campaigns',
-    colorClass: 'text-cyan-400',
-    bgClass: 'bg-cyan-500/20',
-    format: (v) => `${v.toFixed(1)}x`,
-    statusThresholds: { warning: 2, danger: 1, reverse: true }
+    link: '/admin/tasks?filter=overdue',
+    colorClass: 'text-yellow-400',
+    bgClass: 'bg-yellow-500/20',
+    statusThresholds: { warning: 5, danger: 15 }
   },
   unread_announcements: {
     label: 'تعاميم غير مقروءة',

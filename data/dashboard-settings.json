@@ -1,0 +1,55 @@
+{
+  "widgets": {
+    "kpi_bar": {
+      "enabled": true,
+      "order": 1,
+      "label": "شريط المؤشرات"
+    },
+    "action_center": {
+      "enabled": true,
+      "order": 2,
+      "label": "يحتاج تدخل الآن"
+    },
+    "store_performance": {
+      "enabled": false,
+      "order": 3,
+      "label": "أداء المتاجر"
+    },
+    "team_performance": {
+      "enabled": true,
+      "order": 4,
+      "label": "أداء الفريق"
+    },
+    "marketing_pulse": {
+      "enabled": false,
+      "order": 5,
+      "label": "نبض التسويق"
+    },
+    "account_managers": {
+      "enabled": true,
+      "order": 6,
+      "label": "مدراء العلاقات"
+    },
+    "managers_charts": {
+      "enabled": true,
+      "order": 7,
+      "label": "تحليلات الأداء"
+    },
+    "today_tasks": {
+      "enabled": false,
+      "order": 8,
+      "label": "مهام اليوم"
+    },
+    "announcements": {
+      "enabled": false,
+      "order": 9,
+      "label": "الإعلانات"
+    },
+    "smart_insights": {
+      "enabled": true,
+      "order": 10,
+      "label": "الرؤى الذكية"
+    }
+  },
+  "updatedAt": "2026-01-25T22:52:53.517Z"
+}

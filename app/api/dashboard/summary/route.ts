@@ -5,55 +5,55 @@ export async function GET() {
   // بيانات Mock ثابتة للاختبار
   const mockData = {
     kpis: {
-      overdue_tasks: { value: 12, trend: 'up', change: 3 },
-      due_today: { value: 8, trend: 'down', change: -2 },
-      completed_this_week: { value: 45, trend: 'up', change: 12 },
-      active_stores: { value: 24, trend: 'stable', change: 0 },
-      active_campaigns: { value: 15, trend: 'up', change: 2 },
-      total_spend_today: { value: 12500, trend: 'up', change: 1500 },
-      average_roas: { value: 3.2, trend: 'down', change: -0.3 },
-      unread_announcements: { value: 5, trend: 'up', change: 2 }
+      total_managers: { value: 10, trend: 'up', change: 2 },
+      avg_completion_rate: { value: 78, trend: 'up', change: 5 },
+      top_performers: { value: 5, trend: 'up', change: 1 },
+      needs_attention: { value: 3, trend: 'down', change: -1 },
+      active_stores: { value: 42, trend: 'up', change: 4 },
+      unassigned_stores: { value: 6, trend: 'down', change: -2 },
+      tasks_completed_week: { value: 156, trend: 'up', change: 23 },
+      overdue_tasks: { value: 12, trend: 'down', change: -3 }
     },
     action_center: [
       {
         id: '1',
-        type: 'overdue_task',
-        title: 'مهمة متأخرة 3 أيام',
-        description: 'تحديث صور المنتجات - متجر الأناقة',
+        type: 'low_performance',
+        title: 'مدير بأداء منخفض',
+        description: 'خالد عبدالله - نسبة إنجاز 35% فقط',
+        priority: 'high',
+        link: '/admin/team?filter=low'
+      },
+      {
+        id: '2',
+        type: 'unassigned_stores',
+        title: '6 متاجر بدون مدير',
+        description: 'متاجر جديدة تحتاج إسناد لمدراء العلاقات',
+        priority: 'high',
+        link: '/admin/stores?filter=unassigned'
+      },
+      {
+        id: '3',
+        type: 'overload',
+        title: 'توزيع غير متوازن',
+        description: 'أحمد محمد لديه 8 متاجر - يحتاج إعادة توزيع',
+        priority: 'medium',
+        link: '/admin/team'
+      },
+      {
+        id: '4',
+        type: 'overdue_tasks',
+        title: '12 مهمة متأخرة',
+        description: 'مهام متأخرة تحتاج متابعة من المدراء',
         priority: 'high',
         link: '/admin/tasks?filter=overdue'
       },
       {
-        id: '2',
-        type: 'low_roas',
-        title: 'حملة بأداء منخفض',
-        description: 'حملة الصيف - ROAS 0.8',
-        priority: 'high',
-        link: '/admin/campaigns'
-      },
-      {
-        id: '3',
-        type: 'no_conversion',
-        title: 'حملة بدون تحويلات',
-        description: 'حملة المنتجات الجديدة - 48 ساعة',
-        priority: 'medium',
-        link: '/admin/campaigns'
-      },
-      {
-        id: '4',
-        type: 'pending_approval',
-        title: 'طلب موافقة معلق',
-        description: 'إضافة متجر جديد - انتظار 2 يوم',
-        priority: 'medium',
-        link: '/admin/stores'
-      },
-      {
         id: '5',
-        type: 'urgent_announcement',
-        title: 'تعميم عاجل غير مقروء',
-        description: 'تحديث سياسة الإعلانات',
-        priority: 'high',
-        link: '/admin/announcements'
+        type: 'inactive_manager',
+        title: 'مدير غير نشط',
+        description: 'سلطان فهد - لم ينجز أي مهمة منذ 3 أيام',
+        priority: 'medium',
+        link: '/admin/team'
       }
     ],
     top_stores: [
@@ -117,38 +117,60 @@ export async function GET() {
       { id: '4', title: 'تحديث النظام القادم', type: 'scheduled', created_at: '2025-01-19T09:00:00Z', is_read: true },
       { id: '5', title: 'مكافآت الشهر', type: 'normal', created_at: '2025-01-18T16:00:00Z', is_read: false }
     ],
+    account_managers: {
+      best_manager: { id: '1', name: 'أحمد محمد', avatar: null, stores_count: 8, completion_rate: 95, tasks_completed: 45, total_tasks: 47 },
+      worst_manager: { id: '6', name: 'خالد عبدالله', avatar: null, stores_count: 3, completion_rate: 35, tasks_completed: 12, total_tasks: 34 },
+      overall_completion_rate: 78,
+      total_managers: 10,
+      total_stores_assigned: 42,
+      unassigned_stores: 6,
+      top_10: [
+        { id: '1', name: 'أحمد محمد', avatar: null, stores_count: 8, completion_rate: 95 },
+        { id: '2', name: 'سارة علي', avatar: null, stores_count: 7, completion_rate: 92 },
+        { id: '3', name: 'محمد خالد', avatar: null, stores_count: 6, completion_rate: 88 },
+        { id: '4', name: 'فاطمة أحمد', avatar: null, stores_count: 5, completion_rate: 85 },
+        { id: '5', name: 'عمر حسن', avatar: null, stores_count: 5, completion_rate: 82 },
+        { id: '6', name: 'نورة سعد', avatar: null, stores_count: 4, completion_rate: 75 },
+        { id: '7', name: 'يوسف محمد', avatar: null, stores_count: 3, completion_rate: 68 },
+        { id: '8', name: 'ريم عبدالرحمن', avatar: null, stores_count: 2, completion_rate: 62 },
+        { id: '9', name: 'سلطان فهد', avatar: null, stores_count: 1, completion_rate: 55 },
+        { id: '10', name: 'خالد عبدالله', avatar: null, stores_count: 1, completion_rate: 35 }
+      ],
+      most_assigned: { id: '1', name: 'أحمد محمد', avatar: null, stores_count: 8 },
+      least_assigned: { id: '10', name: 'خالد عبدالله', avatar: null, stores_count: 1 }
+    },
     insights: [
       {
         id: '1',
         type: 'warning',
-        title: 'انخفاض في أداء الحملات',
-        description: 'متوسط ROAS انخفض 15% مقارنة بالأسبوع الماضي',
-        action: 'مراجعة الحملات',
-        link: '/admin/campaigns'
+        title: '3 مدراء بأداء منخفض',
+        description: 'نسبة إنجازهم أقل من 50% هذا الأسبوع',
+        action: 'عرض المدراء',
+        link: '/admin/team?filter=low'
       },
       {
         id: '2',
         type: 'success',
-        title: 'تحسن في إنجاز المهام',
-        description: 'معدل الإنجاز ارتفع 20% هذا الأسبوع',
+        title: 'تحسن في أداء الفريق',
+        description: 'متوسط الإنجاز ارتفع 5% مقارنة بالأسبوع الماضي',
         action: null,
         link: null
       },
       {
         id: '3',
         type: 'info',
-        title: '3 متاجر بدون نشاط',
-        description: 'لم يتم تحديث أي مهام منذ 7 أيام',
-        action: 'عرض المتاجر',
-        link: '/admin/stores?filter=inactive'
+        title: '6 متاجر بدون مدير علاقة',
+        description: 'يجب إسناد هذه المتاجر لمدراء العلاقات',
+        action: 'إسناد المتاجر',
+        link: '/admin/stores?filter=unassigned'
       },
       {
         id: '4',
         type: 'warning',
-        title: 'حملات بميزانية منخفضة',
-        description: '5 حملات ستنتهي ميزانيتها خلال 24 ساعة',
-        action: 'مراجعة الميزانيات',
-        link: '/admin/campaigns'
+        title: 'توزيع غير متوازن',
+        description: 'أحمد محمد لديه 8 متاجر بينما خالد لديه 1 فقط',
+        action: 'إعادة التوزيع',
+        link: '/admin/team'
       }
     ],
     last_updated: new Date().toISOString()

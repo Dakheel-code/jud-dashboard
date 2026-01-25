@@ -17,6 +17,8 @@ import MarketingPulseWidget from '@/components/dashboard/MarketingPulseWidget';
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget';
 import AnnouncementsWidget from '@/components/dashboard/AnnouncementsWidget';
 import SmartInsightsWidget from '@/components/dashboard/SmartInsightsWidget';
+import AccountManagersWidget from '@/components/dashboard/AccountManagersWidget';
+import ManagersChartsWidget from '@/components/dashboard/ManagersChartsWidget';
 
 // Dashboard Summary Types
 interface DashboardSummary {
@@ -37,6 +39,17 @@ interface DashboardSummary {
   };
   today_tasks: Array<{ id: string; title: string; store: string; due: string; status: string; priority: string }>;
   announcements: Array<{ id: string; title: string; type: string; created_at: string; is_read: boolean }>;
+  account_managers: {
+    best_manager: { id: string; name: string; avatar: string | null; stores_count: number; completion_rate: number; tasks_completed: number; total_tasks: number };
+    worst_manager: { id: string; name: string; avatar: string | null; stores_count: number; completion_rate: number; tasks_completed: number; total_tasks: number };
+    overall_completion_rate: number;
+    total_managers: number;
+    total_stores_assigned: number;
+    unassigned_stores: number;
+    top_10: Array<{ id: string; name: string; avatar: string | null; stores_count: number; completion_rate: number }>;
+    most_assigned: { id: string; name: string; avatar: string | null; stores_count: number };
+    least_assigned: { id: string; name: string; avatar: string | null; stores_count: number };
+  };
   insights: Array<{ id: string; type: string; title: string; description: string; action: string | null; link: string | null }>;
   last_updated: string;
 }
@@ -72,6 +85,20 @@ function AdminPageContent() {
   const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   
+  // Dashboard Widgets Settings
+  const [widgetSettings, setWidgetSettings] = useState<Record<string, { enabled: boolean; order: number; label: string }>>({
+    kpi_bar: { enabled: true, order: 1, label: 'شريط المؤشرات' },
+    action_center: { enabled: true, order: 2, label: 'يحتاج تدخل الآن' },
+    store_performance: { enabled: true, order: 3, label: 'أداء المتاجر' },
+    team_performance: { enabled: true, order: 4, label: 'أداء الفريق' },
+    marketing_pulse: { enabled: true, order: 5, label: 'نبض التسويق' },
+    account_managers: { enabled: true, order: 6, label: 'مدراء العلاقات' },
+    managers_charts: { enabled: true, order: 7, label: 'تحليلات الأداء' },
+    today_tasks: { enabled: true, order: 8, label: 'مهام اليوم' },
+    announcements: { enabled: true, order: 9, label: 'الإعلانات' },
+    smart_insights: { enabled: true, order: 10, label: 'الرؤى الذكية' },
+  });
+  
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
@@ -93,6 +120,19 @@ function AdminPageContent() {
       console.error('Failed to fetch dashboard summary:', err);
     } finally {
       setDashboardLoading(false);
+    }
+  }, []);
+
+  // جلب إعدادات الويدجتس
+  const fetchWidgetSettings = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/settings/dashboard', { cache: 'no-store' });
+      const data = await response.json();
+      if (data.settings?.widgets) {
+        setWidgetSettings(data.settings.widgets);
+      }
+    } catch (err) {
+      console.error('Failed to fetch widget settings:', err);
     }
   }, []);
 
@@ -142,6 +182,7 @@ function AdminPageContent() {
   useEffect(() => {
     fetchData();
     fetchDashboardSummary();
+    fetchWidgetSettings();
     
     // إعداد التحديث التلقائي
     const interval = setInterval(() => {
@@ -357,45 +398,61 @@ function AdminPageContent() {
         ) : (
           <div className="space-y-6">
             {/* KPI Bar - شريط المؤشرات العلوي */}
-            {dashboardData?.kpis && (
+            {widgetSettings.kpi_bar?.enabled && dashboardData?.kpis && (
               <DashboardKPIBar kpis={dashboardData.kpis} />
             )}
 
             {/* Action Center - يحتاج تدخل الآن */}
-            {dashboardData?.action_center && (
+            {widgetSettings.action_center?.enabled && dashboardData?.action_center && (
               <DashboardActionCenter items={dashboardData.action_center} />
             )}
 
             {/* Store Performance Widget - Full Width */}
-            {dashboardData?.top_stores && (
+            {widgetSettings.store_performance?.enabled && dashboardData?.top_stores && (
               <StorePerformanceWidget stores={dashboardData.top_stores} />
             )}
 
             {/* Team Performance Widget - Full Width */}
-            {dashboardData?.team && (
+            {widgetSettings.team_performance?.enabled && dashboardData?.team && (
               <TeamPerformanceWidget team={dashboardData.team} />
             )}
 
             {/* Marketing Pulse Widget - Full Width */}
-            {dashboardData?.campaigns_pulse && (
+            {widgetSettings.marketing_pulse?.enabled && dashboardData?.campaigns_pulse && (
               <MarketingPulseWidget data={dashboardData.campaigns_pulse} />
+            )}
+
+            {/* Account Managers Widget - Full Width */}
+            {widgetSettings.account_managers?.enabled && dashboardData?.account_managers && (
+              <AccountManagersWidget data={dashboardData.account_managers} />
+            )}
+
+            {/* Managers Charts Widget - Full Width */}
+            {widgetSettings.managers_charts?.enabled && dashboardData?.account_managers && (
+              <ManagersChartsWidget data={{
+                overall_completion_rate: dashboardData.account_managers.overall_completion_rate,
+                total_managers: dashboardData.account_managers.total_managers,
+                total_stores_assigned: dashboardData.account_managers.total_stores_assigned,
+                unassigned_stores: dashboardData.account_managers.unassigned_stores,
+                top_10: dashboardData.account_managers.top_10,
+              }} />
             )}
 
             {/* Main Grid - 2 columns on desktop, 1 on mobile */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Today Tasks Widget */}
-              {dashboardData?.today_tasks && (
+              {widgetSettings.today_tasks?.enabled && dashboardData?.today_tasks && (
                 <TodayTasksWidget tasks={dashboardData.today_tasks} />
               )}
 
               {/* Announcements Widget */}
-              {dashboardData?.announcements && (
+              {widgetSettings.announcements?.enabled && dashboardData?.announcements && (
                 <AnnouncementsWidget announcements={dashboardData.announcements} canSendAnnouncement={true} />
               )}
             </div>
 
             {/* Smart Insights Widget - Full Width */}
-            {dashboardData?.insights && (
+            {widgetSettings.smart_insights?.enabled && dashboardData?.insights && (
               <SmartInsightsWidget insights={dashboardData.insights} onRefresh={fetchDashboardSummary} />
             )}
           </div>
