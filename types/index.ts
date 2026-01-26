@@ -26,6 +26,7 @@ export interface Task {
   description?: string;
   category: string;
   order_index: number;
+  whatsapp_message?: string;
 }
 
 export interface TaskProgress {
@@ -39,6 +40,7 @@ export interface TaskProgress {
 export interface TaskWithProgress extends Task {
   is_done: boolean;
   description?: string;
+  whatsapp_message?: string;
 }
 
 export interface TasksByCategory {
