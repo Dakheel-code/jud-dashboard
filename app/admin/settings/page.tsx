@@ -67,6 +67,10 @@ function SettingsPageContent() {
   const [editingCategory, setEditingCategory] = useState<{index: number; value: string} | null>(null);
   const [isCategoriesCollapsed, setIsCategoriesCollapsed] = useState(true);
   const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(true);
+  const [isBrandingCollapsed, setIsBrandingCollapsed] = useState(true);
+  const [isAdAccountsCollapsed, setIsAdAccountsCollapsed] = useState(true);
+  const [isWhatsappCollapsed, setIsWhatsappCollapsed] = useState(true);
+  const [isSlackCollapsed, setIsSlackCollapsed] = useState(true);
 
   // إعدادات تخصيص لوحة التحكم
   const [dashboardWidgets, setDashboardWidgets] = useState<Record<string, { enabled: boolean; order: number; label: string }>>({
@@ -755,19 +759,36 @@ function SettingsPageContent() {
         )}
 
         {/* Company Branding Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsBrandingCollapsed(!isBrandingCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">هوية الشركة</h3>
-              <p className="text-purple-300/70 text-sm mb-4">
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">هوية الشركة</h3>
+              <p className="text-purple-300/70 text-sm">
                 قم بتخصيص اسم الشركة والشعار الذي يظهر في جميع صفحات النظام.
               </p>
-              
+            </div>
+            <svg 
+              className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isBrandingCollapsed ? '' : 'rotate-180'}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isBrandingCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
+            <div className="px-6 pb-6 pt-0">
               {/* Company Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -897,7 +918,7 @@ function SettingsPageContent() {
             <div className="flex-1 text-right">
               <h3 className="text-lg font-semibold text-white mb-1">تخصيص لوحة التحكم</h3>
               <p className="text-purple-300/70 text-sm">
-                تحكم في إظهار وإخفاء المربعات في الصفحة الرئيسية للوحة التحكم.
+                تحكم في إظهار وإخفاء العناصر في الصفحة الرئيسية للوحة التحكم.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1027,20 +1048,40 @@ function SettingsPageContent() {
         </div>
 
         {/* Ad Accounts Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsAdAccountsCollapsed(!isAdAccountsCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">الحسابات الإعلانية</h3>
-              <p className="text-purple-300/70 text-sm mb-4">
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">الحسابات الإعلانية</h3>
+              <p className="text-purple-300/70 text-sm">
                 أضف إيميلات الحسابات الإعلانية لاستخدامها في المتاجر.
               </p>
-              
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-sm">{adAccounts.length} حساب</span>
+              <svg 
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isAdAccountsCollapsed ? '' : 'rotate-180'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isAdAccountsCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
+            <div className="px-6 pb-6 pt-0">
               {/* Add New Account */}
               <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <input
@@ -1186,16 +1227,41 @@ function SettingsPageContent() {
         </div>
 
         {/* WhatsApp Templates Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsWhatsappCollapsed(!isWhatsappCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
             <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
             </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-semibold text-white">رسائل الواتساب المخصصة</h3>
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">رسائل الواتساب المخصصة</h3>
+              <p className="text-purple-300/70 text-sm">
+                قم بتخصيص قوالب الرسائل التي يتم إرسالها عبر الواتساب.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-sm">{Object.keys(whatsappTemplates).length} قالب</span>
+              <svg 
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isWhatsappCollapsed ? '' : 'rotate-180'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isWhatsappCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
+            <div className="px-6 pb-6 pt-0">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-purple-300/70 text-sm">استخدم المتغيرات التالية:</p>
                 <button
                   onClick={openAddTemplateModal}
                   className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm rounded-lg transition-colors flex items-center gap-1"
@@ -1206,9 +1272,6 @@ function SettingsPageContent() {
                   إضافة قالب
                 </button>
               </div>
-              <p className="text-purple-300/70 text-sm mb-4">
-                قم بتخصيص قوالب الرسائل التي يتم إرسالها عبر الواتساب. استخدم المتغيرات التالية:
-              </p>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{store_name}'}</span>
                 <span className="px-2 py-1 bg-purple-900/50 rounded-lg text-xs text-purple-300">{'{owner_name}'}</span>
@@ -1258,39 +1321,59 @@ function SettingsPageContent() {
                   <p className="text-purple-300/50 text-sm text-center py-4">لا توجد قوالب مضافة</p>
                 )}
               </div>
+              
+              {/* رابط لصفحة القوالب */}
+              <div className="mt-4 pt-4 border-t border-purple-500/20">
+                <a
+                  href="/admin/task-management"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/30 rounded-xl text-purple-300 hover:text-white transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <span>لتخصيص رسائل الواتساب للمهام الرئيسية للمتاجر عبر صفحة القوالب</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Slack Section */}
         <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
-          <div className="p-6 border-b border-purple-500/20">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-[#4A154B] rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">ربط Slack</h3>
-                <p className="text-purple-300/70 text-sm">
-                  اربط قنوات Slack لتلقي إشعارات فورية عند تسجيل متاجر جديدة، إكمال المهام، أو طلبات المساعدة.
-                </p>
-              </div>
-              <a 
-                href="https://api.slack.com/apps" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-purple-400 hover:text-purple-300 text-sm inline-flex items-center gap-1 shrink-0"
-              >
-                إنشاء Slack App
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsSlackCollapsed(!isSlackCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
+            <div className="w-12 h-12 bg-[#4A154B] rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+              </svg>
             </div>
-          </div>
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">ربط Slack</h3>
+              <p className="text-purple-300/70 text-sm">
+                اربط قنوات Slack لتلقي إشعارات فورية عند تسجيل متاجر جديدة، إكمال المهام، أو طلبات المساعدة.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-sm">{webhooks.length} قناة</span>
+              <svg 
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isSlackCollapsed ? '' : 'rotate-180'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
 
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isSlackCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
           {webhooks.length === 0 ? (
             <div className="p-8 text-center">
               <div className="w-16 h-16 bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1386,6 +1469,7 @@ function SettingsPageContent() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
 
