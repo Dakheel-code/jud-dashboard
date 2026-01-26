@@ -65,6 +65,8 @@ function SettingsPageContent() {
   const [newCategory, setNewCategory] = useState('');
   const [savingCategories, setSavingCategories] = useState(false);
   const [editingCategory, setEditingCategory] = useState<{index: number; value: string} | null>(null);
+  const [isCategoriesCollapsed, setIsCategoriesCollapsed] = useState(true);
+  const [isDashboardCollapsed, setIsDashboardCollapsed] = useState(true);
 
   // إعدادات تخصيص لوحة التحكم
   const [dashboardWidgets, setDashboardWidgets] = useState<Record<string, { enabled: boolean; order: number; label: string }>>({
@@ -881,19 +883,39 @@ function SettingsPageContent() {
         </div>
 
         {/* Dashboard Customization Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsDashboardCollapsed(!isDashboardCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">تخصيص لوحة التحكم</h3>
-              <p className="text-purple-300/70 text-sm mb-4">
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">تخصيص لوحة التحكم</h3>
+              <p className="text-purple-300/70 text-sm">
                 تحكم في إظهار وإخفاء المربعات في الصفحة الرئيسية للوحة التحكم.
               </p>
-              
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-sm">{Object.values(dashboardWidgets).filter(w => w.enabled).length} مفعّل</span>
+              <svg 
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isDashboardCollapsed ? '' : 'rotate-180'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isDashboardCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
+            <div className="px-6 pb-6 pt-0">
               {/* Widgets List - Vertical with Drag & Drop */}
               <div className="space-y-2 mb-4">
                 {Object.entries(dashboardWidgets)
@@ -1063,19 +1085,39 @@ function SettingsPageContent() {
         </div>
 
         {/* Store Categories Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-6">
-          <div className="flex items-start gap-4">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          {/* Header - Clickable */}
+          <button
+            onClick={() => setIsCategoriesCollapsed(!isCategoriesCollapsed)}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
             <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
               <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white mb-2">تصنيفات المتاجر</h3>
-              <p className="text-purple-300/70 text-sm mb-4">
+            <div className="flex-1 text-right">
+              <h3 className="text-lg font-semibold text-white mb-1">تصنيفات المتاجر</h3>
+              <p className="text-purple-300/70 text-sm">
                 أضف وعدّل تصنيفات المتاجر التي تظهر عند إضافة أو تعديل متجر.
               </p>
-              
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 text-sm">{storeCategories.length} تصنيف</span>
+              <svg 
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isCategoriesCollapsed ? '' : 'rotate-180'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Content - Collapsible */}
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isCategoriesCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
+            <div className="px-6 pb-6 pt-0">
               {/* Add New Category */}
               <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <input
