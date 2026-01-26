@@ -74,11 +74,8 @@ function TasksManagementContent() {
   const whatsappVariables = [
     { key: '{{store_name}}', label: 'اسم المتجر' },
     { key: '{{store_url}}', label: 'رابط المتجر' },
-    { key: '{{task_name}}', label: 'اسم المهمة' },
-    { key: '{{section_name}}', label: 'اسم القسم' },
-    { key: '{{assigned_to}}', label: 'المكلف بالمهمة' },
-    { key: '{{due_date}}', label: 'تاريخ التسليم' },
-    { key: '{{company_name}}', label: 'اسم الشركة' },
+    { key: '{{owner_name}}', label: 'صاحب المتجر' },
+    { key: '{{account_manager}}', label: 'اسم الاكاونت مانجر' },
   ];
 
   // Modal states
