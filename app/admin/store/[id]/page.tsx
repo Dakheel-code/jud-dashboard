@@ -640,12 +640,16 @@ function StoreDetailsContent() {
       message = `⏰ تذكير:\n${message}`;
     }
     
+    // تسجيل أن الرسالة تم إرسالها أولاً قبل فتح النافذة
+    setSentWhatsappTasks(prev => {
+      const newSet = new Set(prev);
+      newSet.add(task.id);
+      return newSet;
+    });
+    
     const phone = storeData.owner_phone.replace(/[^0-9]/g, '');
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
-    
-    // تسجيل أن الرسالة تم إرسالها
-    setSentWhatsappTasks(prev => new Set([...prev, task.id]));
   };
 
   const handleToggleTask = async (taskId: string, currentStatus: boolean) => {
