@@ -635,9 +635,9 @@ function StoreDetailsContent() {
     
     let message = replaceWhatsappVariables(task.whatsapp_message);
     
-    // إضافة كلمة "تذكير" في بداية الرسالة إذا كانت رسالة تذكيرية
+    // إضافة كلمة "تذكير" في بداية الرسالة إذا كانت رسالة تذكيرية مع علامة اقتباس
     if (isReminder) {
-      message = `⏰ تذكير:\n${message}`;
+      message = `تذكير:\n"${message}"`;
     }
     
     // تسجيل أن الرسالة تم إرسالها أولاً قبل فتح النافذة
