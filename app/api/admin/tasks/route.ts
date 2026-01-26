@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!auth.authenticated) return auth.error!;
 
     const body = await request.json();
-    const { title, category, order_index } = body;
+    const { title, category, order_index, description, whatsapp_message } = body;
 
     if (!title || !category || order_index === undefined) {
       return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('tasks')
-      .insert([{ title, category, order_index }])
+      .insert([{ title, category, order_index, description, whatsapp_message }])
       .select()
       .single();
 

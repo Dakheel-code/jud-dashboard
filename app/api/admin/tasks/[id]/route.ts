@@ -8,7 +8,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { title, category, order_index } = body;
+    const { title, category, order_index, description, whatsapp_message } = body;
     const { id } = params;
 
     if (!title || !category || order_index === undefined) {
@@ -20,7 +20,7 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from('tasks')
-      .update({ title, category, order_index })
+      .update({ title, category, order_index, description, whatsapp_message })
       .eq('id', id)
       .select()
       .single();
