@@ -77,7 +77,7 @@ function TasksManagementContent() {
     { key: '{{store_name}}', label: 'اسم المتجر' },
     { key: '{{store_url}}', label: 'رابط المتجر' },
     { key: '{{owner_name}}', label: 'صاحب المتجر' },
-    { key: '{{account_manager}}', label: 'اسم الاكاونت مانجر' },
+    { key: '{{account_manager}}', label: 'الاكاونت مانجر' },
   ];
 
   // Modal states
