@@ -102,7 +102,6 @@ export default function AnnouncementBell() {
         setUrgentAnnouncement(unreadUrgent);
       }
     } catch (error) {
-      console.error('Error fetching announcements:', error);
     }
   }, [getUserId, acknowledgedUrgentIds, urgentAnnouncement]);
 
@@ -122,7 +121,6 @@ export default function AnnouncementBell() {
       });
       return response.ok;
     } catch (error) {
-      console.error('Error marking as read:', error);
       return false;
     }
   }, [getUserId]);

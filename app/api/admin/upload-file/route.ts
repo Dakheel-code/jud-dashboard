@@ -54,7 +54,6 @@ export async function POST(request: Request) {
       });
 
     if (error) {
-      console.error('Upload error:', error);
       // إذا كان الـ bucket غير موجود، نحاول إنشاءه
       if (error.message.includes('bucket') || error.message.includes('not found')) {
         return NextResponse.json({ 
@@ -78,7 +77,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ في رفع الملف' }, { status: 500 });
   }
 }

@@ -81,7 +81,6 @@ export async function GET(request: Request) {
     const { data: tasks, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching store tasks:', error);
       return NextResponse.json({ error: 'فشل جلب المهام' }, { status: 500 });
     }
 
@@ -110,7 +109,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('GET /api/admin/tasks/store error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -160,7 +158,6 @@ export async function POST(request: Request) {
       .single();
 
     if (createError) {
-      console.error('Error creating task:', createError);
       return NextResponse.json({ error: 'فشل إنشاء المهمة' }, { status: 500 });
     }
 
@@ -175,7 +172,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, task: newTask, message: 'تم إنشاء المهمة بنجاح' });
 
   } catch (error) {
-    console.error('POST /api/admin/tasks/store error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

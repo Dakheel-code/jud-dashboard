@@ -28,7 +28,7 @@ export async function GET(
 
     const { data: store, error } = await supabase
       .from('stores')
-      .select('*')
+      .select('id, store_name, store_url, owner_name, owner_phone, owner_email, account_manager_id, media_buyer_id, notes, priority, budget, status, is_active, created_at, updated_at, subscription_start_date, store_group_url, category, client_id, snapchat_account, tiktok_account, google_account, meta_account')
       .eq('id', id)
       .single();
 
@@ -41,7 +41,6 @@ export async function GET(
 
     return NextResponse.json({ store });
   } catch (error: any) {
-    console.error('Error fetching store:', error);
     return NextResponse.json({ error: 'Failed to fetch store' }, { status: 500 });
   }
 }
@@ -90,13 +89,11 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating store:', error);
       throw error;
     }
 
     return NextResponse.json({ success: true, store });
   } catch (error: any) {
-    console.error('Error updating store:', error);
     return NextResponse.json({ error: 'Failed to update store' }, { status: 500 });
   }
 }
@@ -107,13 +104,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    console.log('=== DELETE STORE REQUEST ===');
-    console.log('Store ID:', params.id);
     
     const { id } = params;
 
     if (!id) {
-      console.error('❌ No store ID provided');
       return NextResponse.json(
         { error: 'Store ID is required' },
         { status: 400 }
@@ -125,27 +119,23 @@ export async function DELETE(
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Supabase credentials missing');
       return NextResponse.json(
         { error: 'Database configuration error' },
         { status: 500 }
       );
     }
 
-    console.log('✅ Supabase URL:', supabaseUrl);
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // أولاً: التحقق من وجود المتجر
-    console.log('🔍 Checking if store exists...');
     const { data: existingStore, error: checkError } = await supabase
       .from('stores')
-      .select('*')
+      .select('id')
       .eq('id', id)
       .single();
 
     if (checkError) {
-      console.error('❌ Error checking store:', checkError);
       if (checkError.code === 'PGRST116') {
         return NextResponse.json(
           { error: 'Store not found' },
@@ -155,10 +145,8 @@ export async function DELETE(
       throw checkError;
     }
 
-    console.log('✅ Store found:', existingStore);
 
     // ثانياً: حذف المتجر
-    console.log('🗑️ Deleting store...');
     const { data: deletedData, error: deleteError } = await supabase
       .from('stores')
       .delete()
@@ -166,15 +154,12 @@ export async function DELETE(
       .select();
 
     if (deleteError) {
-      console.error('❌ Delete error:', deleteError);
       throw deleteError;
     }
 
-    console.log('✅ Delete result:', deletedData);
 
     // التحقق من نجاح الحذف
     if (!deletedData || deletedData.length === 0) {
-      console.error('❌ No rows deleted');
       return NextResponse.json(
         { error: 'Failed to delete store' },
         { status: 500 }
@@ -182,19 +167,15 @@ export async function DELETE(
     }
 
     // ثالثاً: التحقق من أن المتجر تم حذفه فعلياً
-    console.log('🔍 Verifying deletion...');
     const { data: verifyData, error: verifyError } = await supabase
       .from('stores')
       .select('id')
       .eq('id', id);
 
     if (verifyError) {
-      console.error('⚠️ Verification error:', verifyError);
     } else {
-      console.log('✅ Verification result:', verifyData?.length === 0 ? 'Store deleted' : 'Store still exists!');
     }
 
-    console.log('=== DELETE COMPLETED SUCCESSFULLY ===');
 
     return NextResponse.json({ 
       success: true,
@@ -204,7 +185,6 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('❌ FATAL ERROR:', error);
     return NextResponse.json(
       { 
         error: 'Failed to delete store',

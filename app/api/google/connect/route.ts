@@ -57,7 +57,6 @@ async function getCurrentUserId(request: NextRequest): Promise<string | null> {
     
     return null;
   } catch (error) {
-    console.error('Error getting current user:', error);
     return null;
   }
 }
@@ -119,7 +118,6 @@ export async function GET(request: NextRequest) {
       });
 
     if (insertError) {
-      console.error('Error saving OAuth state:', insertError);
       return NextResponse.json(
         { error: 'فشل في حفظ حالة المصادقة', code: 'STATE_SAVE_ERROR' },
         { status: 500 }
@@ -150,7 +148,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl.toString());
 
   } catch (error) {
-    console.error('Error in /api/google/connect:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

@@ -11,7 +11,7 @@ export async function GET() {
 
     const { data: tasks, error } = await supabase
       .from('tasks')
-      .select('*')
+      .select('id, title, description, category, order_index, help_url, video_url, is_required, created_at')
       .order('category', { ascending: true })
       .order('order_index', { ascending: true });
 
@@ -19,7 +19,6 @@ export async function GET() {
 
     return NextResponse.json({ tasks });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
     return NextResponse.json(
       { error: 'Failed to fetch tasks' },
       { status: 500 }
@@ -54,7 +53,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ task: data }, { status: 201 });
   } catch (error) {
-    console.error('Error creating task:', error);
     return NextResponse.json(
       { error: 'Failed to create task' },
       { status: 500 }

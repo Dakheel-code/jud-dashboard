@@ -26,7 +26,6 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error("Error in /api/me:", error);
     return NextResponse.json({ error: "خطأ في الخادم" }, { status: 500 });
   }
 }

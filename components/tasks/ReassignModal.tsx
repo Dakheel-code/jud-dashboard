@@ -56,7 +56,6 @@ export default function ReassignModal({
         setUsers(filteredUsers);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
     }
@@ -94,7 +93,6 @@ export default function ReassignModal({
         alert(error.error || 'فشل تحويل المهمة');
       }
     } catch (error) {
-      console.error('Error reassigning task:', error);
       alert('حدث خطأ أثناء تحويل المهمة');
     } finally {
       setSubmitting(false);

@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error in /api/cron/reminders:', error);
     return NextResponse.json(
       { 
         error: 'Internal error', 

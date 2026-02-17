@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
   try {
     // التحقق من الأخطاء من Google
     if (error) {
-      console.error('Google OAuth error:', error);
       return NextResponse.redirect(`${settingsUrl}?error=google_denied`);
     }
 
@@ -75,7 +74,6 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (stateError || !savedState) {
-      console.error('State not found in DB:', stateError);
       return NextResponse.redirect(`${settingsUrl}?error=invalid_state`);
     }
 
@@ -119,12 +117,6 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text();
-      console.error('Token exchange failed:', errorData);
-      console.error('Token params used:', {
-        client_id: GOOGLE_CLIENT_ID?.substring(0, 20) + '...',
-        redirect_uri: GOOGLE_REDIRECT_URI,
-        code_length: code?.length,
-      });
       // إرجاع الخطأ في URL للتشخيص
       const errorMsg = encodeURIComponent(errorData.substring(0, 100));
       return NextResponse.redirect(`${settingsUrl}?error=token_exchange_failed&details=${errorMsg}`);
@@ -134,7 +126,6 @@ export async function GET(request: NextRequest) {
 
     // التحقق من وجود refresh_token
     if (!tokens.refresh_token) {
-      console.error('No refresh_token received');
       return NextResponse.redirect(`${settingsUrl}?error=no_refresh_token`);
     }
 
@@ -144,7 +135,6 @@ export async function GET(request: NextRequest) {
     });
 
     if (!userInfoResponse.ok) {
-      console.error('Failed to get user info');
       return NextResponse.redirect(`${settingsUrl}?error=user_info_failed`);
     }
 
@@ -184,7 +174,6 @@ export async function GET(request: NextRequest) {
       .eq('employee_id', userId);
 
     if (dbError) {
-      console.error('Database error:', dbError);
       return NextResponse.redirect(`${settingsUrl}?error=database_error`);
     }
 
@@ -192,7 +181,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${settingsUrl}?success=google_connected`);
 
   } catch (error) {
-    console.error('Error in /api/google/callback:', error);
     return NextResponse.redirect(`${settingsUrl}?error=internal_error`);
   }
 }

@@ -28,7 +28,6 @@ async function updateSubscriptionStartDate(store_id: string, task_id: string, ne
       }
     }
   } catch (error) {
-    console.error('Update subscription start date error:', error);
   }
 }
 
@@ -95,7 +94,6 @@ async function checkAndSendMilestoneNotification(
       });
     }
   } catch (error) {
-    console.error('Milestone notification error:', error);
   }
 }
 
@@ -112,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existingProgress, error: fetchError } = await supabase
       .from('tasks_progress')
-      .select('*')
+      .select('id, store_id, task_id, is_done')
       .eq('store_id', store_id)
       .eq('task_id', task_id)
       .single();

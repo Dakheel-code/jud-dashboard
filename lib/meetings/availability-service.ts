@@ -71,7 +71,6 @@ export async function getEmployeeSettings(employeeId: string): Promise<EmployeeM
       .single();
     
     if (insertError) {
-      console.error('Error creating default settings:', insertError);
       return null;
     }
     
@@ -95,7 +94,6 @@ export async function getEmployeeAvailability(employeeId: string): Promise<Emplo
     .order('day_of_week');
   
   if (error) {
-    console.error('Error fetching availability:', error);
     return [];
   }
   
@@ -119,7 +117,6 @@ export async function getEmployeeAvailability(employeeId: string): Promise<Emplo
       .select();
     
     if (insertError) {
-      console.error('Error creating default availability:', insertError);
       return [];
     }
     
@@ -146,7 +143,6 @@ export async function getEmployeeTimeOff(
     .or(`start_at.lte.${endDate.toISOString()},end_at.gte.${startDate.toISOString()}`);
   
   if (error) {
-    console.error('Error fetching time off:', error);
     return [];
   }
   
@@ -172,7 +168,6 @@ export async function getBookedMeetings(
     .lte('start_at', endDate.toISOString());
   
   if (error) {
-    console.error('Error fetching booked meetings:', error);
     return [];
   }
   
@@ -320,7 +315,6 @@ export async function isSlotAvailable(
   const { data, error } = await query;
   
   if (error) {
-    console.error('Error checking slot availability:', error);
     // في حالة الخطأ، نسمح بالحجز
     return true;
   }
@@ -349,7 +343,6 @@ export async function getTodayMeetingsCount(employeeId: string): Promise<number>
     .lt('start_at', tomorrow.toISOString());
   
   if (error) {
-    console.error('Error counting today meetings:', error);
     return 0;
   }
   

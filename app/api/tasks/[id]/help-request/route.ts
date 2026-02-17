@@ -24,7 +24,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
   return null;
 }
@@ -50,13 +49,11 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching help requests:', error);
       return NextResponse.json({ error: 'فشل جلب طلبات المساعدة' }, { status: 500 });
     }
 
     return NextResponse.json({ help_requests: helpRequests || [] });
   } catch (error) {
-    console.error('GET help requests error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -100,7 +97,6 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating help request:', error);
       return NextResponse.json({ error: 'فشل إنشاء طلب المساعدة' }, { status: 500 });
     }
 
@@ -114,7 +110,6 @@ export async function POST(
 
     return NextResponse.json({ help_request: helpRequest }, { status: 201 });
   } catch (error) {
-    console.error('POST help request error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -196,13 +191,11 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating help request:', error);
       return NextResponse.json({ error: 'فشل تحديث طلب المساعدة' }, { status: 500 });
     }
 
     return NextResponse.json({ help_request: updatedRequest });
   } catch (error) {
-    console.error('PUT help request error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

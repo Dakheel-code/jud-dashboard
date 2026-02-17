@@ -27,7 +27,6 @@ export async function GET(
 ) {
   try {
     const storeId = params.storeId;
-    console.log('=== Snapchat Status Route ===', { storeId });
 
     const supabase = getSupabaseAdmin();
 
@@ -39,14 +38,6 @@ export async function GET(
       .eq('platform', 'snapchat')
       .single();
 
-    console.log('Status query result:', { 
-      storeId, 
-      found: !!integration, 
-      error: integrationError?.message,
-      status: integration?.status,
-      hasAccessToken: !!integration?.access_token_enc,
-      hasAdAccount: !!integration?.ad_account_id,
-    });
 
     if (integrationError || !integration) {
       // لا يوجد ربط
@@ -100,11 +91,9 @@ export async function GET(
       },
     };
 
-    console.log('Status response:', response);
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error('Snapchat status error:', error);
     return NextResponse.json({
       connected: false,
       needs_reauth: false,

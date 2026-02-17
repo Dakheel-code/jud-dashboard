@@ -136,7 +136,6 @@ export async function GET(request: NextRequest) {
     const url = urlResult.final_url;
     const headers = { Authorization: `Bearer ${accessToken}` };
     
-    console.log('Debug: Fetching stats:', url);
 
     const response = await fetch(url, { headers });
 
@@ -192,7 +191,6 @@ export async function GET(request: NextRequest) {
       const totalStat = responseData.total_stats[0]?.total_stat;
       stats = totalStat?.stats || {};
       finalizedDataEndTime = totalStat?.finalized_data_end_time || null;
-      console.log('Debug: Extracted from total_stats:', { stats, finalizedDataEndTime });
     }
     // محاولة استخراج من timeseries_stats
     else if (responseData.timeseries_stats) {

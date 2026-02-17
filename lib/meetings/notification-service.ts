@@ -90,7 +90,6 @@ async function sendSlackToEmployee(
   action: 'created' | 'cancelled' | 'rescheduled'
 ): Promise<boolean> {
   if (!SLACK_WEBHOOK_URL) {
-    console.log('Slack webhook not configured');
     return false;
   }
 
@@ -136,7 +135,6 @@ async function sendSlackToEmployee(
     });
     return response.ok;
   } catch (error) {
-    console.error('Error sending Slack to employee:', error);
     return false;
   }
 }
@@ -150,7 +148,6 @@ async function sendSlackToAdminChannel(
   action: 'created' | 'cancelled' | 'rescheduled'
 ): Promise<boolean> {
   if (!SLACK_ADMIN_CHANNEL_WEBHOOK) {
-    console.log('Slack admin channel webhook not configured');
     return false;
   }
 
@@ -189,7 +186,6 @@ async function sendSlackToAdminChannel(
     });
     return response.ok;
   } catch (error) {
-    console.error('Error sending Slack to admin channel:', error);
     return false;
   }
 }
@@ -207,7 +203,6 @@ async function sendEmail(
   html: string
 ): Promise<boolean> {
   if (!RESEND_API_KEY) {
-    console.log('Resend API key not configured');
     return false;
   }
 
@@ -227,7 +222,6 @@ async function sendEmail(
     });
     return response.ok;
   } catch (error) {
-    console.error('Error sending email:', error);
     return false;
   }
 }

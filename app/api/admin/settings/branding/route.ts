@@ -25,7 +25,6 @@ function readBrandingFile(): any {
       return JSON.parse(content);
     }
   } catch (error) {
-    console.error('Error reading branding file:', error);
   }
   return null;
 }
@@ -37,7 +36,6 @@ function writeBrandingFile(data: any): boolean {
     fs.writeFileSync(BRANDING_FILE, JSON.stringify(data, null, 2), 'utf-8');
     return true;
   } catch (error) {
-    console.error('Error writing branding file:', error);
     return false;
   }
 }
@@ -58,9 +56,10 @@ export async function GET() {
     const savedBranding = readBrandingFile();
     const branding = savedBranding ? { ...defaultBranding, ...savedBranding } : defaultBranding;
     
-    return NextResponse.json({ branding });
+    return NextResponse.json({ branding }, {
+      headers: { 'Cache-Control': 's-maxage=120, stale-while-revalidate=600' }
+    });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ branding: defaultBranding });
   }
 }
@@ -94,7 +93,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'فشل في حفظ الإعدادات' }, { status: 500 });
     }
 
-    console.log('Branding saved successfully:', brandingValue.companyName);
 
     return NextResponse.json({ 
       success: true, 
@@ -102,7 +100,6 @@ export async function PUT(request: NextRequest) {
       message: 'تم حفظ إعدادات الشركة بنجاح' 
     });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

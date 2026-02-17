@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(metadata);
   } catch (error) {
-    console.error('Error fetching metadata:', error);
     
     // إرجاع بيانات افتراضية في حالة الخطأ
     const domain = url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];

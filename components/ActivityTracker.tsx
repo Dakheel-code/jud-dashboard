@@ -76,7 +76,6 @@ export default function ActivityTracker({ userId }: ActivityTrackerProps) {
         body: JSON.stringify({ session_duration_seconds: seconds })
       });
     } catch (error) {
-      console.error('Failed to send heartbeat:', error);
     }
   };
 
@@ -102,6 +101,5 @@ export async function logActivity(
       })
     });
   } catch (error) {
-    console.error('Failed to log activity:', error);
   }
 }

@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
     const { data, count, error } = await query;
 
     if (error) {
-      console.error('Error fetching meetings:', error);
       return NextResponse.json({ error: 'فشل جلب الاجتماعات' }, { status: 500 });
     }
 
@@ -89,7 +88,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error in GET /api/admin/meetings/all:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

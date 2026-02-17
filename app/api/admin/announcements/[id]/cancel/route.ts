@@ -33,7 +33,6 @@ export async function POST(
       .eq('id', id);
 
     if (error) {
-      console.error('Error cancelling announcement:', error);
       return NextResponse.json({ error: 'فشل في إلغاء التعميم' }, { status: 500 });
     }
 
@@ -43,7 +42,6 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

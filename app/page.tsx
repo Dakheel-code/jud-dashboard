@@ -1,34 +1,5 @@
-'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useBranding } from '@/contexts/BrandingContext';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  const router = useRouter();
-  const { branding } = useBranding();
-
-  useEffect(() => {
-    router.replace('/admin/login');
-  }, [router]);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0118]">
-<div className="text-center relative z-10">
-        <div className="relative w-24 h-24 mx-auto mb-4">
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
-          <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-fuchsia-500 border-l-fuchsia-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          <div className="absolute inset-4 flex items-center justify-center">
-            <img 
-              src={branding.logo || '/logo.png'} 
-              alt="Loading" 
-              className="w-full h-full object-contain animate-pulse"
-              style={{ filter: 'drop-shadow(0 0 15px rgba(167, 139, 250, 0.8))' }}
-            />
-          </div>
-        </div>
-        <div className="text-xl text-white font-semibold">جاري التحويل...</div>
-      </div>
-    </div>
-  );
+  redirect('/admin/login');
 }

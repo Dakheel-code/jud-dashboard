@@ -33,17 +33,16 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
 
     const { data, error } = await supabase
       .from('notifications')
-      .select('*')
+      .select('id, user_id, message, type, read_at, created_at, store_id, task_id, link')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching notifications:', error);
       return NextResponse.json({ notifications: [], unreadCount: 0 });
     }
 
@@ -51,7 +50,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notifications: data || [], unreadCount });
   } catch (error: any) {
-    console.error('Error:', error);
     return NextResponse.json({ notifications: [], unreadCount: 0 });
   }
 }
@@ -77,7 +75,6 @@ export async function PUT(request: NextRequest) {
         .is('read_at', null);
 
       if (error) {
-        console.error('Error:', error);
         return NextResponse.json({ success: false });
       }
       return NextResponse.json({ success: true });
@@ -91,14 +88,12 @@ export async function PUT(request: NextRequest) {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error:', error);
         return NextResponse.json({ success: false });
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error:', error);
     return NextResponse.json({ success: false });
   }
 }
@@ -123,7 +118,6 @@ export async function DELETE(request: NextRequest) {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error:', error);
         return NextResponse.json({ success: false });
       }
       return NextResponse.json({ success: true });
@@ -137,14 +131,12 @@ export async function DELETE(request: NextRequest) {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error:', error);
         return NextResponse.json({ success: false });
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error:', error);
     return NextResponse.json({ success: false });
   }
 }

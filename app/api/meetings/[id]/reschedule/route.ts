@@ -79,7 +79,6 @@ export async function POST(
           endTime: endTime,
         });
       } catch (calendarError) {
-        console.error('Error updating calendar event:', calendarError);
       }
     }
     
@@ -95,7 +94,6 @@ export async function POST(
     });
     
   } catch (error) {
-    console.error('Error in /api/meetings/[id]/reschedule:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

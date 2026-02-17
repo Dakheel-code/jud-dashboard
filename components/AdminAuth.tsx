@@ -54,7 +54,6 @@ export default function AdminAuth({ children }: AdminAuthProps) {
         setUserId(adminUser.id);
       }
     } catch (e) {
-      console.error('Error parsing admin user:', e);
     }
 
     // تحقق في الخلفية (اختياري)
@@ -70,7 +69,6 @@ export default function AdminAuth({ children }: AdminAuthProps) {
         router.push('/admin/login');
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
       // نبقي المستخدم مسجل دخول حتى لو فشل التحقق
     }
   };

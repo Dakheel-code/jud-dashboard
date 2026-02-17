@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
       message: 'Snapchat disconnected successfully',
     });
   } catch (error) {
-    console.error('Snapchat disconnect error:', error);
     return NextResponse.json(
       { error: 'Failed to disconnect Snapchat' },
       { status: 500 }

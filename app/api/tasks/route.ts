@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (!store_id && store_url) {
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
-        .select('*, account_manager:admin_users!stores_account_manager_id_fkey(id, name), media_buyer:admin_users!stores_media_buyer_id_fkey(id, name)')
+        .select('id, store_name, store_url, owner_name, owner_phone, owner_email, account_manager_id, media_buyer_id, notes, priority, budget, status, is_active, created_at, subscription_start_date, store_group_url, category, account_manager:admin_users!stores_account_manager_id_fkey(id, name), media_buyer:admin_users!stores_media_buyer_id_fkey(id, name)')
         .eq('store_url', store_url)
         .single();
 
@@ -36,13 +36,12 @@ export async function GET(request: NextRequest) {
 
     const { data: allTasks, error: tasksError } = await supabase
       .from('tasks')
-      .select('*')
-      .order('order_index', { ascending: true });
+      .select('id, title, description, category, order_index, help_url, video_url, is_required, created_at')
+      .order('order_index', { ascending: true })
+      .limit(100);
 
-    console.log('Tasks from DB:', allTasks?.length, 'Error:', tasksError);
 
     if (tasksError) {
-      console.error('Tasks error:', tasksError);
       return NextResponse.json(
         { error: 'Failed to fetch tasks' },
         { status: 500 }
@@ -107,6 +106,8 @@ export async function GET(request: NextRequest) {
       store_id,
       store_url: responseStoreUrl,
       store: storeFullData,
+    }, {
+      headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=120' }
     });
   } catch (error) {
     return NextResponse.json(

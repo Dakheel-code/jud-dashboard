@@ -23,7 +23,6 @@ async function sendToSlack(webhookUrl: string, message: SlackMessage): Promise<b
     });
     return response.ok;
   } catch (error) {
-    console.error('Error sending to Slack:', error);
     return false;
   }
 }
@@ -281,7 +280,6 @@ export async function POST(request: NextRequest) {
       message: allSuccess ? 'تم إرسال الإشعار بنجاح' : 'فشل في إرسال بعض الإشعارات',
     });
   } catch (error) {
-    console.error('Error sending notification:', error);
     return NextResponse.json({ error: 'فشل في إرسال الإشعار' }, { status: 500 });
   }
 }

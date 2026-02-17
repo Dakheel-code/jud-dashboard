@@ -61,7 +61,6 @@ export default function UnifiedNotificationBell() {
         setTaskNotifications(notifications);
       }
     } catch (error) {
-      console.error('Error fetching task notifications:', error);
     }
   }, []);
 
@@ -86,7 +85,6 @@ export default function UnifiedNotificationBell() {
       }));
       setAnnouncements(announcementsList);
     } catch (error) {
-      console.error('Error fetching announcements:', error);
     }
   }, [getUserId]);
 
@@ -125,7 +123,6 @@ export default function UnifiedNotificationBell() {
         prev.map(n => n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n)
       );
     } catch (error) {
-      console.error('Error marking notification as read:', error);
     }
   };
 
@@ -143,7 +140,6 @@ export default function UnifiedNotificationBell() {
         prev.map(a => a.id === announcementId ? { ...a, read_at: new Date().toISOString() } : a)
       );
     } catch (error) {
-      console.error('Error marking announcement as read:', error);
     }
   };
 

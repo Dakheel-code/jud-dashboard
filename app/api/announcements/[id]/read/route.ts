@@ -68,7 +68,6 @@ export async function POST(
       .select();
 
     if (oldTableError) {
-      console.error('Error marking as read:', oldTableError);
       return NextResponse.json(
         { error: 'فشل في تعليم التعميم كمقروء' }, 
         { status: 500, headers }
@@ -81,7 +80,6 @@ export async function POST(
     );
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json(
       { error: 'حدث خطأ' }, 
       { status: 500, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }

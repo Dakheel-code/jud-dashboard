@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
 
     // التحقق من الأخطاء من Snapchat
     if (error) {
-      console.error('Snapchat OAuth error:', error, errorDescription);
       const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
       return NextResponse.redirect(`${baseUrl}/admin/stores?error=snapchat_oauth_denied`);
     }
@@ -51,7 +50,6 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (stateError || !oauthState) {
-      console.error('Invalid OAuth state:', stateError);
       return NextResponse.json({ error: 'Invalid or expired state' }, { status: 400 });
     }
 
@@ -89,12 +87,10 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
 
-    console.log('=== OAuth Callback Success ===', { storeId, baseUrl });
 
     // جلب الحسابات الإعلانية تلقائياً
     try {
       const { adAccounts } = await listAdAccounts({ accessToken: tokens.access_token });
-      console.log('Found ad accounts after OAuth:', adAccounts.length);
       
       // إذا كان هناك حساب واحد فقط، اختره تلقائياً
       if (adAccounts.length === 1) {
@@ -104,19 +100,15 @@ export async function GET(request: NextRequest) {
           name: account.name,
           organizationId: account.organization_id,
         });
-        console.log('Auto-selected single ad account:', account.name);
         // إعادة التوجيه مباشرة لصفحة المتجر مع علامة نجاح
         return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}?snapchat=connected`);
       }
     } catch (err) {
-      console.error('Error fetching ad accounts after OAuth:', err);
     }
 
     // إعادة التوجيه إلى صفحة اختيار الحساب الجديدة
-    console.log('Redirecting to select account page:', `${baseUrl}/admin/integrations/snapchat/select?storeId=${storeId}`);
     return NextResponse.redirect(`${baseUrl}/admin/integrations/snapchat/select?storeId=${storeId}`);
   } catch (error) {
-    console.error('Snapchat OAuth callback error:', error);
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
     return NextResponse.redirect(`${baseUrl}/admin/stores?error=snapchat_oauth_failed`);
   }

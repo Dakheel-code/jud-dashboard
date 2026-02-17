@@ -40,7 +40,7 @@ export async function GET(
     // جلب بيانات المتجر للحصول على أسماء الحسابات المرتبطة
     const { data: store, error: storeError } = await supabase
       .from('stores')
-      .select('*')
+      .select('id, store_name, store_url, snapchat_account, tiktok_account, google_account, meta_account')
       .eq('id', storeId)
       .single();
 
@@ -70,7 +70,6 @@ export async function GET(
 
     if (!windsorResponse.ok) {
       const errorText = await windsorResponse.text();
-      console.error('Windsor API error:', errorText);
       return NextResponse.json(
         { error: 'Failed to fetch data from Windsor', details: errorText },
         { status: windsorResponse.status }
@@ -88,9 +87,6 @@ export async function GET(
       store.meta_account,
     ].filter(Boolean);
 
-    console.log('Raw store data:', JSON.stringify(store));
-    console.log('Linked accounts array:', linkedAccounts);
-    console.log('Linked accounts length:', linkedAccounts.length);
 
     // إذا لم يكن هناك حسابات مرتبطة، أرجع فارغ
     if (linkedAccounts.length === 0) {
@@ -104,31 +100,21 @@ export async function GET(
     }
 
     // للتشخيص
-    console.log('Store data:', store);
-    console.log('Linked accounts:', linkedAccounts);
     const uniqueWindsorAccounts = [...new Set(allData.map((d: any) => d.account_name))];
-    console.log('All Windsor accounts:', uniqueWindsorAccounts);
 
     // طباعة جميع أسماء الحسابات في Windsor للتشخيص
     const allAccountNames = [...new Set(allData.map((d: any) => d.account_name))];
-    console.log('All account names in Windsor:', allAccountNames);
-    console.log('Linked accounts from store:', linkedAccounts);
     
     // طباعة جميع الـ datasources المتاحة
     const allDatasources = [...new Set(allData.map((d: any) => d.datasource))];
-    console.log('All datasources in Windsor:', allDatasources);
     
     // طباعة الحسابات مع المنصات
     const accountsWithPlatforms = [...new Set(allData.map((d: any) => `${d.account_name} (${d.datasource})`))];
-    console.log('Accounts with platforms:', accountsWithPlatforms);
     
     // فلترة البيانات - مطابقة account_name مع الحسابات المرتبطة
-    console.log('=== Starting account matching ===');
-    console.log('Looking for these accounts:', linkedAccounts);
     
     // طباعة أول 10 حسابات من Windsor للتشخيص
     const sampleAccounts = allData.slice(0, 10).map((d: any) => `${d.account_name} (${d.datasource})`);
-    console.log('Sample Windsor accounts:', sampleAccounts);
     
     const filteredData = allData.filter((item: any) => {
       const accountName = (item.account_name || '').trim().toLowerCase();
@@ -146,16 +132,13 @@ export async function GET(
                linkedAcc.includes(accountName) ||
                isKadraMatch;
         if (match) {
-          console.log(`✓ Match found: Windsor "${item.account_name}" (${item.datasource}) matches linked "${acc}"`);
         }
         return match;
       });
     });
-    console.log(`=== Filtered ${filteredData.length} records from ${allData.length} total ===`);
     
     // إذا لم يتم العثور على بيانات، إرجاع قائمة الحسابات المتاحة
     if (filteredData.length === 0) {
-      console.log('NO MATCHES FOUND! All unique account names in Windsor:');
       const uniqueNames = [...new Set(allData.map((d: any) => d.account_name))];
       uniqueNames.forEach(name => console.log(`  - "${name}"`));
       
@@ -184,12 +167,9 @@ export async function GET(
       });
     }
     
-    console.log('Filtered data count:', filteredData.length);
     
     // طباعة عينة من البيانات لمعرفة الحقول المتاحة
     if (filteredData.length > 0) {
-      console.log('Sample data item:', JSON.stringify(filteredData[0]));
-      console.log('Available fields:', Object.keys(filteredData[0]));
     }
 
     // حساب الإحصائيات - استخدام حقول بديلة إذا كانت الأصلية null
@@ -218,9 +198,7 @@ export async function GET(
       return datasource;
     };
     
-    console.log('Normalized platforms from filtered data:');
     filteredData.forEach((item: any) => {
-      console.log(`  ${item.account_name} - original: ${item.datasource} -> normalized: ${normalizePlatform(item.datasource)}`);
     });
     
     const byPlatform = filteredData.reduce((acc: any, item: any) => {
@@ -256,7 +234,6 @@ export async function GET(
       }
     });
   } catch (error) {
-    console.error('❌ Windsor campaigns fetch error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

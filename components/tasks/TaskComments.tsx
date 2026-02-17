@@ -59,7 +59,6 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         setUsers(data.users || []);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
     }
   };
 
@@ -71,7 +70,6 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         setComments(data.comments || []);
       }
     } catch (error) {
-      console.error('Error fetching comments:', error);
     } finally {
       setLoading(false);
     }
@@ -99,7 +97,6 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         alert(error.error || 'فشل إضافة التعليق');
       }
     } catch (error) {
-      console.error('Error adding comment:', error);
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +161,6 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         setEditContent('');
       }
     } catch (error) {
-      console.error('Error editing comment:', error);
     }
   };
 
@@ -180,7 +176,6 @@ export default function TaskComments({ taskId, currentUserId, userRole }: TaskCo
         setComments(comments.filter(c => c.id !== commentId));
       }
     } catch (error) {
-      console.error('Error deleting comment:', error);
     }
   };
 

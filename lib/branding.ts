@@ -23,7 +23,6 @@ export function getBrandingSync(): typeof defaultBranding {
       return { ...defaultBranding, ...saved };
     }
   } catch (error) {
-    console.error('Error reading branding file:', error);
   }
   return defaultBranding;
 }

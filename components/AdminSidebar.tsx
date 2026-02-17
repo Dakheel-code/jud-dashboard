@@ -236,7 +236,6 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
       const data = await response.json();
       setPendingLeaveRequests(data.requests?.length || 0);
     } catch (err) {
-      console.error('Failed to fetch pending leave requests:', err);
     }
   };
 
@@ -303,7 +302,6 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
         setProfileError(data.error || 'فشل تحديث البيانات');
       }
     } catch (err) {
-      console.error('Profile update error:', err);
       setProfileError('حدث خطأ أثناء تحديث البيانات');
     } finally {
       setProfileLoading(false);
@@ -324,7 +322,6 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
       localStorage.removeItem('admin_user');
       router.push('/admin/login');
     } catch (err) {
-      console.error('Logout failed:', err);
     }
   };
 

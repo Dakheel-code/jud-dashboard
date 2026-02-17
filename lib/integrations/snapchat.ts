@@ -92,7 +92,6 @@ export async function exchangeCodeForToken({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Snapchat token exchange error:', errorText);
     throw new Error(`Failed to exchange code for token: ${response.status}`);
   }
 
@@ -128,7 +127,6 @@ export async function refreshToken({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Snapchat token refresh error:', errorText);
     throw new Error(`Failed to refresh token: ${response.status}`);
   }
 
@@ -151,12 +149,10 @@ export async function listAdAccounts({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Snapchat list organizations error:', errorText);
     throw new Error(`Failed to list organizations: ${response.status}`);
   }
 
   const data = await response.json();
-  console.log('Snapchat API raw response:', JSON.stringify(data, null, 2));
   
   const organizations: SnapchatOrganization[] = [];
   const adAccounts: SnapchatAdAccount[] = [];
@@ -165,7 +161,6 @@ export async function listAdAccounts({
   if (data.organizations && Array.isArray(data.organizations)) {
     data.organizations.forEach((orgWrapper: any) => {
       const org = orgWrapper.organization || orgWrapper;
-      console.log('Processing organization:', org?.id, org?.name);
       
       const orgData: SnapchatOrganization = {
         id: org?.id || '',
@@ -178,7 +173,6 @@ export async function listAdAccounts({
       if (Array.isArray(accounts)) {
         accounts.forEach((accWrapper: any) => {
           const acc = accWrapper.ad_account || accWrapper;
-          console.log('Processing ad account:', acc?.id, acc?.name);
           
           const adAccount: SnapchatAdAccount = {
             id: acc?.id || '',
@@ -201,8 +195,6 @@ export async function listAdAccounts({
     });
   }
   
-  console.log('Parsed organizations:', organizations.length);
-  console.log('Parsed ad accounts:', adAccounts.length, adAccounts);
 
   return { organizations, adAccounts };
 }
@@ -223,7 +215,6 @@ export async function getUserInfo({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Snapchat get user info error:', errorText);
     throw new Error(`Failed to get user info: ${response.status}`);
   }
 

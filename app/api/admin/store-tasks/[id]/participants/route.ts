@@ -66,14 +66,12 @@ export async function GET(
       .order('added_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching participants:', error);
       return NextResponse.json({ error: 'فشل جلب المشاركين' }, { status: 500 });
     }
 
     return NextResponse.json({ participants: participants || [] });
 
   } catch (error) {
-    console.error('GET /api/admin/store-tasks/:id/participants error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -153,7 +151,6 @@ export async function POST(
       .single();
 
     if (insertError) {
-      console.error('Error adding participant:', insertError);
       return NextResponse.json({ error: 'فشل إضافة المشارك' }, { status: 500 });
     }
 
@@ -176,7 +173,6 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('POST /api/admin/store-tasks/:id/participants error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -217,7 +213,6 @@ export async function DELETE(
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error removing participant:', error);
       return NextResponse.json({ error: 'فشل إزالة المشارك' }, { status: 500 });
     }
 
@@ -238,7 +233,6 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('DELETE /api/admin/store-tasks/:id/participants error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

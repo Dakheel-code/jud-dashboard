@@ -31,7 +31,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (user) return user.id;
     }
   } catch (e) {
-    console.log('NextAuth session not available');
   }
 
   try {
@@ -42,7 +41,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
 
   return null;
@@ -104,29 +102,33 @@ export async function GET(request: Request) {
     const { data: tasks, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching store tasks:', error);
       return NextResponse.json({ error: 'فشل جلب المهام' }, { status: 500 });
     }
 
-    // حساب الإحصائيات العامة
-    const { data: allTasks } = await supabase
-      .from('store_tasks')
-      .select('status, priority, due_date');
+    // حساب الإحصائيات — counts فقط بدون جلب كل الصفوف
+    const now = new Date().toISOString();
+    const [totalR, pendingR, inProgressR, waitingR, doneR, blockedR, canceledR, criticalR, overdueR] = await Promise.all([
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'in_progress'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'waiting'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'done'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'blocked'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('status', 'canceled'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).eq('priority', 'critical'),
+      supabase.from('store_tasks').select('id', { count: 'exact', head: true }).neq('status', 'done').neq('status', 'canceled').not('due_date', 'is', null).lt('due_date', now)
+    ]);
 
-    const now = new Date();
     const counts = {
-      total: allTasks?.length || 0,
-      pending: allTasks?.filter(t => t.status === 'pending').length || 0,
-      in_progress: allTasks?.filter(t => t.status === 'in_progress').length || 0,
-      waiting: allTasks?.filter(t => t.status === 'waiting').length || 0,
-      done: allTasks?.filter(t => t.status === 'done').length || 0,
-      blocked: allTasks?.filter(t => t.status === 'blocked').length || 0,
-      canceled: allTasks?.filter(t => t.status === 'canceled').length || 0,
-      critical: allTasks?.filter(t => t.priority === 'critical').length || 0,
-      overdue: allTasks?.filter(t => {
-        if (!t.due_date || t.status === 'done' || t.status === 'canceled') return false;
-        return new Date(t.due_date) < now;
-      }).length || 0
+      total: totalR.count || 0,
+      pending: pendingR.count || 0,
+      in_progress: inProgressR.count || 0,
+      waiting: waitingR.count || 0,
+      done: doneR.count || 0,
+      blocked: blockedR.count || 0,
+      canceled: canceledR.count || 0,
+      critical: criticalR.count || 0,
+      overdue: overdueR.count || 0
     };
 
     return NextResponse.json({
@@ -141,7 +143,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('GET /api/admin/store-tasks error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -250,7 +251,6 @@ export async function POST(request: Request) {
       .single();
 
     if (createError) {
-      console.error('Error creating task:', createError);
       return NextResponse.json({ error: 'فشل إنشاء المهمة' }, { status: 500 });
     }
 
@@ -289,7 +289,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('POST /api/admin/store-tasks error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

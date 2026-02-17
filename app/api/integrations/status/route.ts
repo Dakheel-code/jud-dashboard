@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
       .eq('store_id', storeId);
 
     if (error) {
-      console.error('Failed to fetch integration status:', error);
       return NextResponse.json({ error: 'Failed to fetch status' }, { status: 500 });
     }
 
@@ -65,7 +64,6 @@ export async function GET(request: NextRequest) {
       platforms,
     });
   } catch (error) {
-    console.error('Integration status error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

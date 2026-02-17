@@ -88,7 +88,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (updateError) {
-      console.error('Update profile error:', updateError);
       return NextResponse.json({ error: 'فشل تحديث البيانات' }, { status: 500 });
     }
 
@@ -99,7 +98,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Profile update error:', error);
     return NextResponse.json({ error: 'حدث خطأ في الخادم' }, { status: 500 });
   }
 }

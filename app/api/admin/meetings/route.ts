@@ -65,7 +65,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in GET /api/admin/meetings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }
@@ -108,7 +107,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in POST /api/admin/meetings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }
@@ -153,7 +151,6 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in PUT /api/admin/meetings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }
@@ -200,7 +197,6 @@ export async function DELETE(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in DELETE /api/admin/meetings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

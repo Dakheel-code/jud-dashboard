@@ -17,156 +17,127 @@ function getSupabaseClient() {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
-    
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoISO = weekAgo.toISOString();
+    const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1);
+    const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // جلب البيانات بالتوازي
+    // جلب البيانات بالتوازي — RPCs + targeted queries بدل "جلب كل شيء"
     const [
-      tasksResult,
-      storesResult,
-      usersResult,
+      kpisResult,
+      employeeResult,
+      storeTasksResult,
+      overdueTasksResult,
+      todayTasksResult,
       announcementsResult
     ] = await Promise.all([
-      // المهام
-      supabase.from('tasks').select('id, status, due_date, assigned_to, store_id, title, created_at, completed_at'),
-      // المتاجر
-      supabase.from('stores').select('id, store_url, is_active, created_at'),
-      // المستخدمين
-      supabase.from('admin_users').select('id, name, username, avatar, role, is_active'),
-      // التعاميم
-      supabase.from('announcements').select('id, title, type, status, created_at')
+      // KPIs — RPC واحد بدل 4+ queries
+      supabase.rpc('get_dashboard_kpis'),
+      // أداء الموظفين — RPC بدل O(n²) JS
+      supabase.rpc('get_employee_performance'),
+      // أداء المتاجر — RPC بدل O(n²) JS
+      supabase.rpc('get_store_tasks_counts'),
+      // مهام متأخرة (أول 8 فقط) — للـ Action Center
+      supabase.from('store_tasks')
+        .select('id, title, status, due_date, store_id, assigned_to')
+        .not('status', 'in', '("done","canceled")')
+        .not('due_date', 'is', null)
+        .lt('due_date', now.toISOString())
+        .order('due_date', { ascending: true })
+        .limit(8),
+      // مهام اليوم (أول 8 فقط)
+      supabase.from('store_tasks')
+        .select('id, title, status, due_date, store_id, assigned_to')
+        .not('status', 'in', '("done","canceled")')
+        .gte('due_date', todayStart.toISOString())
+        .lt('due_date', todayEnd.toISOString())
+        .limit(8),
+      // آخر 5 تعاميم
+      supabase.from('announcements')
+        .select('id, title, type, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5)
     ]);
 
-    // الحملات (إذا وجدت) - جلب منفصل مع معالجة الخطأ
-    let campaigns: any[] = [];
-    try {
-      const campaignsResult = await supabase.from('store_campaigns').select('*');
-      campaigns = campaignsResult.data || [];
-    } catch {
-      campaigns = [];
-    }
+    // Fallback: إذا RPCs غير موجودة، استخدم القيم الافتراضية
+    const kpis = kpisResult.data || {
+      overdue_tasks: 0, today_tasks: 0, completed_this_week: 0,
+      active_stores: 0, total_stores: 0, total_users: 0,
+      unread_announcements: 0, total_tasks_pending: 0, total_tasks_in_progress: 0
+    };
 
-    const tasks = tasksResult.data || [];
-    const stores = storesResult.data || [];
-    const users = usersResult.data || [];
+    const employees: any[] = employeeResult.data || [];
+    const storeTasksCounts: any[] = storeTasksResult.data || [];
+    const overdueTasks = overdueTasksResult.data || [];
+    const todayTasks = todayTasksResult.data || [];
     const announcements = announcementsResult.data || [];
 
-    // حساب KPIs
-    const overdueTasks = tasks.filter(t => 
-      t.status !== 'completed' && 
-      t.due_date && 
-      new Date(t.due_date) < new Date()
-    );
-
-    const todayTasks = tasks.filter(t => {
-      if (!t.due_date) return false;
-      const dueDate = new Date(t.due_date);
-      dueDate.setHours(0, 0, 0, 0);
-      return dueDate.getTime() === today.getTime() && t.status !== 'completed';
-    });
-
-    const completedThisWeek = tasks.filter(t => 
-      t.status === 'completed' && 
-      t.completed_at && 
-      new Date(t.completed_at) >= weekAgo
-    );
-
-    const activeStores = stores.filter(s => s.is_active !== false);
-    
-    const activeCampaigns = campaigns.filter((c: any) => c.status === 'active' || c.is_active);
-
-    const unreadAnnouncements = announcements.filter(a => a.status === 'sent');
-
-    // حساب أداء الموظفين
-    const userPerformance = users.filter(u => u.is_active).map(user => {
-      const userTasks = tasks.filter(t => t.assigned_to === user.id);
-      const completedTasks = userTasks.filter(t => t.status === 'completed');
-      const overdue = userTasks.filter(t => 
-        t.status !== 'completed' && 
-        t.due_date && 
-        new Date(t.due_date) < new Date()
-      );
-      const completedThisWeekUser = userTasks.filter(t => 
-        t.status === 'completed' && 
-        t.completed_at && 
-        new Date(t.completed_at) >= weekAgo
-      );
-
-      return {
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        avatar: user.avatar,
-        role: user.role,
-        totalTasks: userTasks.length,
-        completedTasks: completedTasks.length,
-        overdueTasks: overdue.length,
-        completedThisWeek: completedThisWeekUser.length,
-        completionRate: userTasks.length > 0 
-          ? Math.round((completedTasks.length / userTasks.length) * 100) 
-          : 0
-      };
-    });
-
     // أفضل 5 موظفين
-    const topPerformers = [...userPerformance]
-      .sort((a, b) => b.completedThisWeek - a.completedThisWeek)
-      .slice(0, 5);
+    const topPerformers = employees
+      .sort((a: any, b: any) => (b.completed_this_week || 0) - (a.completed_this_week || 0))
+      .slice(0, 5)
+      .map((u: any) => ({
+        id: u.id, name: u.name, username: u.username, avatar: u.avatar, role: u.role,
+        totalTasks: u.total_tasks, completedTasks: u.completed_tasks,
+        overdueTasks: u.overdue_tasks, completedThisWeek: u.completed_this_week,
+        completionRate: u.completion_rate
+      }));
 
-    // أسوأ 5 موظفين (الأكثر تأخراً)
-    const lowPerformers = [...userPerformance]
-      .filter(u => u.overdueTasks > 0)
-      .sort((a, b) => b.overdueTasks - a.overdueTasks)
-      .slice(0, 5);
+    // أسوأ 5 موظفين
+    const lowPerformers = employees
+      .filter((u: any) => (u.overdue_tasks || 0) > 0)
+      .sort((a: any, b: any) => (b.overdue_tasks || 0) - (a.overdue_tasks || 0))
+      .slice(0, 5)
+      .map((u: any) => ({
+        id: u.id, name: u.name, username: u.username, avatar: u.avatar, role: u.role,
+        totalTasks: u.total_tasks, completedTasks: u.completed_tasks,
+        overdueTasks: u.overdue_tasks, completedThisWeek: u.completed_this_week,
+        completionRate: u.completion_rate
+      }));
 
-    // أداء المتاجر
-    const storePerformance = stores.map(store => {
-      const storeTasks = tasks.filter(t => t.store_id === store.id);
-      const openTasks = storeTasks.filter(t => t.status !== 'completed');
-      const overdue = storeTasks.filter(t => 
-        t.status !== 'completed' && 
-        t.due_date && 
-        new Date(t.due_date) < new Date()
-      );
-      const storeCampaigns = campaigns.filter((c: any) => c.store_id === store.id);
-      const activeCamps = storeCampaigns.filter((c: any) => c.status === 'active' || c.is_active);
+    // أداء المتاجر — من RPC مباشرة
+    const storePerformance = storeTasksCounts.map((s: any) => ({
+      id: s.store_id,
+      store_url: s.store_url,
+      is_active: s.is_active !== false,
+      openTasks: s.open_tasks || 0,
+      overdueTasks: s.overdue_tasks || 0,
+      activeCampaigns: 0,
+      totalCampaigns: 0,
+      needsAttention: (s.overdue_tasks || 0) > 0 || (s.open_tasks || 0) === 0
+    }));
 
-      return {
-        id: store.id,
-        store_url: store.store_url,
-        is_active: store.is_active !== false,
-        openTasks: openTasks.length,
-        overdueTasks: overdue.length,
-        activeCampaigns: activeCamps.length,
-        totalCampaigns: storeCampaigns.length,
-        needsAttention: overdue.length > 0 || (openTasks.length === 0 && activeCamps.length === 0)
-      };
-    });
+    // جلب أسماء المتاجر والمستخدمين للـ Action Center (targeted)
+    const storeIds = [...new Set([...overdueTasks, ...todayTasks].map((t: any) => t.store_id).filter(Boolean))];
+    const userIds = [...new Set([...overdueTasks, ...todayTasks].map((t: any) => t.assigned_to).filter(Boolean))];
+
+    let storeMap: Record<string, string> = {};
+    let userMap: Record<string, string> = {};
+
+    if (storeIds.length > 0) {
+      const { data: storeNames } = await supabase.from('stores').select('id, store_url').in('id', storeIds);
+      (storeNames || []).forEach((s: any) => { storeMap[s.id] = s.store_url; });
+    }
+    if (userIds.length > 0) {
+      const { data: userNames } = await supabase.from('admin_users').select('id, name').in('id', userIds);
+      (userNames || []).forEach((u: any) => { userMap[u.id] = u.name; });
+    }
 
     // العناصر الحرجة (Action Center)
     const criticalItems: any[] = [];
 
-    // مهام متأخرة
-    overdueTasks.slice(0, 3).forEach(task => {
-      const store = stores.find(s => s.id === task.store_id);
-      const user = users.find(u => u.id === task.assigned_to);
+    overdueTasks.slice(0, 3).forEach((task: any) => {
       criticalItems.push({
         type: 'overdue_task',
         title: task.title,
-        description: `مهمة متأخرة - ${store?.store_url || 'غير محدد'}`,
-        assignee: user?.name,
+        description: `مهمة متأخرة - ${storeMap[task.store_id] || 'غير محدد'}`,
+        assignee: userMap[task.assigned_to],
         link: `/admin/tasks`,
         priority: 'high'
       });
     });
 
-    // موظفين عليهم مهام متأخرة كثيرة
-    lowPerformers.filter(u => u.overdueTasks >= 3).slice(0, 2).forEach(user => {
+    lowPerformers.filter((u: any) => u.overdueTasks >= 3).slice(0, 2).forEach((user: any) => {
       criticalItems.push({
         type: 'employee_overdue',
         title: `${user.name} - ${user.overdueTasks} مهام متأخرة`,
@@ -176,9 +147,8 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // تعاميم عاجلة
-    const urgentAnnouncements = announcements.filter(a => a.type === 'urgent' && a.status === 'sent');
-    urgentAnnouncements.slice(0, 2).forEach(ann => {
+    const urgentAnnouncements = announcements.filter((a: any) => a.type === 'urgent' && a.status === 'sent');
+    urgentAnnouncements.slice(0, 2).forEach((ann: any) => {
       criticalItems.push({
         type: 'urgent_announcement',
         title: ann.title,
@@ -188,14 +158,13 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // متاجر بحاجة متابعة
     storePerformance.filter(s => s.needsAttention).slice(0, 2).forEach(store => {
       criticalItems.push({
         type: 'store_attention',
         title: store.store_url,
         description: store.overdueTasks > 0 
           ? `${store.overdueTasks} مهام متأخرة`
-          : 'بدون مهام أو حملات نشطة',
+          : 'بدون مهام نشطة',
         link: `/admin/stores/${store.id}`,
         priority: 'medium'
       });
@@ -203,89 +172,66 @@ export async function GET(request: NextRequest) {
 
     // التوصيات الذكية
     const smartInsights: any[] = [];
-
-    // متاجر بدون مهام لأكثر من 7 أيام
-    storePerformance.filter(s => s.openTasks === 0 && s.is_active).forEach(store => {
+    storePerformance.filter(s => s.openTasks === 0 && s.is_active).slice(0, 3).forEach(store => {
       smartInsights.push({
-        type: 'inactive_store',
-        icon: '🏪',
+        type: 'inactive_store', icon: '🏪',
         message: `متجر "${store.store_url}" بدون مهام مفتوحة`,
-        action: 'إضافة مهام جديدة',
-        link: `/admin/stores/${store.id}`
+        action: 'إضافة مهام جديدة', link: `/admin/stores/${store.id}`
       });
     });
-
-    // موظفين بمهام متأخرة
-    lowPerformers.filter(u => u.overdueTasks >= 3).forEach(user => {
+    lowPerformers.filter((u: any) => u.overdueTasks >= 3).slice(0, 2).forEach((user: any) => {
       smartInsights.push({
-        type: 'overloaded_employee',
-        icon: '👤',
+        type: 'overloaded_employee', icon: '👤',
         message: `${user.name} لديه ${user.overdueTasks} مهام متأخرة`,
-        action: 'إعادة توزيع المهام',
-        link: `/admin/users/${user.id}`
+        action: 'إعادة توزيع المهام', link: `/admin/users/${user.id}`
       });
     });
 
-    // مهام اليوم
-    const todayTasksList = [...todayTasks, ...overdueTasks.slice(0, 5)]
+    // مهام اليوم + المتأخرة
+    const todayTasksList = [...todayTasks, ...overdueTasks]
       .slice(0, 8)
-      .map(task => {
-        const store = stores.find(s => s.id === task.store_id);
-        const user = users.find(u => u.id === task.assigned_to);
-        return {
-          id: task.id,
-          title: task.title,
-          store: store?.store_url || 'غير محدد',
-          assignee: user?.name || 'غير مكلف',
-          status: task.status,
-          isOverdue: task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed',
-          dueDate: task.due_date
-        };
-      });
+      .map((task: any) => ({
+        id: task.id, title: task.title,
+        store: storeMap[task.store_id] || 'غير محدد',
+        assignee: userMap[task.assigned_to] || 'غير مكلف',
+        status: task.status,
+        isOverdue: task.due_date && new Date(task.due_date) < now,
+        dueDate: task.due_date
+      }));
 
     // آخر التعاميم
-    const recentAnnouncements = announcements
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5)
-      .map(ann => ({
-        id: ann.id,
-        title: ann.title,
-        type: ann.type,
-        status: ann.status,
-        createdAt: ann.created_at
-      }));
+    const recentAnnouncements = announcements.map((ann: any) => ({
+      id: ann.id, title: ann.title, type: ann.type,
+      status: ann.status, createdAt: ann.created_at
+    }));
 
     return NextResponse.json({
       kpis: {
-        overdueTasks: overdueTasks.length,
-        todayTasks: todayTasks.length,
-        completedThisWeek: completedThisWeek.length,
-        activeStores: activeStores.length,
-        totalStores: stores.length,
-        activeCampaigns: activeCampaigns.length,
-        dailySpend: 0, // يحتاج ربط مع Snapchat API
+        overdueTasks: kpis.overdue_tasks || 0,
+        todayTasks: kpis.today_tasks || 0,
+        completedThisWeek: kpis.completed_this_week || 0,
+        activeStores: kpis.active_stores || 0,
+        totalStores: kpis.total_stores || 0,
+        activeCampaigns: 0,
+        dailySpend: 0,
         monthlySpend: 0,
         averageRoas: 0,
-        unreadAnnouncements: unreadAnnouncements.length
+        unreadAnnouncements: kpis.unread_announcements || 0
       },
       criticalItems: criticalItems.slice(0, 6),
-      storePerformance: storePerformance.sort((a, b) => b.overdueTasks - a.overdueTasks),
+      storePerformance,
       topPerformers,
       lowPerformers,
       todayTasks: todayTasksList,
       recentAnnouncements,
       smartInsights: smartInsights.slice(0, 5),
       campaignStats: {
-        totalActive: activeCampaigns.length,
-        dailySpend: 0,
-        bestCampaign: null,
-        worstCampaign: null,
-        noConversions: []
+        totalActive: 0, dailySpend: 0,
+        bestCampaign: null, worstCampaign: null, noConversions: []
       }
     });
 
   } catch (error) {
-    console.error('Dashboard API error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch dashboard data' },
       { status: 500 }

@@ -91,7 +91,6 @@ export async function GET(
       welcome_message: settings?.welcome_message,
     });
   } catch (error) {
-    console.error('Error in GET /api/public/employee/[slug]:', error);
     return NextResponse.json(
       { error: 'حدث خطأ', code: 'INTERNAL_ERROR' },
       { status: 500 }

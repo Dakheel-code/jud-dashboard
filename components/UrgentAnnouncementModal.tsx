@@ -54,7 +54,6 @@ export default function UrgentAnnouncementModal() {
         setUrgentAnnouncement(unreadUrgent);
       }
     } catch (error) {
-      console.error('Error fetching urgent announcement:', error);
     }
   }, [getUserId, acknowledgedIds, urgentAnnouncement]);
 
@@ -73,7 +72,6 @@ export default function UrgentAnnouncementModal() {
         body: JSON.stringify({ user_id: userId })
       });
     } catch (error) {
-      console.error('Error marking as read:', error);
     }
   }, [getUserId]);
 

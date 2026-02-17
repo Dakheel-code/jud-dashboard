@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 
 interface StoreImportExportProps {
   onImportSuccess: () => void;
@@ -38,7 +37,6 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       const data = await res.json();
       setCategories(data.categories || []);
     } catch (err) {
-      console.error('Failed to fetch categories:', err);
     }
   };
 
@@ -48,7 +46,6 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       const data = await res.json();
       setUsers(data.users || []);
     } catch (err) {
-      console.error('Failed to fetch users:', err);
     }
   };
 
@@ -57,6 +54,7 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
     setDownloadingTemplate(true);
     
     try {
+      const XLSX = await import('xlsx');
       // إنشاء workbook جديد
       const wb = XLSX.utils.book_new();
       
@@ -195,7 +193,6 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       // حفظ الملف
       XLSX.writeFile(wb, 'قالب_استيراد_المتاجر.xlsx');
     } catch (error) {
-      console.error('Error creating template:', error);
       alert('حدث خطأ في إنشاء القالب');
     } finally {
       setDownloadingTemplate(false);
@@ -213,6 +210,7 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
         throw new Error(data.error || 'فشل التصدير');
       }
 
+      const XLSX = await import('xlsx');
       const ws = XLSX.utils.json_to_sheet(data.stores);
       
       // تعيين عرض الأعمدة
@@ -244,6 +242,7 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
 
     try {
       const data = await file.arrayBuffer();
+      const XLSX = await import('xlsx');
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];

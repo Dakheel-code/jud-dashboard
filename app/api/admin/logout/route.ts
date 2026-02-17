@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Logout error:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في تسجيل الخروج' },
       { status: 500 }

@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
     const url = urlResult.final_url;
     const headers = { Authorization: `Bearer ${accessToken}` };
     
-    console.log('Debug: Fetching ads:', url);
 
     const response = await fetch(url, { headers });
 

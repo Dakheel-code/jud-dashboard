@@ -165,7 +165,6 @@ export async function createMeeting(
     .single();
   
   if (error || !meeting) {
-    console.error('Error creating meeting:', error);
     return { success: false, error: 'فشل إنشاء الاجتماع', code: 'CREATE_FAILED' };
   }
   
@@ -305,7 +304,6 @@ export async function cancelMeeting(
     .eq('id', meetingId);
   
   if (error) {
-    console.error('Error cancelling meeting:', error);
     return { success: false, error: 'فشل إلغاء الاجتماع', code: 'CANCEL_FAILED' };
   }
   
@@ -391,7 +389,6 @@ export async function rescheduleMeeting(
     .single();
   
   if (error || !updatedMeeting) {
-    console.error('Error rescheduling meeting:', error);
     return { success: false, error: 'فشل إعادة جدولة الاجتماع', code: 'RESCHEDULE_FAILED' };
   }
   
@@ -482,7 +479,6 @@ export async function logMeetingAction(
     .insert(logEntry);
   
   if (error) {
-    console.error('Error logging meeting action:', error);
   }
 }
 
@@ -529,7 +525,6 @@ export async function getEmployeeMeetings(
   const { data, count, error } = await query;
   
   if (error) {
-    console.error('Error fetching employee meetings:', error);
     return { meetings: [], total: 0 };
   }
   

@@ -35,7 +35,6 @@ export async function GET(request: Request) {
         .single();
 
       if (error) {
-        console.error('Error fetching office:', error);
         return NextResponse.json({ error: 'فشل في جلب بيانات المكتب' }, { status: 500 });
       }
 
@@ -54,7 +53,6 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching offices:', error);
       if (error.code === '42P01') {
         return NextResponse.json({ offices: [], message: 'جدول المكاتب غير موجود' });
       }
@@ -64,7 +62,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ offices: offices || [] });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ offices: [] });
   }
 }
@@ -97,7 +94,6 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error creating office:', error);
       return NextResponse.json({ error: 'فشل في إنشاء المكتب' }, { status: 500 });
     }
 
@@ -113,7 +109,6 @@ export async function POST(request: Request) {
         .insert(employeeRecords);
 
       if (empError) {
-        console.error('Error adding employees:', empError);
       }
     }
 
@@ -124,7 +119,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -158,7 +152,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error updating office:', error);
       return NextResponse.json({ error: 'فشل في تحديث المكتب' }, { status: 500 });
     }
 
@@ -182,7 +175,6 @@ export async function PUT(request: Request) {
           .insert(employeeRecords);
 
         if (empError) {
-          console.error('Error updating employees:', empError);
         }
       }
     }
@@ -194,7 +186,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -223,7 +214,6 @@ export async function DELETE(request: Request) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting office:', error);
       return NextResponse.json({ error: 'فشل في حذف المكتب' }, { status: 500 });
     }
 
@@ -233,7 +223,6 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

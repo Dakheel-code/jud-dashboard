@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
     }
 
-    console.log('=== Snapchat OAuth Start ===', { storeId, forceLogin });
 
     // التحقق من المتغيرات البيئية
     const clientId = process.env.SNAPCHAT_CLIENT_ID;
@@ -75,7 +74,6 @@ export async function GET(request: NextRequest) {
       });
 
     if (stateError) {
-      console.error('Failed to save OAuth state:', stateError);
       return NextResponse.json({ error: 'Failed to initiate OAuth' }, { status: 500 });
     }
 
@@ -90,7 +88,6 @@ export async function GET(request: NextRequest) {
     // إعادة التوجيه إلى Snapchat
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error('Snapchat OAuth start error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

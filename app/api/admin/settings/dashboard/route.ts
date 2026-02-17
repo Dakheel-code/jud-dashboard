@@ -27,7 +27,6 @@ export async function GET() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('GET: Missing Supabase credentials');
     return NextResponse.json({ settings: defaultSettings });
   }
 
@@ -41,7 +40,6 @@ export async function GET() {
       .maybeSingle();
     
     if (error) {
-      console.error('GET Error:', error);
       return NextResponse.json({ settings: defaultSettings });
     }
     
@@ -55,14 +53,12 @@ export async function GET() {
         };
         return NextResponse.json({ settings: mergedSettings });
       } catch (parseError) {
-        console.error('Parse error:', parseError);
         return NextResponse.json({ settings: defaultSettings });
       }
     }
     
     return NextResponse.json({ settings: defaultSettings });
   } catch (error) {
-    console.error('GET Exception:', error);
     return NextResponse.json({ settings: defaultSettings });
   }
 }
@@ -73,7 +69,6 @@ export async function PUT(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('PUT: Missing Supabase credentials');
     return NextResponse.json({ success: false, error: 'خطأ في إعدادات قاعدة البيانات' }, { status: 500 });
   }
 
@@ -101,7 +96,6 @@ export async function PUT(request: NextRequest) {
       .maybeSingle();
 
     if (selectError) {
-      console.error('SELECT Error:', selectError);
       return NextResponse.json({ success: false, error: 'خطأ في قراءة الإعدادات: ' + selectError.message }, { status: 500 });
     }
 
@@ -131,7 +125,6 @@ export async function PUT(request: NextRequest) {
     }
 
     if (saveError) {
-      console.error('SAVE Error:', saveError);
       return NextResponse.json({ 
         success: false, 
         error: 'فشل في حفظ الإعدادات: ' + saveError.message,
@@ -147,7 +140,6 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (verifyError || !verifyData) {
-      console.error('VERIFY Error:', verifyError);
       return NextResponse.json({ 
         success: false, 
         error: 'فشل في التحقق من الحفظ'
@@ -161,7 +153,6 @@ export async function PUT(request: NextRequest) {
       savedAt: verifyData.updated_at
     });
   } catch (error) {
-    console.error('PUT Exception:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'حدث خطأ غير متوقع: ' + (error as Error).message 

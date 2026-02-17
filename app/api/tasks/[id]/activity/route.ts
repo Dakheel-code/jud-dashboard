@@ -32,13 +32,10 @@ export async function GET(
       .limit(50);
 
     if (error) {
-      console.error('Error fetching activity log:', error);
       return NextResponse.json({ error: 'فشل جلب سجل النشاط' }, { status: 500 });
     }
 
-    console.log('Activities fetched:', activities?.length, 'for task:', taskId);
     if (activities && activities.length > 0) {
-      console.log('First activity:', JSON.stringify(activities[0]));
     }
 
     // جلب بيانات المستخدمين بشكل منفصل ودمج meta و details
@@ -59,7 +56,6 @@ export async function GET(
 
     return NextResponse.json({ activities: activitiesWithUsers });
   } catch (error) {
-    console.error('GET activity error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

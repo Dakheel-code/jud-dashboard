@@ -66,7 +66,6 @@ export async function POST(
       try {
         await deleteCalendarEvent(meeting.employee_id, meeting.google_event_id);
       } catch (calendarError) {
-        console.error('Error deleting calendar event:', calendarError);
       }
     }
     
@@ -76,7 +75,6 @@ export async function POST(
     });
     
   } catch (error) {
-    console.error('Error in /api/meetings/[id]/cancel:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

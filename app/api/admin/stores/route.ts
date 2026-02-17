@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { StoreWithProgress } from '@/types';
 import { requireAuth, requireAdmin } from '@/lib/auth-guard';
@@ -9,75 +9,72 @@ export const revalidate = 0;
 // الأدوار المسموح لها بإضافة متاجر
 const ALLOWED_ROLES_TO_ADD = ['super_admin', 'admin', 'team_leader'];
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // التحقق من الجلسة
     const auth = await requireAuth();
     if (!auth.authenticated) return auth.error!;
 
-    console.log('=== FETCH STORES ===');
+    // Pagination اختياري — إذا ما فيه limit يرجع الكل (backward compatible)
+    const { searchParams } = new URL(request.url);
+    const limitParam = searchParams.get('limit');
+    const offsetParam = searchParams.get('offset');
+    const usesPagination = limitParam !== null;
+
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Supabase credentials missing');
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
 
-    console.log('🔗 Connecting to Supabase:', supabaseUrl);
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب المتاجر مع بيانات مدير الحساب
-    const { data: stores, error: storesError } = await supabase
+    // جلب المتاجر + عدد المهام المكتملة لكل متجر بـ 3 queries متوازية (بدون O(n²))
+    let storesQuery = supabase
       .from('stores')
       .select(`
-        *,
+        id, store_name, store_url, owner_name, owner_phone, owner_email,
+        account_manager_id, media_buyer_id, notes, priority, budget, status,
+        is_active, created_at, updated_at,
         account_manager:admin_users!stores_account_manager_id_fkey(id, name, username),
         media_buyer:admin_users!stores_media_buyer_id_fkey(id, name, username)
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false });
 
-    console.log('📦 Stores fetched:', stores?.length, 'Error:', storesError);
+    // Pagination — دائماً يوجد limit افتراضي
+    const limit = Math.min(parseInt(limitParam || '50'), 200);
+    const offset = parseInt(offsetParam || '0');
+    storesQuery = storesQuery.range(offset, offset + limit - 1);
 
-    if (storesError) {
-      console.error('❌ Stores error:', storesError);
-      return NextResponse.json(
-        { error: 'Failed to fetch stores' },
-        { status: 500 }
-      );
+    const [storesResult, tasksCountResult, progressResult] = await Promise.all([
+      storesQuery,
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true }),
+      // Aggregation: عدد المهام المكتملة لكل متجر — بدلاً من جلب كل الصفوف
+      supabase.rpc('get_store_completed_counts')
+    ]);
+
+    if (storesResult.error) {
+      return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 });
     }
 
-    const { data: allTasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('id');
+    const stores = storesResult.data;
+    const totalTasks = tasksCountResult.count || 0;
 
-    if (tasksError) {
-      return NextResponse.json(
-        { error: 'Failed to fetch tasks' },
-        { status: 500 }
-      );
+    // بناء map للوصول السريع O(1) بدلاً من filter O(n)
+    const completedMap: Record<string, number> = {};
+    if (progressResult.data) {
+      (progressResult.data as any[]).forEach((row: any) => {
+        completedMap[row.store_id] = Number(row.completed_count);
+      });
     }
-
-    const { data: allProgress, error: progressError } = await supabase
-      .from('tasks_progress')
-      .select('store_id, is_done');
-
-    if (progressError) {
-      return NextResponse.json(
-        { error: 'Failed to fetch progress' },
-        { status: 500 }
-      );
-    }
-
-    const totalTasks = allTasks.length;
 
     const storesWithProgress: StoreWithProgress[] = stores.map((store: any) => {
-      const storeProgress = allProgress.filter(
-        (p: any) => p.store_id === store.id && p.is_done
-      );
-      const completedTasks = storeProgress.length;
+      const completedTasks = completedMap[store.id] || 0;
       const completionPercentage =
         totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -105,7 +102,16 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ stores: storesWithProgress });
+    const response: any = { stores: storesWithProgress };
+    response.pagination = {
+      total: storesResult.count || 0,
+      limit,
+      offset,
+      totalPages: Math.ceil((storesResult.count || 0) / limit)
+    };
+    return NextResponse.json(response, {
+      headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=120' }
+    });
   } catch (error) {
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -183,14 +189,11 @@ export async function POST(request: Request) {
 
       if (!clientError && newClient) {
         finalClientId = newClient.id;
-        console.log('✅ New client created:', newClient.id);
       } else {
-        console.log('⚠️ Could not create client:', clientError?.message);
       }
     } else if (existingClient) {
       // استخدام العميل الموجود
       finalClientId = existingClient.id;
-      console.log('ℹ️ Using existing client:', existingClient.id);
     }
 
     // تنظيف رابط المتجر - إزالة https:// و http:// و www.
@@ -224,7 +227,6 @@ export async function POST(request: Request) {
       .single();
 
     if (createError) {
-      console.error('❌ Create store error:', createError);
       if (createError.code === '23505') {
         return NextResponse.json({ error: 'رابط المتجر موجود مسبقاً' }, { status: 400 });
       }
@@ -239,7 +241,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ POST store error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -305,7 +306,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (updateError) {
-      console.error('❌ Update store error:', updateError);
       if (updateError.code === '23505') {
         return NextResponse.json({ error: 'رابط المتجر موجود مسبقاً' }, { status: 400 });
       }
@@ -319,7 +319,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ PUT store error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

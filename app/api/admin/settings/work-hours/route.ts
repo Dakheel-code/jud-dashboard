@@ -26,7 +26,6 @@ export async function GET() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching work hours settings:', error);
     }
 
     // إعدادات افتراضية
@@ -51,7 +50,6 @@ export async function GET() {
     return NextResponse.json({ settings: defaultSettings });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ 
       settings: {
         workStartTime: '09:00',
@@ -89,7 +87,6 @@ export async function POST(request: Request) {
         .eq('key', 'work_hours');
 
       if (error) {
-        console.error('Error updating work hours settings:', error);
         return NextResponse.json({ error: 'فشل في حفظ الإعدادات' }, { status: 500 });
       }
     } else {
@@ -112,7 +109,6 @@ export async function POST(request: Request) {
             settings 
           });
         }
-        console.error('Error creating work hours settings:', error);
         return NextResponse.json({ error: 'فشل في حفظ الإعدادات' }, { status: 500 });
       }
     }
@@ -120,7 +116,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, settings });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

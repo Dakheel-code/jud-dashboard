@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in /api/admin/meetings/stats:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

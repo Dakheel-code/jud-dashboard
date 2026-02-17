@@ -46,7 +46,6 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
         setActivities(data.activities || []);
       }
     } catch (error) {
-      console.error('Error fetching activities:', error);
     }
     setLoading(false);
   };

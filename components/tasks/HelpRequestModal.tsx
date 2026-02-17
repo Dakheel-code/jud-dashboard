@@ -74,7 +74,6 @@ export default function HelpRequestModal({
         setHelpRequests(data.helpRequests || []);
       }
     } catch (error) {
-      console.error('Error fetching help requests:', error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +89,6 @@ export default function HelpRequestModal({
         setEmployees(filtered);
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
     }
   };
 
@@ -120,7 +118,6 @@ export default function HelpRequestModal({
         alert(err.error || 'فشل إرسال الطلب');
       }
     } catch (error) {
-      console.error('Error creating help request:', error);
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +136,6 @@ export default function HelpRequestModal({
         setHelpRequests(helpRequests.map(r => r.id === requestId ? data.helpRequest : r));
       }
     } catch (error) {
-      console.error('Error responding to help request:', error);
     }
   };
 
@@ -153,7 +149,6 @@ export default function HelpRequestModal({
         setHelpRequests(helpRequests.filter(r => r.id !== requestId));
       }
     } catch (error) {
-      console.error('Error deleting help request:', error);
     }
   };
 

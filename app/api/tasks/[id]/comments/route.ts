@@ -27,7 +27,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -65,13 +64,11 @@ export async function GET(
     }));
 
     if (error) {
-      console.error('Error fetching comments:', error);
       return NextResponse.json({ error: 'فشل جلب التعليقات' }, { status: 500 });
     }
 
     return NextResponse.json({ comments: transformedComments });
   } catch (error) {
-    console.error('GET comments error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -83,9 +80,7 @@ export async function POST(
 ) {
   try {
     const userId = await getCurrentUserId();
-    console.log('POST comment - userId:', userId);
     if (!userId) {
-      console.log('POST comment - No userId found, returning 401');
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
@@ -117,7 +112,6 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating comment:', error);
       return NextResponse.json({ error: 'فشل إضافة التعليق' }, { status: 500 });
     }
 
@@ -175,7 +169,6 @@ export async function POST(
 
     return NextResponse.json({ comment: transformedComment }, { status: 201 });
   } catch (error) {
-    console.error('POST comment error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

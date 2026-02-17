@@ -49,10 +49,8 @@ export async function GET(request: Request) {
       .lte('end_date', yearEnd);
 
     if (error && error.code !== '42P01') {
-      console.error('Error fetching leave requests:', error);
     }
 
-    console.log('Approved leaves for user', userId, ':', approvedLeaves);
 
     // حساب الأيام المستخدمة (الإجازات العادية فقط تخصم من الرصيد، المرضية لا تخصم)
     let usedDays = 0;
@@ -80,7 +78,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({
       balance: {
         total: 21,

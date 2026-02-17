@@ -40,7 +40,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing error:', e);
   }
 
   return null;
@@ -58,12 +57,11 @@ export async function GET(
     // جلب المهمة الأساسية
     const { data: task, error } = await supabase
       .from('store_tasks')
-      .select('*')
+      .select('id, title, description, store_id, assigned_to, priority, status, type, due_date, created_by, created_at, updated_at, is_individual, assign_to_all, assigned_roles')
       .eq('id', taskId)
       .single();
 
     if (error) {
-      console.error('Error fetching task:', error);
       return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
     }
 
@@ -136,7 +134,6 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('GET /api/admin/store-tasks/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -159,7 +156,7 @@ export async function PUT(
     // جلب المهمة الحالية
     const { data: currentTask, error: fetchError } = await supabase
       .from('store_tasks')
-      .select('*')
+      .select('id, title, description, status, priority, assigned_to, store_id, created_by, due_date')
       .eq('id', taskId)
       .single();
 
@@ -254,7 +251,6 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      console.error('Error updating task:', updateError);
       return NextResponse.json({ error: 'فشل تحديث المهمة' }, { status: 500 });
     }
 
@@ -272,7 +268,6 @@ export async function PUT(
         action = 'due_date_changed';
       }
 
-      console.log('Inserting activity log:', { task_id: taskId, user_id: userId, action, details: changes });
       const { error: activityError } = await supabase.from('task_activity_log').insert({
         task_id: taskId,
         user_id: userId,
@@ -280,9 +275,7 @@ export async function PUT(
         details: changes
       });
       if (activityError) {
-        console.error('Error inserting activity log:', activityError);
       } else {
-        console.log('Activity log inserted successfully');
       }
     }
 
@@ -294,7 +287,6 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('PUT /api/admin/store-tasks/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -320,7 +312,6 @@ export async function DELETE(
       .eq('id', taskId);
 
     if (error) {
-      console.error('Error deleting task:', error);
       return NextResponse.json({ error: 'فشل حذف المهمة' }, { status: 500 });
     }
 
@@ -330,7 +321,6 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('DELETE /api/admin/store-tasks/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -25,7 +25,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
   return null;
 }
@@ -112,7 +111,6 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating help request:', error);
       return NextResponse.json({ error: 'فشل تحديث طلب المساعدة' }, { status: 500 });
     }
 
@@ -164,7 +162,6 @@ export async function PUT(
 
     return NextResponse.json({ helpRequest: updatedRequest });
   } catch (error) {
-    console.error('PUT help request error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -211,13 +208,11 @@ export async function DELETE(
       .eq('id', params.requestId);
 
     if (error) {
-      console.error('Error deleting help request:', error);
       return NextResponse.json({ error: 'فشل حذف طلب المساعدة' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('DELETE help request error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

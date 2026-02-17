@@ -99,7 +99,6 @@ export async function POST(request: Request) {
       .single();
 
     if (createError) {
-      console.error('Error creating announcement:', createError);
       return NextResponse.json(
         { error: 'فشل في إنشاء التعميم' },
         { status: 500, headers }
@@ -116,7 +115,6 @@ export async function POST(request: Request) {
         .select('id');
 
       if (usersError) {
-        console.error('Error fetching users:', usersError);
       } else {
         recipientUserIds = users?.map((u: any) => u.id) || [];
       }
@@ -128,7 +126,6 @@ export async function POST(request: Request) {
         .eq('department_id', target_department_id);
 
       if (usersError) {
-        console.error('Error fetching department users:', usersError);
       } else {
         recipientUserIds = users?.map((u: any) => u.id) || [];
       }
@@ -154,7 +151,6 @@ export async function POST(request: Request) {
         });
 
       if (recipientsError) {
-        console.error('Error creating recipients:', recipientsError);
         // Try old table as fallback
         const oldRecords = recipientUserIds.map(userId => ({
           announcement_id: announcement.id,
@@ -182,7 +178,6 @@ export async function POST(request: Request) {
     );
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json(
       { error: 'حدث خطأ' },
       { status: 500, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }

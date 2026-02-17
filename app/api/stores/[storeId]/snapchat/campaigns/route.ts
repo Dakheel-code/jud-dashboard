@@ -88,7 +88,6 @@ export async function GET(
     const range = searchParams.get('range') || '30d';
     const debug = searchParams.get('debug') === 'true';
 
-    console.log('=== Snapchat Campaigns Route Hit ===', { storeId, range });
 
     // التحقق من المتغيرات البيئية
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -114,12 +113,6 @@ export async function GET(
       .eq('platform', 'snapchat')
       .single();
 
-    console.log('Campaigns: Integration query result:', {
-      storeId,
-      found: !!integration,
-      error: integrationError?.message,
-      hasAdAccount: !!integration?.ad_account_id,
-    });
 
     if (integrationError || !integration) {
       return NextResponse.json(
@@ -436,7 +429,6 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error: any) {
-    console.error('Snapchat campaigns error:', error);
     return NextResponse.json(
       {
         success: false,

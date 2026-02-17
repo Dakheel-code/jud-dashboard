@@ -52,7 +52,6 @@ providers.push(
 
       // بيانات افتراضية للمسؤول (يُنصح بإزالتها في الإنتاج وإنشاء مستخدم في قاعدة البيانات)
       if ((identifier === 'admin' || identifier === 'admin@jud.sa') && password === 'admin123') {
-        console.warn('⚠️ تحذير: تم استخدام بيانات الدخول الافتراضية. يُنصح بإنشاء مستخدم في قاعدة البيانات.');
         return {
           id: 'default-admin',
           name: 'المسؤول الرئيسي',
@@ -149,7 +148,6 @@ export const authOptions: NextAuthOptions = {
           const userAvatar = (profile as any)?.picture || user?.image;
           const username = email.split('@')[0];
           
-          console.log('Creating new Google user:', { email, userName, username, userAvatar });
           
           const { data: newUser, error: insertError } = await supabase.from('admin_users').insert({
             email: emailLower,
@@ -166,13 +164,10 @@ export const authOptions: NextAuthOptions = {
           }).select().single();
           
           if (insertError) {
-            console.error('Error creating Google user:', insertError);
           } else {
-            console.log('Google user created successfully:', newUser);
           }
         } else {
           // تحديث آخر تسجيل دخول فقط - لا نغير الاسم أو الصورة إذا كان المستخدم موجود
-          console.log('Updating last_login for existing Google user:', { email });
           
           const { error: updateError } = await supabase
             .from('admin_users')
@@ -183,7 +178,6 @@ export const authOptions: NextAuthOptions = {
             .ilike('email', emailLower);
             
           if (updateError) {
-            console.error('Error updating Google user last_login:', updateError);
           }
         }
       }
@@ -208,7 +202,6 @@ export const authOptions: NextAuthOptions = {
         const supabase = getSupabaseClient();
         const emailToSearch = (token.email as string)?.trim() || '';
         
-        console.log('JWT callback - Google login, searching for email:', emailToSearch);
         
         // البحث بدون تحويل لـ lowercase لأن ilike يتجاهل حالة الأحرف
         const { data: dbUser, error: dbError } = await supabase
@@ -217,13 +210,11 @@ export const authOptions: NextAuthOptions = {
           .ilike('email', emailToSearch)
           .single();
 
-        console.log('JWT callback - DB search result:', JSON.stringify({ dbUser, dbError }));
 
         if (dbUser) {
           token.uid = dbUser.id;
           token.role = dbUser.role;
           token.username = dbUser.username;
-          console.log('JWT callback - User found:', dbUser.id);
         } else {
           // محاولة ثانية: البحث بـ eq مع lowercase
           const { data: dbUser2 } = await supabase
@@ -236,9 +227,7 @@ export const authOptions: NextAuthOptions = {
             token.uid = dbUser2.id;
             token.role = dbUser2.role;
             token.username = dbUser2.username;
-            console.log('JWT callback - User found with eq:', dbUser2.id);
           } else {
-            console.log('JWT callback - User NOT found for email:', emailToSearch);
           }
         }
       }

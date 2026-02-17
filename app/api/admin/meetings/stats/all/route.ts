@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
       .gte('start_at', startDate.toISOString());
 
     if (error) {
-      console.error('Error fetching meetings:', error);
       return NextResponse.json({ error: 'فشل جلب البيانات' }, { status: 500 });
     }
 
@@ -160,7 +159,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error in GET /api/admin/meetings/stats/all:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

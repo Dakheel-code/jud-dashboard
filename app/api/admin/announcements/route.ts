@@ -50,7 +50,6 @@ export async function GET(request: Request) {
     const { data: announcements, error } = await query;
 
     if (error) {
-      console.error('Error fetching announcements:', error);
       return NextResponse.json({ announcements: [] });
     }
 
@@ -74,7 +73,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ announcements: announcementsWithCounts });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ announcements: [] });
   }
 }
@@ -124,17 +122,12 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error creating announcement:', error);
       return NextResponse.json({ error: 'فشل في إنشاء التعميم' }, { status: 500 });
     }
 
     // إذا كان الإرسال فوري، أنشئ سجلات المستلمين
     if (sendNow) {
-      console.log('=== SENDING ANNOUNCEMENT ===');
-      console.log('Announcement ID:', announcement.id);
-      console.log('Target Type:', target_type);
       await sendAnnouncementToRecipients(supabase, announcement.id, target_type || 'all', target_department_id, target_users);
-      console.log('=== ANNOUNCEMENT SENT ===');
     }
 
     return NextResponse.json({ 
@@ -144,7 +137,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -194,7 +186,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error updating announcement:', error);
       return NextResponse.json({ error: 'فشل في تعديل التعميم' }, { status: 500 });
     }
 
@@ -233,7 +224,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -261,7 +251,6 @@ export async function DELETE(request: Request) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting announcement:', error);
       return NextResponse.json({ error: 'فشل في حذف التعميم' }, { status: 500 });
     }
 
@@ -271,7 +260,6 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -286,26 +274,22 @@ async function sendAnnouncementToRecipients(
 ) {
   let usersToNotify: string[] = [];
 
-  console.log('sendAnnouncementToRecipients called:', { announcementId, targetType, targetDepartmentId, targetUsers });
 
   if (targetType === 'all') {
     const { data: users, error } = await supabase
       .from('admin_users')
       .select('id');
-    console.log('All users fetched:', users?.length, error);
     usersToNotify = users?.map((u: any) => u.id) || [];
   } else if (targetType === 'department' && targetDepartmentId) {
     const { data: users, error } = await supabase
       .from('admin_users')
       .select('id')
       .eq('department_id', targetDepartmentId);
-    console.log('Department users fetched:', users?.length, error);
     usersToNotify = users?.map((u: any) => u.id) || [];
   } else if (targetType === 'users' && targetUsers) {
     usersToNotify = targetUsers;
   }
 
-  console.log('Users to notify:', usersToNotify.length);
 
   if (usersToNotify.length > 0) {
     // إنشاء سجلات المستلمين في الجدول الجديد
@@ -323,6 +307,5 @@ async function sendAnnouncementToRecipients(
         ignoreDuplicates: true 
       });
     
-    console.log('Insert announcement_recipients result:', insertError ? insertError : 'Success', recipientRecords.length);
   }
 }

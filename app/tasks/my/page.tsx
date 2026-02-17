@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useBranding } from '@/contexts/BrandingContext';
+import StoreFavicon from '@/components/StoreFavicon';
 
 interface Task {
   id: string;
@@ -310,12 +311,7 @@ export default function MyTasksPage() {
                     className="bg-purple-950/40 rounded-xl border border-purple-500/20 p-4 hover:bg-purple-900/40 hover:border-purple-400/50 transition-all group cursor-pointer"
                   >
                     <div className="flex items-center gap-3 mb-3">
-                      <img
-                        src={`https://www.google.com/s2/favicons?domain=${store.store_url}&sz=32`}
-                        alt=""
-                        className="w-10 h-10 rounded-lg"
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
-                      />
+                      <StoreFavicon storeUrl={store.store_url} size={40} className="w-10 h-10 rounded-lg" />
                       <div className="flex-1 min-w-0">
                         <h3 className="text-white font-medium truncate group-hover:text-purple-300 transition-colors">
                           {store.store_name}

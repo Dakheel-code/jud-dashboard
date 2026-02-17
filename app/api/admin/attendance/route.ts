@@ -25,7 +25,6 @@ async function getCurrentUserId(request: Request) {
       const adminUser = JSON.parse(adminUserCookie.value);
       if (adminUser.id) return adminUser.id;
     } catch (e) {
-      console.error('Error parsing admin user cookie:', e);
     }
   }
   
@@ -86,7 +85,6 @@ export async function GET(request: Request) {
     const { data: records, error } = await query.limit(1000);
 
     if (error) {
-      console.error('Error fetching attendance:', error);
       if (error.code === '42P01') {
         return NextResponse.json({ records: [], message: 'جدول الحضور غير موجود' });
       }
@@ -115,7 +113,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ records: [], error: 'حدث خطأ' });
   }
 }
@@ -226,7 +223,6 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error recording check-in:', error);
       return NextResponse.json({ error: 'فشل في تسجيل الحضور' }, { status: 500 });
     }
 
@@ -237,7 +233,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -296,7 +291,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error recording check-out:', error);
       return NextResponse.json({ error: 'فشل في تسجيل الانصراف' }, { status: 500 });
     }
 
@@ -307,7 +301,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -330,7 +323,6 @@ export async function DELETE(request: Request) {
       .eq('id', recordId);
 
     if (error) {
-      console.error('Error deleting attendance:', error);
       return NextResponse.json({ error: 'فشل في حذف السجل' }, { status: 500 });
     }
 
@@ -340,7 +332,6 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

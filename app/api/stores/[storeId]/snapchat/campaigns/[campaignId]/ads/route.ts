@@ -19,7 +19,6 @@ export async function GET(
   try {
     const { storeId, campaignId } = params;
 
-    console.log('=== Fetching Ads for Campaign ===', { storeId, campaignId });
 
     // جلب معلومات الحساب الإعلاني من Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -54,12 +53,10 @@ export async function GET(
 
     // 1. جلب Ad Squads للحملة
     const adSquadsUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}/adsquads`;
-    console.log('Fetching ad squads:', adSquadsUrl);
     
     const adSquadsResponse = await fetch(adSquadsUrl, { headers });
     if (!adSquadsResponse.ok) {
       const errorData = await adSquadsResponse.json().catch(() => ({}));
-      console.error('Ad Squads error:', errorData);
       return NextResponse.json({ 
         success: false, 
         error: 'Failed to fetch ad squads',
@@ -78,7 +75,6 @@ export async function GET(
       if (!squadId) continue;
 
       const adsUrl = `${SNAPCHAT_API_URL}/adsquads/${squadId}/ads`;
-      console.log('Fetching ads for squad:', squadId);
       
       const adsResponse = await fetch(adsUrl, { headers });
       if (adsResponse.ok) {
@@ -103,7 +99,6 @@ export async function GET(
                 const creativeData = await creativeResponse.json();
                 const creative = creativeData.creatives?.[0]?.creative;
                 
-                console.log('Creative data:', JSON.stringify(creative, null, 2));
                 
                 if (creative) {
                   // أولاً: جرب preview_creative (غالباً يحتوي على صورة مصغرة)
@@ -126,7 +121,6 @@ export async function GET(
                       const mediaData = await mediaResponse.json();
                       const media = mediaData.media?.[0]?.media;
                       
-                      console.log('Media data:', JSON.stringify(media, null, 2));
                       
                       if (media) {
                         mediaType = media.type; // VIDEO or IMAGE
@@ -151,7 +145,6 @@ export async function GET(
                   // رابعاً: جرب web_view_properties
                   if (!thumbnailUrl && creative.web_view_properties?.url) {
                     // لا نستخدم الـ URL مباشرة لكن نسجله
-                    console.log('Web view URL:', creative.web_view_properties.url);
                   }
                   
                   // خامساً: للصور، استخدم media_url مباشرة كـ thumbnail
@@ -161,7 +154,6 @@ export async function GET(
                 }
               }
             } catch (err) {
-              console.error('Error fetching creative:', err);
             }
           }
 
@@ -192,7 +184,6 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('Error fetching campaign ads:', error);
     return NextResponse.json({
       success: false,
       error: error.message || 'Internal server error',

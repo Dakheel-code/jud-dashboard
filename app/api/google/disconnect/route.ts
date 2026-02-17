@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
       .eq('employee_id', userId);
 
     if (error) {
-      console.error('Error disconnecting Google:', error);
       return NextResponse.json(
         { error: 'فشل إلغاء الربط', code: 'DELETE_FAILED' },
         { status: 500 }
@@ -58,7 +57,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in /api/google/disconnect:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }

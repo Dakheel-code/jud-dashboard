@@ -101,7 +101,6 @@ export async function POST(request: NextRequest) {
     const maxDaysAhead = settingsData?.max_advance_days || 60;
     const bufferMinutes = (settingsData?.buffer_before || 5) + (settingsData?.buffer_after || 5);
 
-    console.log('Settings loaded:', { slotDuration, minNoticeHours, maxDaysAhead, bufferMinutes, settingsData });
 
     // حساب الحد الأدنى للإشعار بالدقائق (min_notice_hours هو بالساعات)
     const minNoticeMinutes = minNoticeHours * 60;
@@ -112,7 +111,6 @@ export async function POST(request: NextRequest) {
       .select('day_of_week, start_time, end_time, is_enabled')
       .eq('employee_id', actualEmployeeId);
     
-    console.log('Availability loaded:', { actualEmployeeId, availability, availError });
     
     // تحويل أوقات العمل إلى map
     const workingHours: Record<number, { start: string; end: string; enabled: boolean }> = { ...DEFAULT_WORKING_HOURS };
@@ -133,8 +131,6 @@ export async function POST(request: NextRequest) {
       workingHours[6] = { start: '09:00', end: '17:00', enabled: true };
     }
     
-    console.log('Working hours:', workingHours);
-    console.log('Saturday enabled:', workingHours[6]?.enabled);
     
     // إنشاء الأوقات المتاحة
     const slots: any[] = [];
@@ -155,13 +151,6 @@ export async function POST(request: NextRequest) {
     // استخدام الأكبر لضمان تغطية كل الأيام المطلوبة
     const endDateObj = requestedEndDate > maxEndDate ? requestedEndDate : maxEndDate;
     
-    console.log('Date range:', { 
-      now: now.toISOString(), 
-      earliestBookingTime: earliestBookingTime.toISOString(),
-      startDateObj: startDateObj.toISOString(), 
-      endDateObj: endDateObj.toISOString(),
-      maxDaysAhead 
-    });
     
     // إنشاء slots لكل يوم
     const currentDate = new Date(startDateObj);
@@ -211,7 +200,6 @@ export async function POST(request: NextRequest) {
       .eq('id', actualEmployeeId)
       .single();
     
-    console.log('Employee by ID:', empById);
     
     if (empById) {
       employeeData = empById;
@@ -222,13 +210,11 @@ export async function POST(request: NextRequest) {
         .select('id, name, username, avatar, title')
         .eq('username', employee_id)
         .single();
-      console.log('Employee by slug:', empBySlug);
       employeeData = empBySlug;
     }
     
     // إذا كان name فارغ أو يساوي username، استخدم username كـ fallback
     if (employeeData && (!employeeData.name || employeeData.name === employeeData.username)) {
-      console.log('Name is empty or equals username, keeping as is');
     }
 
     return NextResponse.json({
@@ -245,7 +231,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in /api/meetings/slots:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم: ' + (error instanceof Error ? error.message : 'Unknown'), code: 'INTERNAL_ERROR' },
       { status: 500 }

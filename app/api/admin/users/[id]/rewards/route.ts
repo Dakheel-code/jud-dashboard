@@ -34,7 +34,6 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching rewards:', error);
       // إذا كان الجدول غير موجود، نرجع مصفوفة فارغة
       if (error.code === '42P01') {
         return NextResponse.json({ rewards: [], totalPoints: 0 });
@@ -57,7 +56,6 @@ export async function GET(
 
     return NextResponse.json({ rewards: formattedRewards, totalPoints });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ rewards: [], totalPoints: 0 });
   }
 }
@@ -84,7 +82,6 @@ export async function POST(
         const adminUser = JSON.parse(adminUserCookie.value);
         awardedBy = adminUser.id;
       } catch (e) {
-        console.error('Error parsing admin user cookie:', e);
       }
     }
 
@@ -126,13 +123,11 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating reward:', error);
       return NextResponse.json({ error: 'فشل في إضافة المكافأة' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, reward: data });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

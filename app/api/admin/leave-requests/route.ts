@@ -24,7 +24,6 @@ async function getCurrentUserId(request: Request) {
       const adminUser = JSON.parse(adminUserCookie.value);
       if (adminUser.id) return adminUser.id;
     } catch (e) {
-      console.error('Error parsing admin user cookie:', e);
     }
   }
   
@@ -74,7 +73,6 @@ export async function GET(request: Request) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching leave requests:', error);
       if (error.code === '42P01') {
         return NextResponse.json({ requests: [], message: 'جدول الطلبات غير موجود' });
       }
@@ -84,7 +82,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ requests: data || [] });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ requests: [] });
   }
 }
@@ -138,7 +135,6 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error creating leave request:', error);
       return NextResponse.json({ error: 'فشل في إنشاء الطلب' }, { status: 500 });
     }
 
@@ -149,7 +145,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -181,7 +176,6 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error updating leave request:', error);
       return NextResponse.json({ error: 'فشل في تحديث الطلب' }, { status: 500 });
     }
 
@@ -192,7 +186,6 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

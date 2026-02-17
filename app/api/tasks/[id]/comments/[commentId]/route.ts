@@ -24,7 +24,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
   return null;
 }
@@ -96,7 +95,6 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating comment:', error);
       return NextResponse.json({ error: 'فشل تعديل التعليق' }, { status: 500 });
     }
 
@@ -111,7 +109,6 @@ export async function PUT(
 
     return NextResponse.json({ comment: transformedComment });
   } catch (error) {
-    console.error('PUT comment error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -156,13 +153,11 @@ export async function DELETE(
       .eq('id', params.commentId);
 
     if (error) {
-      console.error('Error deleting comment:', error);
       return NextResponse.json({ error: 'فشل حذف التعليق' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('DELETE comment error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

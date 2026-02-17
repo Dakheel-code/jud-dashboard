@@ -54,13 +54,11 @@ export async function GET(request: NextRequest) {
     const { data: users, error } = await query;
 
     if (error) {
-      console.error('Error fetching users:', error);
       return NextResponse.json({ error: 'فشل في جلب المستخدمين' }, { status: 500 });
     }
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -116,13 +114,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating user:', error);
       return NextResponse.json({ error: 'فشل في إنشاء المستخدم' }, { status: 500 });
     }
 
     return NextResponse.json({ user: newUser, message: 'تم إنشاء المستخدم بنجاح' });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -167,13 +163,11 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error updating user:', error);
       return NextResponse.json({ error: 'فشل في تحديث المستخدم' }, { status: 500 });
     }
 
     return NextResponse.json({ user: updatedUser, message: 'تم تحديث المستخدم بنجاح' });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -204,13 +198,11 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting user:', error);
       return NextResponse.json({ error: 'فشل في حذف المستخدم' }, { status: 500 });
     }
 
     return NextResponse.json({ message: 'تم حذف المستخدم بنجاح' });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

@@ -28,12 +28,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('=== Fetching Ad Accounts ===', { storeId });
 
     // جلب الحسابات الإعلانية
     const { adAccounts } = await listAdAccounts({ accessToken });
 
-    console.log('Found ad accounts:', adAccounts.length);
 
     // إرجاع البيانات بالتنسيق المتوقع من الواجهة
     const formattedAccounts = adAccounts.map((acc) => ({
@@ -49,7 +47,6 @@ export async function GET(request: NextRequest) {
       adAccounts: formattedAccounts,
     });
   } catch (error) {
-    console.error('Snapchat ad accounts error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch ad accounts' },
       { status: 500 }

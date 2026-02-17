@@ -26,7 +26,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -48,7 +47,6 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching help requests:', error);
       return NextResponse.json({ helpRequests: [] });
     }
 
@@ -84,7 +82,6 @@ export async function GET(
 
     return NextResponse.json({ helpRequests });
   } catch (error) {
-    console.error('GET help requests error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -155,7 +152,6 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating help request:', error);
       return NextResponse.json({ error: 'فشل إنشاء طلب المساعدة' }, { status: 500 });
     }
 
@@ -222,7 +218,6 @@ export async function POST(
 
     return NextResponse.json({ helpRequest }, { status: 201 });
   } catch (error) {
-    console.error('POST help request error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

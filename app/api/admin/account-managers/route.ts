@@ -29,13 +29,11 @@ export async function GET() {
     );
 
     if (error) {
-      console.error('❌ Fetch account managers error:', error);
       return NextResponse.json({ error: 'فشل جلب مديري الحسابات' }, { status: 500 });
     }
 
     return NextResponse.json({ managers: managers || [] });
   } catch (error) {
-    console.error('❌ GET account managers error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

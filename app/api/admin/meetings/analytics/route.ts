@@ -125,7 +125,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in /api/admin/meetings/analytics:', error);
     
     // إذا كانت الـ functions غير موجودة، نرجع بيانات محسوبة يدوياً
     if (error.code === '42883' || error.message?.includes('function')) {

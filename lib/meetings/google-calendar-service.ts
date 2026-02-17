@@ -107,7 +107,6 @@ export async function getGoogleAccount(employeeId: string): Promise<{
 export async function getFreshAccessToken(employeeId: string): Promise<string | null> {
   const account = await getGoogleAccount(employeeId);
   if (!account || !account.refresh_token) {
-    console.error('No refresh token found for employee:', employeeId);
     return null;
   }
   
@@ -115,7 +114,6 @@ export async function getFreshAccessToken(employeeId: string): Promise<string | 
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
-    console.error('Google OAuth credentials not configured');
     return null;
   }
   
@@ -133,7 +131,6 @@ export async function getFreshAccessToken(employeeId: string): Promise<string | 
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Failed to refresh token:', errorText);
       
       // تحديث حالة الخطأ في قاعدة البيانات
       const supabase = getSupabase();
@@ -160,7 +157,6 @@ export async function getFreshAccessToken(employeeId: string): Promise<string | 
     // إرجاع access_token للاستخدام المؤقت فقط
     return tokens.access_token;
   } catch (error) {
-    console.error('Error getting fresh access token:', error);
     return null;
   }
 }
@@ -263,7 +259,6 @@ export async function createCalendarEvent(
     
     if (!response.ok) {
       const error = await response.text();
-      console.error('Failed to create calendar event:', error);
       
       // تحديث حالة الخطأ
       const supabase = getSupabase();
@@ -292,7 +287,6 @@ export async function createCalendarEvent(
       meetLink,
     };
   } catch (error) {
-    console.error('Error creating calendar event:', error);
     return { success: false, error: 'خطأ في الاتصال بـ Google Calendar' };
   }
 }
@@ -357,13 +351,11 @@ export async function updateCalendarEvent(
     
     if (!response.ok) {
       const error = await response.text();
-      console.error('Failed to update calendar event:', error);
       return { success: false, error: 'فشل تحديث الحدث في التقويم' };
     }
     
     return { success: true };
   } catch (error) {
-    console.error('Error updating calendar event:', error);
     return { success: false, error: 'خطأ في الاتصال بـ Google Calendar' };
   }
 }
@@ -399,13 +391,11 @@ export async function deleteCalendarEvent(
     
     if (!response.ok && response.status !== 404) {
       const error = await response.text();
-      console.error('Failed to delete calendar event:', error);
       return { success: false, error: 'فشل حذف الحدث من التقويم' };
     }
     
     return { success: true };
   } catch (error) {
-    console.error('Error deleting calendar event:', error);
     return { success: false, error: 'خطأ في الاتصال بـ Google Calendar' };
   }
 }
@@ -446,7 +436,6 @@ export async function getFreeBusy(
     
     if (!response.ok) {
       const error = await response.text();
-      console.error('Failed to get free/busy:', error);
       return { success: false, error: 'فشل جلب أوقات الانشغال' };
     }
     
@@ -461,7 +450,6 @@ export async function getFreeBusy(
       })),
     };
   } catch (error) {
-    console.error('Error getting free/busy:', error);
     return { success: false, error: 'خطأ في الاتصال بـ Google Calendar' };
   }
 }
@@ -499,7 +487,6 @@ export async function saveGoogleTokens(
     });
   
   if (error) {
-    console.error('Error saving Google tokens:', error);
     return false;
   }
   
@@ -518,7 +505,6 @@ export async function disconnectGoogleAccount(employeeId: string): Promise<boole
     .eq('employee_id', employeeId);
   
   if (error) {
-    console.error('Error disconnecting Google account:', error);
     return false;
   }
   

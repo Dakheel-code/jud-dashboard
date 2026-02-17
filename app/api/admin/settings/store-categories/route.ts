@@ -48,7 +48,6 @@ export async function GET() {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Error fetching categories:', error);
       return NextResponse.json({ categories: DEFAULT_CATEGORIES });
     }
 
@@ -63,7 +62,6 @@ export async function GET() {
 
     return NextResponse.json({ categories: DEFAULT_CATEGORIES });
   } catch (error) {
-    console.error('GET categories error:', error);
     return NextResponse.json({ categories: DEFAULT_CATEGORIES });
   }
 }
@@ -94,7 +92,6 @@ export async function POST(request: Request) {
         .eq('key', 'store_categories');
 
       if (error) {
-        console.error('Error updating categories:', error);
         return NextResponse.json({ error: 'فشل تحديث التصنيفات' }, { status: 500 });
       }
     } else {
@@ -104,14 +101,12 @@ export async function POST(request: Request) {
         .insert({ key: 'store_categories', value: JSON.stringify(categories) });
 
       if (error) {
-        console.error('Error creating categories:', error);
         return NextResponse.json({ error: 'فشل حفظ التصنيفات' }, { status: 500 });
       }
     }
 
     return NextResponse.json({ success: true, categories });
   } catch (error) {
-    console.error('POST categories error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

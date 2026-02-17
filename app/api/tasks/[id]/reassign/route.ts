@@ -25,7 +25,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
   return null;
 }
@@ -123,7 +122,6 @@ export async function POST(
       .single();
 
     if (updateError) {
-      console.error('Error reassigning task:', updateError);
       return NextResponse.json({ error: 'فشل إعادة إسناد المهمة' }, { status: 500 });
     }
 
@@ -187,7 +185,6 @@ export async function POST(
       message: `تم تحويل المهمة من ${oldAssigneeName} إلى ${newAssignee.name}`
     });
   } catch (error) {
-    console.error('POST reassign error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -213,13 +210,11 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching reassignments:', error);
       return NextResponse.json({ error: 'فشل جلب سجل إعادة الإسناد' }, { status: 500 });
     }
 
     return NextResponse.json({ reassignments: reassignments || [] });
   } catch (error) {
-    console.error('GET reassignments error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

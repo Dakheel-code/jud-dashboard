@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import StoreFavicon from '@/components/StoreFavicon';
 
 interface UserStats {
   total_stores: number;
@@ -302,14 +303,7 @@ function UserDetailsContent() {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-1">
                       {/* Store Logo */}
-                      <img 
-                        src={`https://www.google.com/s2/favicons?domain=${store.store_url}&sz=64`}
-                        alt={store.store_name || store.store_url}
-                        className="w-12 h-12 rounded-xl object-cover bg-purple-900/50"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/logo.png';
-                        }}
-                      />
+                      <StoreFavicon storeUrl={store.store_url} alt={store.store_name || store.store_url} size={48} className="w-12 h-12 rounded-xl object-cover" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link 

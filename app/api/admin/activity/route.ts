@@ -33,7 +33,6 @@ export async function POST(request: Request) {
         const adminUser = JSON.parse(adminUserCookie.value);
         userId = adminUser.id;
       } catch (e) {
-        console.error('Error parsing admin user cookie:', e);
       }
     }
 
@@ -59,13 +58,11 @@ export async function POST(request: Request) {
       if (error.code === '42P01') {
         return NextResponse.json({ success: true, message: 'Activity logging not configured' });
       }
-      console.error('Error logging activity:', error);
       return NextResponse.json({ success: true }); // لا نفشل الطلب الأصلي
     }
 
     return NextResponse.json({ success: true, activity: data });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ success: true }); // لا نفشل الطلب الأصلي
   }
 }
@@ -87,7 +84,6 @@ export async function PUT(request: Request) {
         const adminUser = JSON.parse(adminUserCookie.value);
         userId = adminUser.id;
       } catch (e) {
-        console.error('Error parsing admin user cookie:', e);
       }
     }
 
@@ -128,7 +124,6 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ success: true });
   }
 }

@@ -42,7 +42,6 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (storesError) {
-      console.error('Error fetching stores:', storesError);
     }
 
     // جلب جميع المهام
@@ -108,7 +107,6 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error in user details API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

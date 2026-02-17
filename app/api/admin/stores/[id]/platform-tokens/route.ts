@@ -68,7 +68,6 @@ export async function GET(
     
     return NextResponse.json({ tokens });
   } catch (error) {
-    console.error('Error fetching platform tokens:', error);
     return NextResponse.json({ tokens: {} });
   }
 }
@@ -122,7 +121,6 @@ export async function PUT(
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error saving platform token:', error);
     return NextResponse.json({ error: 'Failed to save token' }, { status: 500 });
   }
 }
@@ -165,7 +163,6 @@ export async function DELETE(
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting platform token:', error);
     return NextResponse.json({ error: 'Failed to delete token' }, { status: 500 });
   }
 }

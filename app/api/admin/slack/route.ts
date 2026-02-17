@@ -18,7 +18,6 @@ export async function GET() {
 
     return NextResponse.json({ webhooks: data });
   } catch (error) {
-    console.error('Error fetching webhooks:', error);
     return NextResponse.json({ error: 'فشل في جلب الإعدادات' }, { status: 500 });
   }
 }
@@ -56,7 +55,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ webhook: data, message: 'تم إضافة Webhook بنجاح' });
   } catch (error) {
-    console.error('Error adding webhook:', error);
     return NextResponse.json({ error: 'فشل في إضافة Webhook' }, { status: 500 });
   }
 }
@@ -82,7 +80,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ webhook: data, message: 'تم تحديث Webhook بنجاح' });
   } catch (error) {
-    console.error('Error updating webhook:', error);
     return NextResponse.json({ error: 'فشل في تحديث Webhook' }, { status: 500 });
   }
 }
@@ -106,7 +103,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ message: 'تم حذف Webhook بنجاح' });
   } catch (error) {
-    console.error('Error deleting webhook:', error);
     return NextResponse.json({ error: 'فشل في حذف Webhook' }, { status: 500 });
   }
 }

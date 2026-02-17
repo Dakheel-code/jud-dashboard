@@ -57,7 +57,6 @@ export default function TaskAttachments({ taskId, currentUserId, userRole }: Tas
         setAttachments(data.attachments || []);
       }
     } catch (error) {
-      console.error('Error fetching attachments:', error);
     } finally {
       setLoading(false);
     }
@@ -117,7 +116,6 @@ export default function TaskAttachments({ taskId, currentUserId, userRole }: Tas
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error('Error uploading file:', err);
       setError('حدث خطأ أثناء رفع الملف');
       setUploading(false);
     }
@@ -166,7 +164,6 @@ export default function TaskAttachments({ taskId, currentUserId, userRole }: Tas
         setAttachments(attachments.filter(a => a.id !== attachmentId));
       }
     } catch (error) {
-      console.error('Error deleting attachment:', error);
     }
   };
 

@@ -56,14 +56,12 @@ export async function POST(request: NextRequest) {
       .eq('id', userId);
     
     if (error) {
-      console.error('Heartbeat error:', error);
       return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
     }
     
     return NextResponse.json({ success: true });
     
   } catch (error) {
-    console.error('Heartbeat error:', error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

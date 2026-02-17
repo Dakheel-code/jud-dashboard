@@ -84,7 +84,6 @@ export async function POST(
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error updating announcement:', updateError);
       return NextResponse.json({ error: 'فشل في تحديث حالة التعميم' }, { status: 500 });
     }
 
@@ -95,7 +94,6 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

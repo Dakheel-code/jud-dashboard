@@ -25,17 +25,13 @@ function ensureDataDir() {
 
 function readTemplatesFromFile() {
   try {
-    console.log('Reading templates from:', TEMPLATES_FILE);
     if (fs.existsSync(TEMPLATES_FILE)) {
       const data = fs.readFileSync(TEMPLATES_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      console.log('Templates loaded:', Object.keys(parsed));
       return parsed;
     } else {
-      console.log('Templates file does not exist');
     }
   } catch (err) {
-    console.error('Error reading templates file:', err);
   }
   return null;
 }
@@ -46,7 +42,6 @@ function writeTemplatesToFile(templates: any) {
     fs.writeFileSync(TEMPLATES_FILE, JSON.stringify(templates, null, 2), 'utf-8');
     return true;
   } catch (err) {
-    console.error('Error writing templates file:', err);
     return false;
   }
 }
@@ -83,7 +78,6 @@ export async function GET() {
 
     return NextResponse.json({ templates: defaultTemplates });
   } catch (error: any) {
-    console.error('Error fetching whatsapp templates:', error);
     return NextResponse.json({ templates: defaultTemplates });
   }
 }
@@ -129,7 +123,6 @@ export async function PUT(request: NextRequest) {
           savedToDb = true;
         }
       } catch (dbErr) {
-        console.error('Database error, falling back to file:', dbErr);
       }
     }
 
@@ -142,7 +135,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ error: 'Failed to save templates' }, { status: 500 });
   } catch (error: any) {
-    console.error('Error updating whatsapp templates:', error);
     return NextResponse.json({ error: 'Failed to update templates' }, { status: 500 });
   }
 }

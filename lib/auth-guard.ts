@@ -52,7 +52,6 @@ export async function requireAuth(): Promise<AuthResult> {
       },
     };
   } catch (error) {
-    console.error('Auth check error:', error);
     return {
       authenticated: false,
       error: NextResponse.json(

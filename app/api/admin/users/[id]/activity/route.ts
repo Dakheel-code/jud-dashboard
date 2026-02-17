@@ -106,7 +106,6 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching user activity:', error);
     // إرجاع قيم افتراضية في حالة الخطأ
     return NextResponse.json({
       browsing: {

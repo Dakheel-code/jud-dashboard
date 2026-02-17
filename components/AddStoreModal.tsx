@@ -127,7 +127,6 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       const data = await response.json();
       setAccountManagers(data.managers || []);
     } catch (err) {
-      console.error('Failed to fetch account managers:', err);
     }
   };
 
@@ -140,7 +139,6 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       );
       setMediaBuyers(buyers.map((u: any) => ({ id: u.id, name: u.name })));
     } catch (err) {
-      console.error('Failed to fetch media buyers:', err);
     }
   };
 
@@ -150,7 +148,6 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       const data = await response.json();
       setClients(data.clients || []);
     } catch (err) {
-      console.error('Failed to fetch clients:', err);
     }
   };
 
@@ -160,7 +157,6 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       const data = await response.json();
       setStoreCategories(data.categories || []);
     } catch (err) {
-      console.error('Failed to fetch store categories:', err);
     }
   };
 
@@ -199,7 +195,6 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
         setError(data.error || (editingStore ? 'فشل تحديث المتجر' : 'فشل إضافة المتجر'));
       }
     } catch (err) {
-      console.error('Failed to save store:', err);
       setError('حدث خطأ أثناء حفظ المتجر');
     } finally {
       setSubmitting(false);

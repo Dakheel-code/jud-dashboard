@@ -18,7 +18,6 @@ export async function GET() {
     const accounts = data?.value?.accounts || [];
     return NextResponse.json({ accounts });
   } catch (error: any) {
-    console.error('Error fetching ad accounts:', error);
     return NextResponse.json({ accounts: [] });
   }
 }
@@ -59,7 +58,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'تم حفظ الحسابات الإعلانية بنجاح' });
   } catch (error: any) {
-    console.error('Error saving ad accounts:', error);
     return NextResponse.json({ error: 'Failed to save ad accounts' }, { status: 500 });
   }
 }

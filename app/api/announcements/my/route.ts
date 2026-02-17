@@ -66,7 +66,6 @@ export async function GET(request: Request) {
     const { data: userAnnouncements, error } = await query;
 
     if (error) {
-      console.error('Error fetching user announcements:', error);
       // Fallback to old table structure if new one doesn't exist
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return await fetchFromOldTable(supabase, userId, unreadOnly);
@@ -102,7 +101,6 @@ export async function GET(request: Request) {
     );
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json(
       { announcements: [], unread_count: 0 },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }

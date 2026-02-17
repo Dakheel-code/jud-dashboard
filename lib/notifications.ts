@@ -32,13 +32,11 @@ export async function createNotification(params: CreateNotificationParams): Prom
     });
 
     if (error) {
-      console.error('Error creating notification:', error);
       return false;
     }
 
     return true;
   } catch (e) {
-    console.error('Error in createNotification:', e);
     return false;
   }
 }
@@ -129,13 +127,11 @@ export async function findUsersByUsernames(usernames: string[]): Promise<{ id: s
       .in('username', usernames);
     
     if (error) {
-      console.error('Error finding users:', error);
       return [];
     }
     
     return data || [];
   } catch (e) {
-    console.error('Error in findUsersByUsernames:', e);
     return [];
   }
 }

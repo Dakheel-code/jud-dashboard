@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
 
     // جلب Organizations مع Ad Accounts
     const url = `${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`;
-    console.log('Debug: Fetching organizations:', url);
 
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -53,20 +52,16 @@ export async function GET(request: NextRequest) {
     const allAdAccounts: any[] = [];
     
     // Debug: طباعة هيكل البيانات
-    console.log('Debug: Organizations count:', organizations.length);
     if (organizations.length > 0) {
-      console.log('Debug: First org structure:', JSON.stringify(organizations[0], null, 2).substring(0, 500));
     }
     
     organizations.forEach((org: any) => {
       const orgData = org.organization;
-      console.log('Debug: Org data:', orgData?.id, orgData?.name, 'ad_accounts:', orgData?.ad_accounts?.length);
       
       if (orgData?.ad_accounts) {
         orgData.ad_accounts.forEach((acc: any) => {
           // قد يكون الـ ad_account مباشرة أو داخل wrapper
           const adAccount = acc.ad_account || acc;
-          console.log('Debug: Ad account raw:', JSON.stringify(acc, null, 2).substring(0, 200));
           
           if (adAccount && adAccount.id) {
             allAdAccounts.push({
@@ -85,13 +80,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Debug: طباعة أول ad account للتحقق
-    console.log('Debug: Total ad accounts extracted:', allAdAccounts.length);
     if (allAdAccounts.length > 0) {
-      console.log('Debug: First ad account extracted:', {
-        id: allAdAccounts[0].id,
-        name: allAdAccounts[0].name,
-        id_type: typeof allAdAccounts[0].id,
-      });
     }
 
     // التشخيص التلقائي

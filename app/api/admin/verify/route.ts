@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       message: 'مصرح'
     });
   } catch (error) {
-    console.error('Verify error:', error);
     return NextResponse.json(
       { authenticated: false, error: 'حدث خطأ' },
       { status: 500 }

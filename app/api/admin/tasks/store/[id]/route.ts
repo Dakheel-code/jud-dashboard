@@ -78,7 +78,6 @@ export async function GET(
     return NextResponse.json({ task });
 
   } catch (error) {
-    console.error('GET /api/admin/tasks/store/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -154,7 +153,6 @@ export async function PUT(
       .single();
 
     if (updateError) {
-      console.error('Error updating task:', updateError);
       return NextResponse.json({ error: 'فشل تحديث المهمة' }, { status: 500 });
     }
 
@@ -177,7 +175,6 @@ export async function PUT(
     return NextResponse.json({ success: true, task: updatedTask, changes, message: 'تم تحديث المهمة بنجاح' });
 
   } catch (error) {
-    console.error('PUT /api/admin/tasks/store/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -202,14 +199,12 @@ export async function DELETE(
       .eq('id', taskId);
 
     if (error) {
-      console.error('Error deleting task:', error);
       return NextResponse.json({ error: 'فشل حذف المهمة' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: 'تم حذف المهمة بنجاح' });
 
   } catch (error) {
-    console.error('DELETE /api/admin/tasks/store/:id error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

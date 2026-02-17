@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error exporting stores:', error);
       return NextResponse.json({ error: 'فشل في تصدير المتاجر' }, { status: 500 });
     }
 
@@ -64,7 +63,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ stores: exportData });
   } catch (error) {
-    console.error('Export error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -219,7 +217,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Import error:', error);
     return NextResponse.json({ error: 'حدث خطأ في الاستيراد: ' + error.message }, { status: 500 });
   }
 }

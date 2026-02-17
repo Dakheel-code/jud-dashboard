@@ -119,7 +119,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
         organization_id: result.organization_id || null,
       });
     } catch (err) {
-      console.error('Error fetching status:', err);
     } finally {
       setStatusLoading(false);
     }
@@ -138,7 +137,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
         setAdAccounts(result.adAccounts);
       }
     } catch (err) {
-      console.error('Error fetching ad accounts:', err);
     } finally {
       setLoadingAccounts(false);
     }
@@ -170,7 +168,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
         alert('فشل في حفظ الحساب: ' + (result.error || 'خطأ غير معروف'));
       }
     } catch (err) {
-      console.error('Error saving account:', err);
       alert('حدث خطأ في الاتصال');
     } finally {
       setSavingAccount(false);
@@ -194,7 +191,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
       const response = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${range}`);
       
       if (!response.ok) {
-        console.error('HTTP error:', response.status);
         if (response.status === 404) {
           setError('Route not found (404)');
         } else if (response.status === 401 || response.status === 403) {
@@ -224,7 +220,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
         setError(result.error || 'Failed to fetch campaigns');
       }
     } catch (err: any) {
-      console.error('Fetch error:', err);
       setError(err.message || 'Network error');
     } finally {
       setLoading(false);
@@ -269,11 +264,9 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
       if (result.success) {
         setCampaignAds(prev => ({ ...prev, [campaignId]: result.ads || [] }));
       } else {
-        console.error('Failed to fetch ads:', result.error);
         setCampaignAds(prev => ({ ...prev, [campaignId]: [] }));
       }
     } catch (err) {
-      console.error('Error fetching ads:', err);
       setCampaignAds(prev => ({ ...prev, [campaignId]: [] }));
     } finally {
       setLoadingAds(null);

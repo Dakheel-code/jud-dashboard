@@ -34,7 +34,6 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching ratings:', error);
       // إذا كان الجدول غير موجود، نرجع مصفوفة فارغة
       if (error.code === '42P01') {
         return NextResponse.json({ ratings: [] });
@@ -54,7 +53,6 @@ export async function GET(
 
     return NextResponse.json({ ratings: formattedRatings });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ ratings: [] });
   }
 }
@@ -81,7 +79,6 @@ export async function POST(
         const adminUser = JSON.parse(adminUserCookie.value);
         ratedBy = adminUser.id;
       } catch (e) {
-        console.error('Error parsing admin user cookie:', e);
       }
     }
 
@@ -122,13 +119,11 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating rating:', error);
       return NextResponse.json({ error: 'فشل في إضافة التقييم' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, rating: data });
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

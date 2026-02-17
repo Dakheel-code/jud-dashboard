@@ -55,7 +55,6 @@ async function getMeetingsFor24hReminder(): Promise<Meeting[]> {
     .lte('start_at', to.toISOString());
 
   if (error) {
-    console.error('Error fetching meetings for 24h reminder:', error);
     return [];
   }
 
@@ -82,7 +81,6 @@ async function getMeetingsFor10minReminder(): Promise<Meeting[]> {
     .lte('start_at', to.toISOString());
 
   if (error) {
-    console.error('Error fetching meetings for 10min reminder:', error);
     return [];
   }
 
@@ -101,10 +99,8 @@ export async function process24hReminders(): Promise<{ processed: number; errors
     try {
       await sendMeetingReminder(meeting, 24 * 60); // 24 ساعة = 1440 دقيقة
       processed++;
-      console.log(`24h reminder sent for meeting ${meeting.id}`);
     } catch (error) {
       errors++;
-      console.error(`Error sending 24h reminder for meeting ${meeting.id}:`, error);
     }
   }
 
@@ -123,10 +119,8 @@ export async function process10minReminders(): Promise<{ processed: number; erro
     try {
       await sendMeetingReminder(meeting, 10);
       processed++;
-      console.log(`10min reminder sent for meeting ${meeting.id}`);
     } catch (error) {
       errors++;
-      console.error(`Error sending 10min reminder for meeting ${meeting.id}:`, error);
     }
   }
 

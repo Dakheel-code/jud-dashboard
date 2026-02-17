@@ -29,7 +29,6 @@ async function fetchSnapchatData(accessToken: string, accountId: string, startDa
 
     if (!campaignsResponse.ok) {
       const errorText = await campaignsResponse.text();
-      console.error('Snapchat API Error:', campaignsResponse.status, errorText);
       return { error: `Snapchat API Error: ${campaignsResponse.status}`, campaigns: [] };
     }
 
@@ -57,7 +56,6 @@ async function fetchSnapchatData(accessToken: string, accountId: string, startDa
       error: null
     };
   } catch (error) {
-    console.error('Error fetching Snapchat data:', error);
     return { error: String(error), campaigns: [], stats: null };
   }
 }
@@ -92,7 +90,6 @@ async function fetchTikTokData(accessToken: string, accountId: string, startDate
     const data = await response.json();
     return { data: data.data, error: null };
   } catch (error) {
-    console.error('Error fetching TikTok data:', error);
     return { error: String(error), data: null };
   }
 }
@@ -111,7 +108,6 @@ async function fetchMetaData(accessToken: string, accountId: string, startDate: 
     const data = await response.json();
     return { data: data.data, error: null };
   } catch (error) {
-    console.error('Error fetching Meta data:', error);
     return { error: String(error), data: null };
   }
 }
@@ -148,7 +144,6 @@ async function fetchGoogleData(accessToken: string, accountId: string, startDate
     const data = await response.json();
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching Google data:', error);
     return { error: String(error), data: null };
   }
 }
@@ -289,7 +284,6 @@ export async function GET(
 
     return NextResponse.json(results);
   } catch (error) {
-    console.error('Error fetching campaigns:', error);
     return NextResponse.json({ 
       error: String(error),
       summary: { sales: 0, revenue: 0, spend: 0, roas: 0 }

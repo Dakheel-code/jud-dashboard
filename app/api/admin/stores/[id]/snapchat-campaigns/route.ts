@@ -162,7 +162,6 @@ export async function GET(
     const fields = 'spend,impressions,swipes,conversion_purchases,conversion_purchases_value';
     const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${fields}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
 
-    console.log('Fetching campaign stats:', statsUrl);
 
     const statsResponse = await fetch(statsUrl, { headers });
     const statsData = await statsResponse.json();
@@ -341,7 +340,6 @@ export async function GET(
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error('Snapchat campaigns error:', error);
     return NextResponse.json({
       success: false,
       error: error.message || 'Internal server error',

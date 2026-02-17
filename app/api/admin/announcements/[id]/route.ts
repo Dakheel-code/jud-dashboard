@@ -41,14 +41,12 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Error fetching announcement:', error);
       return NextResponse.json({ error: 'فشل في جلب التعميم' }, { status: 500 });
     }
 
     return NextResponse.json({ announcement });
 
   } catch (error) {
-    console.error('Error:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

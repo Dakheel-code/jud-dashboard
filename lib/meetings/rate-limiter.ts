@@ -101,7 +101,6 @@ export async function verifyTurnstile(token: string): Promise<boolean> {
   const secretKey = process.env.TURNSTILE_SECRET_KEY || process.env.RECAPTCHA_SECRET_KEY;
   
   if (!secretKey) {
-    console.warn('No CAPTCHA secret key configured, skipping verification');
     return true; // السماح إذا لم يكن مُعداً
   }
   
@@ -138,7 +137,6 @@ export async function verifyTurnstile(token: string): Promise<boolean> {
     
     return true;
   } catch (error) {
-    console.error('CAPTCHA verification error:', error);
     return false;
   }
 }

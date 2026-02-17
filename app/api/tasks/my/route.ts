@@ -32,7 +32,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (user) return user.id;
     }
   } catch (e) {
-    console.log('NextAuth session not available');
   }
 
   // محاولة الحصول من الكوكيز (legacy token)
@@ -44,7 +43,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed');
   }
 
   return null;
@@ -73,7 +71,6 @@ export async function GET(request: Request) {
       .select('id, store_name, store_url, account_manager_id')
       .eq('account_manager_id', userId);
     
-    console.log('User stores for userId:', userId, 'Found:', userStores?.length, 'Error:', storesError);
 
     const userStoreIds = userStores?.map(s => s.id) || [];
     const myStoresDetails = userStores || [];
@@ -110,11 +107,8 @@ export async function GET(request: Request) {
 
     const { data: allTasks, error: tasksError } = await query;
 
-    console.log('All tasks fetched:', allTasks?.length, 'for userId:', userId);
-    console.log('Sample tasks assigned_to:', allTasks?.slice(0, 3).map(t => ({ id: t.id, assigned_to: t.assigned_to, title: t.title })));
 
     if (tasksError) {
-      console.error('Error fetching tasks:', tasksError);
       return NextResponse.json({ error: 'فشل جلب المهام' }, { status: 500 });
     }
 
@@ -138,7 +132,6 @@ export async function GET(request: Request) {
       return false;
     });
     
-    console.log('Filtered tasks for user:', userId, 'Total:', myTasks.length);
 
     // 5. حساب الإحصائيات
     const now = new Date();
@@ -184,8 +177,6 @@ export async function GET(request: Request) {
       .select('id');
     const totalBaseTasks = allBaseTasks?.length || 0;
     
-    console.log('Base tasks count:', totalBaseTasks, 'Error:', baseTasksError);
-    console.log('My stores details:', myStoresDetails?.length);
     
     for (const store of myStoresDetails) {
       // جلب تقدم المهام للمتجر من جدول tasks_progress
@@ -206,7 +197,6 @@ export async function GET(request: Request) {
       });
     }
 
-    console.log('Stores with tasks:', storesWithTasks.length);
 
     return NextResponse.json({
       tasks: tasksWithMeta,
@@ -216,7 +206,6 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('GET /api/tasks/my error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

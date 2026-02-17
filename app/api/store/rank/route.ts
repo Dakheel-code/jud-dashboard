@@ -21,63 +21,59 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب جميع المتاجر
-    const { data: stores, error: storesError } = await supabase
-      .from('stores')
-      .select('id, store_url');
-
-    if (storesError) {
-      return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 });
-    }
-
-    // جلب جميع المهام
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('id');
-
-    if (tasksError) {
-      return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
-    }
-
-    const totalTasks = tasks.length;
-
-    // جلب تقدم جميع المتاجر
-    const { data: allProgress, error: progressError } = await supabase
-      .from('tasks_progress')
-      .select('store_id, is_done');
-
-    if (progressError) {
-      return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });
-    }
-
-    // حساب نسبة الإنجاز لكل متجر
-    const storeCompletions = stores.map(store => {
-      const storeProgress = allProgress.filter(p => p.store_id === store.id && p.is_done);
-      const completionPercentage = totalTasks > 0 ? Math.round((storeProgress.length / totalTasks) * 100) : 0;
-      return {
-        id: store.id,
-        store_url: store.store_url,
-        completion_percentage: completionPercentage
-      };
+    // محاولة استخدام RPC (أسرع — صف واحد فقط)
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_store_rank', {
+      target_store_id: storeId
     });
 
-    // ترتيب المتاجر حسب نسبة الإنجاز (تنازلي)
-    storeCompletions.sort((a, b) => b.completion_percentage - a.completion_percentage);
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      const row = rpcData[0];
+      return NextResponse.json({
+        rank: row.rank,
+        total_stores: row.total_stores,
+        completion_percentage: row.completion_percentage,
+        is_top_3: row.rank <= 3,
+        is_first: row.rank === 1
+      }, {
+        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
+      });
+    }
 
-    // إيجاد ترتيب المتجر المطلوب
-    const rank = storeCompletions.findIndex(s => s.id === storeId) + 1;
-    const totalStores = stores.length;
-    const currentStore = storeCompletions.find(s => s.id === storeId);
+    // Fallback: حساب يدوي بدون O(n²) — باستخدام aggregation
+    const [storesResult, tasksCountResult, progressResult] = await Promise.all([
+      supabase.from('stores').select('id', { count: 'exact' }),
+      supabase.from('tasks').select('id', { count: 'exact', head: true }),
+      supabase.rpc('get_store_completed_counts')
+    ]);
+
+    const totalStores = storesResult.count || 0;
+    const totalTasks = tasksCountResult.count || 0;
+
+    // بناء map وترتيب
+    const completions: { id: string; pct: number }[] = [];
+    if (progressResult.data) {
+      const storeIds = new Set((storesResult.data || []).map((s: any) => s.id));
+      storeIds.forEach(id => {
+        const row = (progressResult.data as any[]).find((r: any) => r.store_id === id);
+        const completed = row ? Number(row.completed_count) : 0;
+        completions.push({ id, pct: totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0 });
+      });
+    }
+
+    completions.sort((a, b) => b.pct - a.pct);
+    const rank = completions.findIndex(s => s.id === storeId) + 1;
+    const currentStore = completions.find(s => s.id === storeId);
 
     return NextResponse.json({
-      rank,
+      rank: rank || totalStores,
       total_stores: totalStores,
-      completion_percentage: currentStore?.completion_percentage || 0,
-      is_top_3: rank <= 3,
+      completion_percentage: currentStore?.pct || 0,
+      is_top_3: rank > 0 && rank <= 3,
       is_first: rank === 1
+    }, {
+      headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' }
     });
   } catch (error) {
-    console.error('Error fetching rank:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

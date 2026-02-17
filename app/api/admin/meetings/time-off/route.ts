@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, time_offs: data });
   } catch (error) {
-    console.error('Error in GET /api/admin/meetings/time-off:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -85,13 +84,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating time off:', error);
       return NextResponse.json({ error: 'فشل إضافة الإجازة' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, time_off: data });
   } catch (error) {
-    console.error('Error in POST /api/admin/meetings/time-off:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
@@ -123,7 +120,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/admin/meetings/time-off:', error);
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }

@@ -47,7 +47,6 @@ export async function getValidAccessToken(
     .single();
 
   if (error || !record) {
-    console.error('Token record not found:', error);
     return null;
   }
 
@@ -109,7 +108,6 @@ export async function getValidAccessToken(
 
     return newTokens.access_token;
   } catch (err) {
-    console.error('Token refresh failed:', err);
     
     // تحديث الحالة إلى needs_reauth
     await supabase
@@ -157,7 +155,6 @@ export async function saveTokens(
     });
 
   if (error) {
-    console.error('Failed to save tokens:', error);
     throw new Error('Failed to save tokens');
   }
 }
@@ -187,7 +184,6 @@ export async function clearTokens(
     .eq('platform', platform);
 
   if (error) {
-    console.error('Failed to clear tokens:', error);
     throw new Error('Failed to clear tokens');
   }
 }
@@ -221,12 +217,10 @@ export async function updateSelectedAdAccount(
     .select('id');
 
   if (error) {
-    console.error('Failed to update ad account:', error);
     throw new Error('Failed to update ad account');
   }
 
   if (!data || data.length === 0) {
-    console.error('No ad_platform_accounts row updated. storeId/platform not found:', { storeId, platform });
     throw new Error('Ad platform token record not found. Please re-connect the platform.');
   }
 }

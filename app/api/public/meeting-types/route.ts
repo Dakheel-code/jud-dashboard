@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
       types: data,
     });
   } catch (error) {
-    console.error('Error in GET /api/public/meeting-types:', error);
     // في حالة الخطأ، نُرجع الأنواع الافتراضية
     return NextResponse.json({
       success: true,

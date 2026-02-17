@@ -28,7 +28,6 @@ async function getCurrentUserId(): Promise<string | null> {
       if (adminUser?.id) return adminUser.id;
     }
   } catch (e) {
-    console.log('Cookie parsing failed:', e);
   }
   return null;
 }
@@ -66,7 +65,6 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching attachments:', error);
       return NextResponse.json({ error: 'فشل جلب المرفقات' }, { status: 500 });
     }
 
@@ -90,7 +88,6 @@ export async function GET(
 
     return NextResponse.json({ attachments: attachmentsWithUrls });
   } catch (error) {
-    console.error('GET attachments error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -142,13 +139,11 @@ export async function POST(
           });
 
         if (uploadError) {
-          console.error('Error uploading file to storage:', uploadError);
           // نستمر بدون رفع الملف للـ storage - سنحفظ المعلومات فقط
         } else {
           fileUploaded = true;
         }
       } catch (storageError) {
-        console.error('Storage error:', storageError);
         // نستمر بدون رفع الملف للـ storage
       }
     }
@@ -181,7 +176,6 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error('Error creating attachment record:', error);
       // حذف الملف من Storage إذا فشل إنشاء السجل
       if (fileUploaded) {
         await supabase.storage.from(BUCKET_NAME).remove([filePath]);
@@ -225,7 +219,6 @@ export async function POST(
       }
     }, { status: 201 });
   } catch (error) {
-    console.error('POST attachment error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -290,13 +283,11 @@ export async function DELETE(
       .eq('id', attachmentId);
 
     if (error) {
-      console.error('Error deleting attachment:', error);
       return NextResponse.json({ error: 'فشل حذف المرفق' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('DELETE attachment error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

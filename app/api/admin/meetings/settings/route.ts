@@ -38,7 +38,6 @@ async function getCurrentUserId(request: NextRequest): Promise<string | null> {
     
     return null;
   } catch (error) {
-    console.error('Error getting user ID:', error);
     return null;
   }
 }
@@ -138,7 +137,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in GET /api/admin/meetings/settings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم', code: 'INTERNAL_ERROR' },
       { status: 500 }
@@ -150,7 +148,6 @@ export async function PUT(request: NextRequest) {
   try {
     // التحقق من المصادقة
     const userId = await getCurrentUserId(request);
-    console.log('PUT settings - userId:', userId);
     
     if (!userId) {
       return NextResponse.json(
@@ -160,7 +157,6 @@ export async function PUT(request: NextRequest) {
     }
     
     const body = await request.json();
-    console.log('PUT settings - body:', JSON.stringify(body));
     
     const supabase = getSupabase();
     
@@ -193,7 +189,6 @@ export async function PUT(request: NextRequest) {
     }
     if (body.meeting_title !== undefined) settingsData.welcome_message = body.meeting_title;
     
-    console.log('PUT settings - settingsData:', JSON.stringify(settingsData));
     
     const { data: savedSettings, error: settingsError } = await supabase
       .from('employee_meeting_settings')
@@ -204,14 +199,12 @@ export async function PUT(request: NextRequest) {
       .single();
     
     if (settingsError) {
-      console.error('Error updating settings:', settingsError);
       return NextResponse.json(
         { error: 'فشل تحديث الإعدادات: ' + settingsError.message, code: 'UPDATE_FAILED', details: settingsError },
         { status: 500 }
       );
     }
     
-    console.log('PUT settings - savedSettings:', JSON.stringify(savedSettings));
     
     // تحديث أوقات العمل إذا موجودة
     if (body.working_hours) {
@@ -235,7 +228,6 @@ export async function PUT(request: NextRequest) {
             });
           
           if (availError) {
-            console.error(`Error updating availability for day ${i}:`, availError);
           }
         }
       }
@@ -248,7 +240,6 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in PUT /api/admin/meetings/settings:', error);
     return NextResponse.json(
       { error: 'حدث خطأ في الخادم: ' + (error instanceof Error ? error.message : 'Unknown'), code: 'INTERNAL_ERROR' },
       { status: 500 }

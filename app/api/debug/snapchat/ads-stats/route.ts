@@ -92,7 +92,6 @@ export async function GET(request: NextRequest) {
 
     // الخطوة 1: جلب أول 50 Ad IDs
     const adsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/ads?limit=50`;
-    console.log('Debug: Fetching ads:', adsUrl);
     
     const adsResponse = await fetch(adsUrl, { headers });
     const adsData = await adsResponse.json();
@@ -156,7 +155,6 @@ export async function GET(request: NextRequest) {
       breakdown: 'ad',
     });
 
-    console.log('Debug: Fetching ads stats:', statsUrl.final_url);
     
     const statsResponse = await fetch(statsUrl.final_url, { headers });
     const statsData = await statsResponse.json();

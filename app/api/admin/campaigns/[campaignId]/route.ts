@@ -28,7 +28,6 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'Campaign ID required' }, { status: 400 });
     }
 
-    console.log('=== Campaign Update Request ===', { campaignId, storeId, action, status, daily_budget_micro });
 
     // جلب توكن صالح
     const accessToken = await getValidAccessToken(storeId, 'snapchat');
@@ -62,7 +61,6 @@ export async function PUT(
 
     // تحديث الحملة عبر Snapchat API
     const updateUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}`;
-    console.log('Updating campaign:', updateUrl, updateBody);
 
     const response = await fetch(updateUrl, {
       method: 'PUT',
@@ -76,7 +74,6 @@ export async function PUT(
     });
 
     const result = await response.json();
-    console.log('Snapchat API response:', result);
 
     if (!response.ok) {
       return NextResponse.json({
@@ -93,7 +90,6 @@ export async function PUT(
     });
 
   } catch (error: any) {
-    console.error('Error updating campaign:', error);
     return NextResponse.json({
       success: false,
       error: error.message || 'Internal server error'

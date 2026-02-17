@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
       dateRange = getDateRange(datePreset);
     }
 
-    console.log('Fetching Snapchat campaigns for:', adAccountId, dateRange);
 
     // جلب الحملات
     const campaignsResponse = await fetch(
@@ -112,14 +111,12 @@ export async function GET(request: NextRequest) {
 
     if (!campaignsResponse.ok) {
       const errorText = await campaignsResponse.text();
-      console.error('Snapchat campaigns error:', errorText);
       return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 });
     }
 
     const campaignsData = await campaignsResponse.json();
     const allCampaigns = campaignsData.campaigns || [];
 
-    console.log('Found campaigns:', allCampaigns.length);
 
     // ترتيب الحملات حسب تاريخ التحديث (الأحدث أولاً)
     const sortedCampaigns = allCampaigns.sort((a: any, b: any) => {
@@ -131,7 +128,6 @@ export async function GET(request: NextRequest) {
     // أخذ آخر 5 حملات فقط (بغض النظر عن الحالة)
     const latestCampaigns = sortedCampaigns.slice(0, 5);
 
-    console.log('Latest 5 campaigns:', latestCampaigns.map((c: any) => c.campaign?.name));
 
     // جلب IDs الحملات لجلب الإحصائيات
     const campaignIds = latestCampaigns.map((c: any) => c.campaign?.id).filter(Boolean);
@@ -155,7 +151,6 @@ export async function GET(request: NextRequest) {
       try {
         // جلب إحصائيات الحملة
         const statsUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}/stats?granularity=TOTAL&fields=${statsFields}&start_time=${dateRange.start}T00:00:00.000-00:00&end_time=${dateRange.end}T23:59:59.999-00:00`;
-        console.log('Fetching campaign stats:', statsUrl);
         
         const statsResponse = await fetch(statsUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -163,7 +158,6 @@ export async function GET(request: NextRequest) {
         
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
-          console.log(`Campaign ${campaignId} stats response:`, JSON.stringify(statsData, null, 2));
           
           // Snapchat يرجع الإحصائيات في timeseries_stats أو total_stats
           const stats = statsData.timeseries_stats?.[0]?.timeseries?.[0]?.stats 
@@ -172,7 +166,6 @@ export async function GET(request: NextRequest) {
           campaignStatsMap[campaignId] = stats;
         } else {
           const errorText = await statsResponse.text();
-          console.error(`Campaign ${campaignId} stats error:`, errorText);
         }
 
         // جلب الإعلانات (Ads) تحت الحملة
@@ -184,7 +177,6 @@ export async function GET(request: NextRequest) {
         if (adsResponse.ok) {
           const adsData = await adsResponse.json();
           const ads = adsData.ads || [];
-          console.log(`Campaign ${campaignId} has ${ads.length} ads`);
           
           // جلب إحصائيات كل إعلان
           const processedAds = [];
@@ -221,19 +213,16 @@ export async function GET(request: NextRequest) {
                 roas: adSpend > 0 ? adRevenue / adSpend : 0,
               });
             } catch (adErr) {
-              console.error(`Error fetching ad ${ad.id} stats:`, adErr);
             }
           }
           campaignAdsMap[campaignId] = processedAds;
         }
       } catch (err) {
-        console.error(`Error fetching data for campaign ${campaignId}:`, err);
       }
     }
 
     // جلب إحصائيات الحساب الإعلاني للإجماليات
     const accountStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${adAccountId}/stats?granularity=TOTAL&fields=${statsFields}&start_time=${dateRange.start}T00:00:00.000-00:00&end_time=${dateRange.end}T23:59:59.999-00:00`;
-    console.log('Fetching account stats:', accountStatsUrl);
     
     const accountStatsResponse = await fetch(accountStatsUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -242,13 +231,11 @@ export async function GET(request: NextRequest) {
     let accountStats: any = {};
     if (accountStatsResponse.ok) {
       const accountStatsData = await accountStatsResponse.json();
-      console.log('Account stats response:', JSON.stringify(accountStatsData, null, 2));
       accountStats = accountStatsData.timeseries_stats?.[0]?.timeseries?.[0]?.stats 
                   || accountStatsData.total_stats?.[0]?.stats 
                   || {};
     } else {
       const errorText = await accountStatsResponse.text();
-      console.error('Account stats error:', errorText);
     }
 
     // تجميع البيانات للحملات مع إحصائياتها وإعلاناتها
@@ -295,7 +282,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Snapchat campaigns error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
