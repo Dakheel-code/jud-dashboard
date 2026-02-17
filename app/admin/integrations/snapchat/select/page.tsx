@@ -35,12 +35,9 @@ function SelectAccountContent() {
 
   const fetchAdAccounts = async () => {
     try {
-      console.log('Fetching ad accounts for store:', storeId);
       const response = await fetch(`/api/integrations/snapchat/ad-accounts?storeId=${storeId}`);
       const result = await response.json();
       
-      console.log('Ad accounts response:', result);
-
       if (result.success && result.adAccounts) {
         setAdAccounts(result.adAccounts);
         // إذا كان هناك حساب واحد فقط، اختره تلقائياً
@@ -65,8 +62,6 @@ function SelectAccountContent() {
     setError(null);
 
     try {
-      console.log('Saving selected account:', { storeId, account: selectedAccount });
-      
       const response = await fetch('/api/integrations/snapchat/select-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,8 +74,6 @@ function SelectAccountContent() {
       });
 
       const result = await response.json();
-      console.log('Select account response:', result);
-
       if (result.success) {
         // الانتقال لصفحة المتجر مع علامة نجاح
         router.push(`/admin/store/${storeId}?snapchat=connected`);

@@ -22,7 +22,7 @@ export default function GlobalAnnouncementBell() {
     const interval = setInterval(() => {
       const userStr = localStorage.getItem('admin_user');
       setIsLoggedIn(!!userStr);
-    }, 1000);
+    }, 5000);
 
     return () => {
       window.removeEventListener('storage', handleStorage);

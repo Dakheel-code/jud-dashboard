@@ -67,23 +67,16 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    console.log('Login attempt with:', email);
-
     try {
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
       });
-      console.log('Login result:', result);
-
       if (result?.error) {
-        console.log('Login error:', result.error);
         setError('بيانات الدخول غير صحيحة');
       } else if (result?.ok) {
-        console.log('Login successful, syncing user...');
         await syncUserToLocalStorage();
-        console.log('Redirecting to /admin...');
         router.push('/admin');
         router.refresh();
       }
@@ -104,21 +97,21 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-[#0a0118] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background effects */}
-      <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-      <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      <div className="absolute w-64 h-64 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/4 animate-pulse"></div>
+      <div className="absolute w-64 h-64 bg-fuchsia-600/10 rounded-full blur-3xl bottom-0 right-1/4"></div>
 
-      <div className="relative w-full max-w-lg">
-        {/* Logo على الزاوية اليمنى العليا - خارج المربع */}
-        <div className="absolute -top-12 -right-12 w-36 h-36 z-20">
-          <img 
-            src="/logo-zid2.png" 
-            alt="Logo" 
-            className="w-full h-full object-contain brightness-0 invert"
-          />
+      <div className="relative w-full max-w-lg pt-14">
+        {/* Logo دائرة في المنتصف - نصفها فوق المربع ونصفها داخله */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
+          <div className="w-28 h-28 rounded-full bg-purple-950/40 backdrop-blur-xl border-2 border-purple-500/30 flex items-center justify-center shadow-xl shadow-purple-500/20">
+            <img 
+              src={branding.logo || '/logo.png'} 
+              alt={branding.companyName || 'Jud'} 
+              className="w-16 h-16 object-contain"
+            />
+          </div>
         </div>
 
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-10 pt-10 border border-purple-500/20 shadow-2xl relative overflow-visible">
+        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-10 pt-20 border border-purple-500/20 shadow-2xl relative overflow-visible">
           {/* Title */}
           <h1 className="text-2xl text-white text-center mb-10 uppercase relative z-10" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>تسجيل الدخول</h1>
 
@@ -245,7 +238,7 @@ export default function AdminLoginPage() {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-purple-400/50 text-xs">
-            <span className="text-purple-300/70">{branding.companyName || 'زد'}</span> - جميع الحقوق محفوظة © {new Date().getFullYear()}
+            <span className="text-purple-300/70">{branding.companyName || 'جود'}</span> - جميع الحقوق محفوظة © {new Date().getFullYear()}
           </p>
         </div>
       </div>

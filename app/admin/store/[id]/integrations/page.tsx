@@ -125,7 +125,6 @@ export default function IntegrationsPage() {
       });
 
       const data = await response.json();
-      console.log('Save account response:', data);
       if (data.success) {
         setShowSelectModal(false);
         fetchStatus();

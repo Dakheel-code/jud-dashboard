@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { StoreWithProgress } from '@/types';
 import Modal from '@/components/ui/Modal';
-import AdminAuth from '@/components/AdminAuth';
-import AddStoreModal from '@/components/AddStoreModal';
-import StoreImportExport from '@/components/StoreImportExport';
 import { useBranding } from '@/contexts/BrandingContext';
+
+const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
+const StoreImportExport = dynamic(() => import('@/components/StoreImportExport'), { ssr: false });
 
 
 interface UserInfo {
@@ -37,6 +38,7 @@ function StoresPageContent() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(30);
 
   // تبديل حالة البطاقة (مطوية/مفتوحة)
   const toggleCard = (storeId: string) => {
@@ -154,13 +156,10 @@ function StoresPageContent() {
 
   // تغيير حالة المتجر
   const handleStatusChange = async (storeId: string, newStatus: string) => {
-    console.log('handleStatusChange called:', storeId, newStatus);
     setShowStatusMenu(null);
     
     try {
       const token = localStorage.getItem('admin_token');
-      console.log('Sending request to /api/admin/stores/status');
-      
       const response = await fetch('/api/admin/stores/status', {
         method: 'PUT',
         headers: {
@@ -170,9 +169,7 @@ function StoresPageContent() {
         body: JSON.stringify({ id: storeId, status: newStatus })
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
         setResultModalType('success');
@@ -238,8 +235,6 @@ function StoresPageContent() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
@@ -261,12 +256,6 @@ function StoresPageContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/3 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -287,42 +276,42 @@ function StoresPageContent() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <button 
             onClick={() => setStatusFilter('all')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'all' ? 'border-purple-400 ring-2 ring-purple-500/30' : 'border-purple-500/20 hover:border-purple-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'all' ? 'border-purple-400 ring-2 ring-purple-500/30' : 'border-purple-500/20 hover:border-purple-400/50'}`}
           >
             <h3 className="text-sm text-purple-300/80 mb-1">إجمالي المتاجر</h3>
             <p className="text-2xl font-bold text-white">{stores.length}</p>
           </button>
           <button 
             onClick={() => setStatusFilter('new')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'new' ? 'border-blue-400 ring-2 ring-blue-500/30' : 'border-blue-500/20 hover:border-blue-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'new' ? 'border-blue-400 ring-2 ring-blue-500/30' : 'border-blue-500/20 hover:border-blue-400/50'}`}
           >
             <h3 className="text-sm text-blue-300/80 mb-1">المتاجر الجديدة</h3>
             <p className="text-2xl font-bold text-blue-400">{stores.filter(s => s.status === 'new' || !s.status).length}</p>
           </button>
           <button 
             onClick={() => setStatusFilter('active')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'active' ? 'border-green-400 ring-2 ring-green-500/30' : 'border-green-500/20 hover:border-green-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'active' ? 'border-green-400 ring-2 ring-green-500/30' : 'border-green-500/20 hover:border-green-400/50'}`}
           >
             <h3 className="text-sm text-green-300/80 mb-1">المتاجر النشطة</h3>
             <p className="text-2xl font-bold text-green-400">{stores.filter(s => s.status === 'active').length}</p>
           </button>
           <button 
             onClick={() => setStatusFilter('paused')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'paused' ? 'border-orange-400 ring-2 ring-orange-500/30' : 'border-orange-500/20 hover:border-orange-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'paused' ? 'border-orange-400 ring-2 ring-orange-500/30' : 'border-orange-500/20 hover:border-orange-400/50'}`}
           >
             <h3 className="text-sm text-orange-300/80 mb-1">المتاجر المتوقفة</h3>
             <p className="text-2xl font-bold text-orange-400">{stores.filter(s => s.status === 'paused').length}</p>
           </button>
           <button 
             onClick={() => setStatusFilter('expired')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'expired' ? 'border-red-400 ring-2 ring-red-500/30' : 'border-red-500/20 hover:border-red-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'expired' ? 'border-red-400 ring-2 ring-red-500/30' : 'border-red-500/20 hover:border-red-400/50'}`}
           >
             <h3 className="text-sm text-red-300/80 mb-1">المتاجر المنتهية</h3>
             <p className="text-2xl font-bold text-red-400">{stores.filter(s => s.status === 'expired').length}</p>
           </button>
           <button 
             onClick={() => setStatusFilter('completed')}
-            className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border transition-all text-right ${statusFilter === 'completed' ? 'border-fuchsia-400 ring-2 ring-fuchsia-500/30' : 'border-fuchsia-500/20 hover:border-fuchsia-400/50'}`}
+            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'completed' ? 'border-fuchsia-400 ring-2 ring-fuchsia-500/30' : 'border-fuchsia-500/20 hover:border-fuchsia-400/50'}`}
           >
             <h3 className="text-sm text-fuchsia-300/80 mb-1">المتاجر المكتملة</h3>
             <p className="text-2xl font-bold text-fuchsia-400">{stores.filter(s => s.completion_percentage === 100).length}</p>
@@ -330,7 +319,7 @@ function StoresPageContent() {
         </div>
 
         {/* Filters */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-3 sm:p-4 border border-purple-500/20 mb-4 sm:mb-6">
+        <div className="bg-purple-950/40 rounded-2xl p-3 sm:p-4 border border-purple-500/20 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
             {/* Search */}
             <div className="w-full sm:flex-1 sm:min-w-[200px]">
@@ -393,10 +382,10 @@ function StoresPageContent() {
 
         {/* Stores Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
-          {filteredStores.map((store) => (
+          {filteredStores.slice(0, visibleCount).map((store) => (
             <div
               key={store.id}
-              className={`bg-purple-950/40 backdrop-blur-xl rounded-2xl overflow-hidden transition-all ${
+              className={`bg-purple-950/40 rounded-2xl overflow-hidden transition-all ${
                 store.priority === 'high' 
                   ? 'border-2 border-red-500/50 hover:border-red-400/70' 
                   : store.priority === 'low' 
@@ -417,6 +406,7 @@ function StoresPageContent() {
                         src={getStoreLogo(store.store_url)} 
                         alt={store.store_name}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/logo.png';
                         }}
@@ -620,6 +610,17 @@ function StoresPageContent() {
           ))}
         </div>
 
+        {filteredStores.length > visibleCount && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 30)}
+              className="px-8 py-3 bg-purple-900/40 border border-purple-500/30 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-xl transition-all font-medium"
+            >
+              عرض المزيد ({filteredStores.length - visibleCount} متجر متبقي)
+            </button>
+          </div>
+        )}
+
         {stores.length === 0 && (
           <div className="text-center py-16">
             <svg className="w-16 h-16 mx-auto text-purple-500/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -686,9 +687,5 @@ function StoresPageContent() {
 }
 
 export default function StoresPage() {
-  return (
-    <AdminAuth>
-      <StoresPageContent />
-    </AdminAuth>
-  );
+  return <StoresPageContent />;
 }

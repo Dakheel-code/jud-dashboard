@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface Announcement {
@@ -268,12 +267,7 @@ function AnnouncementsContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -302,7 +296,7 @@ function AnnouncementsContent() {
         </div>
 
         {/* Filters */}
-        <div className="bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20 mb-6">
+        <div className="bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10  rounded-2xl p-4 border border-purple-500/20 mb-6">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <input
@@ -339,7 +333,7 @@ function AnnouncementsContent() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-xl rounded-2xl p-4 border border-blue-500/20">
+          <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10  rounded-2xl p-4 border border-blue-500/20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -352,7 +346,7 @@ function AnnouncementsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl rounded-2xl p-4 border border-green-500/20">
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10  rounded-2xl p-4 border border-green-500/20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +359,7 @@ function AnnouncementsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-xl rounded-2xl p-4 border border-yellow-500/20">
+          <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10  rounded-2xl p-4 border border-yellow-500/20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +372,7 @@ function AnnouncementsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10 backdrop-blur-xl rounded-2xl p-4 border border-red-500/20">
+          <div className="bg-gradient-to-br from-red-500/10 to-rose-500/10  rounded-2xl p-4 border border-red-500/20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,7 +388,7 @@ function AnnouncementsContent() {
         </div>
 
         {/* Announcements Table */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="bg-white/5  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -761,9 +755,5 @@ function AnnouncementsContent() {
 }
 
 export default function AnnouncementsPage() {
-  return (
-    <AdminAuth>
-      <AnnouncementsContent />
-    </AdminAuth>
-  );
+  return <AnnouncementsContent />;
 }

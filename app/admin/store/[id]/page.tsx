@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { TasksByCategory } from '@/types';
-import AdminAuth from '@/components/AdminAuth';
-import SnapchatCampaignsSection from '@/components/SnapchatCampaignsSection';
-import AddStoreModal from '@/components/AddStoreModal';
+
+const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false });
+const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
 
 interface StoreFullData {
   id: string;
@@ -80,7 +81,7 @@ function StoreDetailsContent() {
   const [activeTab, setActiveTab] = useState<'tasks' | 'info'>('tasks');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string> | null>(null);
   const [isTasksListCollapsed, setIsTasksListCollapsed] = useState(true);
-  const [isCampaignsCollapsed, setIsCampaignsCollapsed] = useState(false);
+  const [isCampaignsCollapsed, setIsCampaignsCollapsed] = useState(true);
   const [campaignDateRange, setCampaignDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('week');
   const [showPlatformTokenModal, setShowPlatformTokenModal] = useState<string | null>(null);
   const [platformTokenForm, setPlatformTokenForm] = useState({ accessToken: '', accountId: '' });
@@ -242,9 +243,9 @@ function StoreDetailsContent() {
     }
   }, [storeId]);
 
-  // جلب بيانات جميع المنصات تلقائياً عند تحميل الصفحة أو تغيير الفترة الزمنية
+  // جلب بيانات جميع المنصات فقط عند فتح قسم الحملات (lazy load)
   useEffect(() => {
-    if (storeId) {
+    if (storeId && !isCampaignsCollapsed) {
       setLoadingCampaigns(true);
       const platforms = [
         { key: 'snapchat', datasource: 'snapchat', field: 'snapchat_account' },
@@ -275,7 +276,7 @@ function StoreDetailsContent() {
         setLoadingCampaigns(false);
       });
     }
-  }, [storeId, storeData, directIntegrations, datePreset, customDateRange.start, customDateRange.end]);
+  }, [storeId, storeData, directIntegrations, datePreset, customDateRange.start, customDateRange.end, isCampaignsCollapsed]);
 
   const fetchAdAccountsList = async () => {
     try {
@@ -378,11 +379,12 @@ function StoreDetailsContent() {
     }
   };
 
+  // جلب بيانات الحملات فقط عند فتح قسم الحملات (وليس عند أول تحميل)
   useEffect(() => {
-    if (storeId) {
+    if (storeId && !isCampaignsCollapsed) {
       fetchCampaignData();
     }
-  }, [storeId, campaignDateRange]);
+  }, [storeId, campaignDateRange, isCampaignsCollapsed]);
 
   const disconnectPlatform = async (platform: string) => {
     if (!storeId || !confirm('هل أنت متأكد من إلغاء ربط هذه المنصة؟')) return;
@@ -458,7 +460,6 @@ function StoreDetailsContent() {
           const url = `/api/admin/stores/${storeId}/snapchat-campaigns?range=${range}`;
           const response = await fetch(url);
           const data = await response.json();
-          console.log(`Snapchat campaigns response:`, data);
           
           if (data.success && data.campaigns) {
             // تحويل البيانات للتنسيق المتوقع
@@ -499,7 +500,6 @@ function StoreDetailsContent() {
         
         const response = await fetch(url);
         const data = await response.json();
-        console.log(`Direct API response for ${platformKey}:`, data);
         
         if (data.success) {
           setPlatformCampaigns(prev => ({ ...prev, [platformKey]: data.campaigns || [] }));
@@ -727,8 +727,6 @@ function StoreDetailsContent() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin"></div>
@@ -792,11 +790,6 @@ function StoreDetailsContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
@@ -926,7 +919,7 @@ function StoreDetailsContent() {
         </div>
 
         {/* Store Info Card */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-purple-500/20 rtl:divide-x-reverse">
             {/* نسبة الإنجاز */}
             <div className="p-4 text-center">
@@ -1232,7 +1225,7 @@ function StoreDetailsContent() {
           </div>
 
         {/* قائمة المهام - مربع قابل للطي مع شريط التقدم */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
           {/* Header - قابل للنقر */}
           <button
             onClick={() => setIsTasksListCollapsed(!isTasksListCollapsed)}
@@ -1275,7 +1268,7 @@ function StoreDetailsContent() {
             const catStats = getCategoryStats(categoryTasks);
             const isCollapsed = collapsedCategories?.has(category) ?? true;
             return (
-              <div key={category} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+              <div key={category} className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
                 {/* Category Header - Clickable */}
                 <button
                   onClick={() => toggleCategory(category)}
@@ -1466,7 +1459,7 @@ function StoreDetailsContent() {
         />
 
         {/* قسم الحملات الإعلانية القديم - مخفي */}
-        <div className="hidden bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="hidden bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           {/* Header - قابل للنقر */}
           <button
             onClick={() => setIsCampaignsCollapsed(!isCampaignsCollapsed)}
@@ -2248,9 +2241,5 @@ function StoreDetailsContent() {
 }
 
 export default function StoreDetailsPage() {
-  return (
-    <AdminAuth>
-      <StoreDetailsContent />
-    </AdminAuth>
-  );
+  return <StoreDetailsContent />;
 }

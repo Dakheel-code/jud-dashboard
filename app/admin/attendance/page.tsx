@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface AttendanceRecord {
@@ -74,7 +73,7 @@ function AttendanceContent() {
     const interval = setInterval(() => {
       fetchLeaveRequests(currentUser.id);
       fetchLeaveBalance(currentUser.id);
-    }, 10000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, [currentUser?.id]);
@@ -303,12 +302,7 @@ function AttendanceContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
             <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
@@ -349,7 +343,7 @@ function AttendanceContent() {
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/30 mb-8">
+        <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10  rounded-2xl p-6 border border-purple-500/30 mb-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">حالة اليوم</h2>
@@ -404,7 +398,7 @@ function AttendanceContent() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -415,7 +409,7 @@ function AttendanceContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -426,7 +420,7 @@ function AttendanceContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -437,7 +431,7 @@ function AttendanceContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
@@ -455,7 +449,7 @@ function AttendanceContent() {
           <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-4 py-2 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400" />
         </div>
 
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b border-purple-500/20">
             <h2 className="text-lg font-semibold text-white">سجل الحضور والانصراف</h2>
           </div>
@@ -542,7 +536,7 @@ function AttendanceContent() {
 
         {/* Leave Requests Section */}
         {leaveRequests.length > 0 && (
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mt-8">
+          <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mt-8">
             <div className="px-6 py-4 border-b border-purple-500/20">
               <h2 className="text-lg font-semibold text-white">طلباتي السابقة</h2>
             </div>
@@ -843,9 +837,5 @@ function AttendanceContent() {
 }
 
 export default function AttendancePage() {
-  return (
-    <AdminAuth>
-      <AttendanceContent />
-    </AdminAuth>
-  );
+  return <AttendanceContent />;
 }

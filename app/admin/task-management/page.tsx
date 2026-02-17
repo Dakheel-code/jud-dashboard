@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface Task {
@@ -435,8 +434,6 @@ function TasksManagementContent() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
@@ -458,11 +455,6 @@ function TasksManagementContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -517,7 +509,7 @@ function TasksManagementContent() {
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20 mb-6">
+        <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20 mb-6">
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             {/* Search Input */}
             <div className="flex-1 relative">
@@ -563,7 +555,7 @@ function TasksManagementContent() {
             const minOrderB = Math.min(...(groupedTasks[b]?.map(t => t.order_index) || [Infinity]));
             return minOrderA - minOrderB;
           }).map(category => (
-            <div key={category} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
+            <div key={category} className="bg-purple-950/40  rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-900/30 p-4 sm:p-6 border border-purple-500/20">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg sm:text-2xl font-bold text-white">{category}</h2>
@@ -674,7 +666,7 @@ function TasksManagementContent() {
       {/* Add Category Modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/90  rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-white mb-6">إضافة قسم جديد</h2>
             <div className="space-y-4">
               <div>
@@ -735,7 +727,7 @@ function TasksManagementContent() {
       {/* Edit Category Modal */}
       {showEditCategoryModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/90  rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-white mb-6">تعديل القسم</h2>
             <div className="space-y-4">
               <div>
@@ -815,7 +807,7 @@ function TasksManagementContent() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-md w-full">
+          <div className="bg-purple-950/90  rounded-3xl shadow-2xl p-8 border border-purple-500/30 max-w-md w-full">
             <h2 className="text-2xl font-bold text-white mb-6">
               {editingTask ? 'تعديل المهمة' : 'إضافة مهمة جديدة'}
             </h2>
@@ -960,9 +952,5 @@ function TasksManagementContent() {
 }
 
 export default function TasksManagementPage() {
-  return (
-    <AdminAuth>
-      <TasksManagementContent />
-    </AdminAuth>
-  );
+  return <TasksManagementContent />;
 }

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface Store {
@@ -80,7 +79,6 @@ function ClientsPageContent() {
     try {
       const response = await fetch('/api/admin/stores');
       const data = await response.json();
-      console.log('Available stores:', data.stores);
       setAvailableStores(data.stores || []);
     } catch (err) {
       console.error('Error fetching stores:', err);
@@ -267,13 +265,7 @@ function ClientsPageContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -334,19 +326,19 @@ function ClientsPageContent() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-xl p-4 border border-purple-500/20">
             <p className="text-purple-300/70 text-xs mb-1">إجمالي العملاء</p>
             <p className="text-2xl font-bold text-white">{clients.length}</p>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-xl p-4 border border-purple-500/20">
             <p className="text-purple-300/70 text-xs mb-1">إجمالي المتاجر</p>
             <p className="text-2xl font-bold text-white">{clients.reduce((acc, c) => acc + (c.stores?.length || 0), 0)}</p>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-xl p-4 border border-purple-500/20">
             <p className="text-purple-300/70 text-xs mb-1">عملاء بدون متاجر</p>
             <p className="text-2xl font-bold text-yellow-400">{clients.filter(c => !c.stores || c.stores.length === 0).length}</p>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-xl p-4 border border-purple-500/20">
             <p className="text-purple-300/70 text-xs mb-1">متوسط المتاجر/عميل</p>
             <p className="text-2xl font-bold text-green-400">
               {clients.length > 0 ? (clients.reduce((acc, c) => acc + (c.stores?.length || 0), 0) / clients.length).toFixed(1) : 0}
@@ -355,7 +347,7 @@ function ClientsPageContent() {
         </div>
 
         {/* Clients List */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="p-4 border-b border-purple-500/20 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">قائمة العملاء ({filteredClients.length})</h2>
             <button
@@ -492,7 +484,7 @@ function ClientsPageContent() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/95 backdrop-blur-xl rounded-2xl border border-purple-500/30 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/95  rounded-2xl border border-purple-500/30 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-purple-500/20">
               <h2 className="text-xl font-bold text-white">
                 {editingClient ? 'تعديل بيانات العميل' : 'إضافة عميل جديد'}
@@ -655,7 +647,7 @@ function ClientsPageContent() {
       {/* View Client Modal */}
       {viewingClient && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setViewingClient(null)}>
-          <div className="bg-purple-950/95 backdrop-blur-xl rounded-2xl border border-purple-500/30 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-purple-950/95  rounded-2xl border border-purple-500/30 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-purple-500/20">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white">بيانات العميل</h2>
@@ -800,9 +792,5 @@ function ClientsPageContent() {
 }
 
 export default function ClientsPage() {
-  return (
-    <AdminAuth>
-      <ClientsPageContent />
-    </AdminAuth>
-  );
+  return <ClientsPageContent />;
 }

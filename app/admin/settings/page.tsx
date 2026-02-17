@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface SlackWebhook {
@@ -233,7 +232,6 @@ function SettingsPageContent() {
         body: JSON.stringify({ widgets: dashboardWidgets }),
       });
       const data = await res.json();
-      console.log('Dashboard settings response:', data);
       if (res.ok && data.success) {
         setSuccess('تم حفظ إعدادات لوحة التحكم بنجاح');
         setTimeout(() => setSuccess(''), 3000);
@@ -310,8 +308,6 @@ function SettingsPageContent() {
   };
 
   const saveBranding = async () => {
-    console.log('saveBranding called with:', brandingForm);
-    
     if (!brandingForm.companyName.trim()) {
       setError('اسم الشركة مطلوب');
       setTimeout(() => setError(''), 3000);
@@ -320,14 +316,11 @@ function SettingsPageContent() {
 
     setSavingBranding(true);
     try {
-      console.log('Sending PUT request...');
       const response = await fetch('/api/admin/settings/branding', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(brandingForm)
       });
-      console.log('Response status:', response.status);
-
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -710,13 +703,7 @@ function SettingsPageContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -759,7 +746,7 @@ function SettingsPageContent() {
         )}
 
         {/* Company Branding Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsBrandingCollapsed(!isBrandingCollapsed)}
@@ -904,7 +891,7 @@ function SettingsPageContent() {
         </div>
 
         {/* Dashboard Customization Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsDashboardCollapsed(!isDashboardCollapsed)}
@@ -1048,7 +1035,7 @@ function SettingsPageContent() {
         </div>
 
         {/* Ad Accounts Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsAdAccountsCollapsed(!isAdAccountsCollapsed)}
@@ -1126,7 +1113,7 @@ function SettingsPageContent() {
         </div>
 
         {/* Store Categories Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsCategoriesCollapsed(!isCategoriesCollapsed)}
@@ -1227,7 +1214,7 @@ function SettingsPageContent() {
         </div>
 
         {/* WhatsApp Templates Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsWhatsappCollapsed(!isWhatsappCollapsed)}
@@ -1342,7 +1329,7 @@ function SettingsPageContent() {
         </div>
 
         {/* Slack Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
           {/* Header - Clickable */}
           <button
             onClick={() => setIsSlackCollapsed(!isSlackCollapsed)}
@@ -1476,7 +1463,7 @@ function SettingsPageContent() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/95 backdrop-blur-xl rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/95  rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold text-white mb-6">
               {editingWebhook ? 'تعديل الربط' : 'إضافة ربط جديد'}
             </h3>
@@ -1774,9 +1761,5 @@ function SettingsPageContent() {
 }
 
 export default function SettingsPage() {
-  return (
-    <AdminAuth>
-      <SettingsPageContent />
-    </AdminAuth>
-  );
+  return <SettingsPageContent />;
 }

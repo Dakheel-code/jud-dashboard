@@ -42,7 +42,6 @@ export default function TaskActivityLog({ taskId }: TaskActivityLogProps) {
     try {
       const response = await fetch(`/api/tasks/${taskId}/activity`);
       const data = await response.json();
-      console.log('Activity data received:', data.activities?.length);
       if (response.ok) {
         setActivities(data.activities || []);
       }

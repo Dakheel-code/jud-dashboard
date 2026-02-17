@@ -3,22 +3,23 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { StoreStats, StoreWithProgress } from '@/types';
 import Modal from '@/components/ui/Modal';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
-import AddStoreModal from '@/components/AddStoreModal';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeletons';
-import DashboardKPIBar from '@/components/dashboard/DashboardKPIBar';
-import DashboardActionCenter from '@/components/dashboard/DashboardActionCenter';
-import StorePerformanceWidget from '@/components/dashboard/StorePerformanceWidget';
-import TeamPerformanceWidget from '@/components/dashboard/TeamPerformanceWidget';
-import MarketingPulseWidget from '@/components/dashboard/MarketingPulseWidget';
-import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget';
-import AnnouncementsWidget from '@/components/dashboard/AnnouncementsWidget';
-import SmartInsightsWidget from '@/components/dashboard/SmartInsightsWidget';
-import AccountManagersWidget from '@/components/dashboard/AccountManagersWidget';
-import ManagersChartsWidget from '@/components/dashboard/ManagersChartsWidget';
+
+const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
+const DashboardKPIBar = dynamic(() => import('@/components/dashboard/DashboardKPIBar'), { ssr: false });
+const DashboardActionCenter = dynamic(() => import('@/components/dashboard/DashboardActionCenter'), { ssr: false });
+const StorePerformanceWidget = dynamic(() => import('@/components/dashboard/StorePerformanceWidget'), { ssr: false });
+const TeamPerformanceWidget = dynamic(() => import('@/components/dashboard/TeamPerformanceWidget'), { ssr: false });
+const MarketingPulseWidget = dynamic(() => import('@/components/dashboard/MarketingPulseWidget'), { ssr: false });
+const TodayTasksWidget = dynamic(() => import('@/components/dashboard/TodayTasksWidget'), { ssr: false });
+const AnnouncementsWidget = dynamic(() => import('@/components/dashboard/AnnouncementsWidget'), { ssr: false });
+const SmartInsightsWidget = dynamic(() => import('@/components/dashboard/SmartInsightsWidget'), { ssr: false });
+const AccountManagersWidget = dynamic(() => import('@/components/dashboard/AccountManagersWidget'), { ssr: false });
+const ManagersChartsWidget = dynamic(() => import('@/components/dashboard/ManagersChartsWidget'), { ssr: false });
 
 // Dashboard Summary Types
 interface DashboardSummary {
@@ -54,7 +55,7 @@ interface DashboardSummary {
   last_updated: string;
 }
 
-const REFRESH_INTERVAL = 5000; // تحديث كل 5 ثواني
+const REFRESH_INTERVAL = 60000; // تحديث كل 60 ثانية
 
 // دالة لحساب الوقت النسبي
 const getTimeAgo = (dateString: string) => {
@@ -287,19 +288,20 @@ function AdminPageContent() {
       const statsData = await statsRes.json();
       const storesData = await storesRes.json();
 
-      console.log('ًں“ٹ Stats:', statsData);
-      console.log('ًں“¦ Stores:', storesData);
-
       setStats(statsData);
       setStores(storesData.stores || []);
       setLoading(false);
 
-      // جلب بيانات المتاجر (الاسم والشعار)
+      // جلب بيانات المتاجر (الاسم والشعار) بشكل متوازي بدلاً من تسلسلي
       const newStores = storesData.stores || [];
-      for (const store of newStores) {
-        const metadata = await fetchStoreMetadata(store.store_url);
-        setStoreMetadata(prev => ({ ...prev, [store.store_url]: metadata }));
-      }
+      const metadataResults = await Promise.all(
+        newStores.map((store: any) => fetchStoreMetadata(store.store_url))
+      );
+      const metadataMap: Record<string, { name: string; logo: string | null }> = {};
+      newStores.forEach((store: any, i: number) => {
+        metadataMap[store.store_url] = metadataResults[i];
+      });
+      setStoreMetadata(prev => ({ ...prev, ...metadataMap }));
     } catch (err) {
       console.error('Failed to fetch admin data:', err);
       setLoading(false);
@@ -340,8 +342,6 @@ function AdminPageContent() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-4">
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 border-r-purple-400 animate-spin"></div>
@@ -363,12 +363,6 @@ function AdminPageContent() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0a0118]">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/3 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -507,12 +501,7 @@ function AdminPageContent() {
   );
 }
 
-// تصدير الصفحة مع حماية تسجيل الدخول
 export default function AdminPage() {
-  return (
-    <AdminAuth>
-      <AdminPageContent />
-    </AdminAuth>
-  );
+  return <AdminPageContent />;
 }
 

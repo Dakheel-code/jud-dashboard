@@ -90,7 +90,7 @@ export default function UrgentAnnouncementModal() {
     isMountedRef.current = true;
     fetchUrgentAnnouncement();
     
-    const interval = setInterval(fetchUrgentAnnouncement, 30000);
+    const interval = setInterval(fetchUrgentAnnouncement, 120000);
     return () => {
       isMountedRef.current = false;
       clearInterval(interval);

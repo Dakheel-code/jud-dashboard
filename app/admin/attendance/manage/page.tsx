@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import dynamic from 'next/dynamic';
 import { useBranding } from '@/contexts/BrandingContext';
 
@@ -341,12 +340,7 @@ function AttendanceManageContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -373,7 +367,7 @@ function AttendanceManageContent() {
         </div>
 
         {/* Work Hours Info */}
-        <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 backdrop-blur-xl rounded-2xl p-4 border border-orange-500/20 mb-8">
+        <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10  rounded-2xl p-4 border border-orange-500/20 mb-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
@@ -399,7 +393,7 @@ function AttendanceManageContent() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -410,7 +404,7 @@ function AttendanceManageContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-red-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-red-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -421,7 +415,7 @@ function AttendanceManageContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -436,7 +430,7 @@ function AttendanceManageContent() {
 
         {/* Leave & Permission Stats */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-green-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-green-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -447,7 +441,7 @@ function AttendanceManageContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-fuchsia-500/20">
+          <div className="bg-purple-950/40  rounded-2xl p-4 border border-fuchsia-500/20">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-fuchsia-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -514,7 +508,7 @@ function AttendanceManageContent() {
 
         {/* Pending Leave Requests Section */}
         {leaveRequests.length > 0 && (
-          <div className="bg-yellow-950/20 backdrop-blur-xl rounded-2xl border border-yellow-500/20 overflow-hidden mb-8">
+          <div className="bg-yellow-950/20  rounded-2xl border border-yellow-500/20 overflow-hidden mb-8">
             <button
               onClick={() => toggleSection('leaveRequests')}
               className="w-full px-6 py-4 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/5 transition-colors"
@@ -571,7 +565,7 @@ function AttendanceManageContent() {
         )}
 
         {/* Offices Section */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-8">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mb-8">
           <button
             onClick={() => toggleSection('offices')}
             className="w-full px-6 py-4 border-b border-purple-500/20 flex items-center justify-between hover:bg-purple-500/5 transition-colors"
@@ -635,7 +629,7 @@ function AttendanceManageContent() {
 
         {/* Absent Users Section - Only show in daily view */}
         {viewMode === 'daily' && absentUsers.length > 0 && (
-          <div className="bg-red-950/20 backdrop-blur-xl rounded-2xl border border-red-500/20 overflow-hidden mb-8">
+          <div className="bg-red-950/20  rounded-2xl border border-red-500/20 overflow-hidden mb-8">
             <button
               onClick={() => toggleSection('absentUsers')}
               className="w-full px-6 py-4 border-b border-red-500/20 flex items-center justify-between hover:bg-red-500/5 transition-colors"
@@ -665,7 +659,7 @@ function AttendanceManageContent() {
         )}
 
         {/* Leave & Permission History */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden mb-8">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mb-8">
           <button
             onClick={() => toggleSection('leaveHistory')}
             className="w-full px-6 py-4 border-b border-purple-500/20 flex items-center justify-between hover:bg-purple-500/5 transition-colors"
@@ -758,7 +752,7 @@ function AttendanceManageContent() {
         </div>
 
         {/* Records Table */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <button
             onClick={() => toggleSection('attendanceRecords')}
             className="w-full px-6 py-4 border-b border-purple-500/20 flex items-center justify-between hover:bg-purple-500/5 transition-colors"
@@ -1231,9 +1225,5 @@ function AttendanceManageContent() {
 }
 
 export default function AttendanceManagePage() {
-  return (
-    <AdminAuth>
-      <AttendanceManageContent />
-    </AdminAuth>
-  );
+  return <AttendanceManageContent />;
 }

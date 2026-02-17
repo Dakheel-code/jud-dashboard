@@ -97,7 +97,7 @@ export default function UnifiedNotificationBell() {
   useEffect(() => {
     isMountedRef.current = true;
     fetchAll();
-    const interval = setInterval(fetchAll, 30000);
+    const interval = setInterval(fetchAll, 60000);
     return () => {
       isMountedRef.current = false;
       clearInterval(interval);

@@ -107,10 +107,8 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
     
     setStatusLoading(true);
     try {
-      console.log('Fetching Snapchat status for store:', storeId);
       const response = await fetch(`/api/stores/${storeId}/snapchat/status`);
       const result = await response.json();
-      console.log('Snapchat status:', result);
       
       setStatus({
         connected: result.connected || false,
@@ -193,7 +191,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
     setError(null);
     
     try {
-      console.log('Fetching campaigns for store:', storeId, 'range:', range);
       const response = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${range}`);
       
       if (!response.ok) {
@@ -210,7 +207,6 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
       }
       
       const result = await response.json();
-      console.log('Snapchat campaigns response:', result);
       
       if (result.success) {
         setData(result);

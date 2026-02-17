@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface Task {
@@ -106,11 +105,22 @@ function StoreTasksContent() {
   const [useDatePicker, setUseDatePicker] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // جلب المتاجر والمستخدمين مرة واحدة فقط
   useEffect(() => {
-    fetchTasks();
     fetchStores();
     fetchUsers();
+  }, []);
+
+  // جلب المهام عند تغيير الفلاتر (مع debounce للبحث)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchTasks();
+    }, searchQuery ? 400 : 0);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [statusFilter, priorityFilter, storeFilter, assignedFilter, searchQuery]);
 
   const fetchTasks = async () => {
@@ -353,12 +363,6 @@ function StoreTasksContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/3 animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -507,7 +511,7 @@ function StoreTasksContent() {
                     </td>
                   </tr>
                 ) : (
-                  tasks.map(task => (
+                  tasks.slice(0, visibleCount).map(task => (
                     <tr key={task.id} className="border-b border-purple-500/10 hover:bg-purple-900/20">
                       <td className="p-4">
                         <div className="flex items-center gap-2">
@@ -578,12 +582,23 @@ function StoreTasksContent() {
             </table>
           </div>
         </div>
+
+        {tasks.length > visibleCount && (
+          <div className="flex justify-center mt-6">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 50)}
+              className="px-8 py-3 bg-purple-900/40 border border-purple-500/30 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-xl transition-all font-medium"
+            >
+              عرض المزيد ({tasks.length - visibleCount} مهمة متبقية)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/90  rounded-2xl border border-purple-500/30 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-4">إنشاء مهمة جديدة</h3>
 
             <div className="space-y-4">
@@ -617,7 +632,7 @@ function StoreTasksContent() {
                   
                   {/* القائمة المنسدلة */}
                   {showStoreDropdown && (
-                    <div className="absolute z-20 w-full mt-1 bg-purple-950/95 backdrop-blur-xl rounded-xl border border-purple-500/30 shadow-xl">
+                    <div className="absolute z-20 w-full mt-1 bg-purple-950/95  rounded-xl border border-purple-500/30 shadow-xl">
                       {/* خانة البحث */}
                       <input
                         type="text"
@@ -821,7 +836,7 @@ function StoreTasksContent() {
       {/* Edit Task Modal */}
       {showEditModal && selectedTask && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-purple-950/90  rounded-2xl border border-purple-500/30 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-4">تعديل المهمة</h3>
 
             <div className="space-y-4">
@@ -907,7 +922,7 @@ function StoreTasksContent() {
       {/* Participants Modal */}
       {showParticipantsModal && selectedTask && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-purple-950/90 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 max-w-md w-full">
+          <div className="bg-purple-950/90  rounded-2xl border border-purple-500/30 p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-white mb-4">المشاركون في المهمة</h3>
 
             {/* Current Participants */}
@@ -973,9 +988,5 @@ function StoreTasksContent() {
 }
 
 export default function StoreTasksPage() {
-  return (
-    <AdminAuth>
-      <StoreTasksContent />
-    </AdminAuth>
-  );
+  return <StoreTasksContent />;
 }

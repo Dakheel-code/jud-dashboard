@@ -236,13 +236,7 @@ function CampaignsContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -258,7 +252,7 @@ function CampaignsContent() {
         </div>
 
         {/* Store Selector */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4 mb-6 relative z-[9999]">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4 mb-6 relative z-[9999]">
           <div className="relative">
             <label className="block text-sm text-purple-300 mb-2">اختر المتجر</label>
             <button
@@ -378,7 +372,7 @@ function CampaignsContent() {
 
             {/* Filters */}
             {snapchatStatus?.connected && (
-              <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
+              <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4">
                 <div className="flex flex-wrap items-center gap-4">
                   {/* Range */}
                   <div className="flex items-center gap-2">
@@ -468,7 +462,7 @@ function CampaignsContent() {
 
             {/* Campaigns Table */}
             {snapchatStatus?.connected && (
-              <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+              <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
                 <div className="p-4 border-b border-purple-500/20">
                   <h3 className="text-lg font-bold text-white">الحملات ({filteredCampaigns.length})</h3>
                 </div>

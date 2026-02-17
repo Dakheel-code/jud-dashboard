@@ -470,8 +470,6 @@ export default function TasksPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0118] relative overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
         <div className="text-center">
           <div className="relative w-24 h-24 mx-auto mb-4">
             {/* Rotating glow ring */}
@@ -571,45 +569,16 @@ export default function TasksPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute w-96 h-96 bg-fuchsia-600/20 rounded-full blur-3xl bottom-0 right-1/3 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        
-        {/* Floating particles */}
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-purple-400/40 rounded-full animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${5 + Math.random() * 10}s`
-            }}
-          />
-        ))}
-      </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 py-8">
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 animate-fade-in">
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="relative">
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-xl animate-pulse"></div>
-              <div className="absolute inset-2 bg-violet-400/20 rounded-full blur-lg animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-              <img 
-                src={branding.logo || '/logo.png'} 
-                alt={branding.companyName || 'Logo'} 
-                className="relative z-10 w-14 h-14 sm:w-20 sm:h-20 object-contain animate-pulse"
-                style={{ 
-                  filter: 'drop-shadow(0 0 10px rgba(167, 139, 250, 0.6)) drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))',
-                  animationDuration: '3s'
-                }}
-              />
-            </div>
+            <img 
+              src={branding.logo || '/logo.png'} 
+              alt={branding.companyName || 'Logo'} 
+              className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
+            />
             {/* Vertical Divider */}
             <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
             <div>
@@ -788,7 +757,6 @@ export default function TasksPage() {
               {/* Shimmer effect */}
               <div className="absolute inset-0 bg-gradient-to-l from-transparent via-white/30 to-transparent animate-shimmer" />
               {/* Glow pulse */}
-              <div className="absolute inset-0 bg-white/10 animate-pulse" />
             </div>
             {/* Moving light indicator */}
             {stats.percentage > 0 && stats.percentage < 100 && (
@@ -900,9 +868,6 @@ export default function TasksPage() {
                     title={achievement.description}
                   >
                     {/* Glow effect for unlocked */}
-                    {isUnlocked && (
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 animate-pulse" />
-                    )}
                     
                     {/* Icon */}
                     <div className={`relative flex justify-center mb-3 ${isUnlocked ? 'animate-bounce' : ''}`} style={{ animationDuration: '2s' }}>

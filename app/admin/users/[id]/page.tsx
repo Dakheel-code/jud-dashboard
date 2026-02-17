@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import AdminAuth from '@/components/AdminAuth';
 
 interface UserStats {
   total_stores: number;
@@ -144,11 +143,6 @@ function UserDetailsContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -183,27 +177,27 @@ function UserDetailsContent() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">إجمالي المتاجر</h3>
               <p className="text-2xl font-bold text-white">{stats.total_stores}</p>
             </div>
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">متاجر مكتملة</h3>
               <p className="text-2xl font-bold text-green-400">{stats.completed_stores}</p>
             </div>
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">قيد التنفيذ</h3>
               <p className="text-2xl font-bold text-yellow-400">{stats.in_progress_stores}</p>
             </div>
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">متوسط الإنجاز</h3>
               <p className="text-2xl font-bold text-blue-400">{stats.average_completion}%</p>
             </div>
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">المهام المنجزة</h3>
               <p className="text-2xl font-bold text-fuchsia-400">{stats.total_tasks_completed}</p>
             </div>
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/20">
+            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
               <h3 className="text-xs font-medium text-purple-300/80 mb-1">إجمالي المهام</h3>
               <p className="text-2xl font-bold text-purple-400">{stats.total_tasks}</p>
             </div>
@@ -212,7 +206,7 @@ function UserDetailsContent() {
 
         {/* Activity Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/10 backdrop-blur-xl rounded-2xl p-4 border border-cyan-500/30">
+          <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/10  rounded-2xl p-4 border border-cyan-500/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +219,7 @@ function UserDetailsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10 backdrop-blur-xl rounded-2xl p-4 border border-green-500/30">
+          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10  rounded-2xl p-4 border border-green-500/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +232,7 @@ function UserDetailsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30">
+          <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10  rounded-2xl p-4 border border-purple-500/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +245,7 @@ function UserDetailsContent() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-orange-500/20 to-yellow-500/10 backdrop-blur-xl rounded-2xl p-4 border border-orange-500/30">
+          <div className="bg-gradient-to-br from-orange-500/20 to-yellow-500/10  rounded-2xl p-4 border border-orange-500/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +261,7 @@ function UserDetailsContent() {
         </div>
 
         {/* User Info Card */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/20 mb-8">
+        <div className="bg-purple-950/40  rounded-2xl p-6 border border-purple-500/20 mb-8">
           <h2 className="text-lg font-semibold text-white mb-4">معلومات المستخدم</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
@@ -292,7 +286,7 @@ function UserDetailsContent() {
         </div>
 
         {/* Assigned Stores */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="px-6 py-4 border-b border-purple-500/20">
             <h2 className="text-lg font-semibold text-white">المتاجر المسندة ({stores.length})</h2>
           </div>
@@ -409,9 +403,5 @@ function UserDetailsContent() {
 }
 
 export default function UserDetailsPage() {
-  return (
-    <AdminAuth>
-      <UserDetailsContent />
-    </AdminAuth>
-  );
+  return <UserDetailsContent />;
 }

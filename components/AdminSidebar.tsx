@@ -221,8 +221,8 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
     
     // جلب عدد الطلبات المعلقة
     fetchPendingLeaveRequests();
-    // تحديث كل 30 ثانية
-    const interval = setInterval(fetchPendingLeaveRequests, 30000);
+    // تحديث كل 120 ثانية
+    const interval = setInterval(fetchPendingLeaveRequests, 120000);
     
     return () => {
       clearInterval(interval);

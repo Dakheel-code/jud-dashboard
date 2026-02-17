@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Modal from '@/components/ui/Modal';
-import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
 
 interface AdminUser {
@@ -316,11 +315,6 @@ function UsersManagementContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-purple-600/20 rounded-full blur-3xl -top-48 -right-48 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-violet-600/20 rounded-full blur-3xl top-1/3 -left-48 animate-pulse"></div>
-      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
@@ -361,7 +355,7 @@ function UsersManagementContent() {
 
         {/* إحصائيات سريعة */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-purple-500/20 p-4">
+          <div className="bg-purple-950/40  rounded-xl border border-purple-500/20 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,7 +368,7 @@ function UsersManagementContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-green-500/20 p-4">
+          <div className="bg-purple-950/40  rounded-xl border border-green-500/20 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,7 +381,7 @@ function UsersManagementContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-red-500/20 p-4">
+          <div className="bg-purple-950/40  rounded-xl border border-red-500/20 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,7 +394,7 @@ function UsersManagementContent() {
               </div>
             </div>
           </div>
-          <div className="bg-purple-950/40 backdrop-blur-xl rounded-xl border border-cyan-500/20 p-4">
+          <div className="bg-purple-950/40  rounded-xl border border-cyan-500/20 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
                 <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,7 +410,7 @@ function UsersManagementContent() {
         </div>
 
         {/* فلترة وبحث */}
-        <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4 mb-6">
+        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* بحث */}
             <div className="flex-1">
@@ -488,12 +482,12 @@ function UsersManagementContent() {
         {/* Mobile View - Cards */}
         <div className="lg:hidden space-y-4">
           {filteredUsers.length === 0 ? (
-            <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 text-center text-purple-400">
+            <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-8 text-center text-purple-400">
               {users.length === 0 ? 'لا يوجد مستخدمين' : 'لا توجد نتائج مطابقة للبحث'}
             </div>
           ) : (
             filteredUsers.map((user) => (
-              <div key={user.id} className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-4">
+              <div key={user.id} className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4">
                 <div className="flex justify-between items-start mb-3">
                   <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                     {user.avatar ? (
@@ -595,7 +589,7 @@ function UsersManagementContent() {
         </div>
 
         {/* Desktop View - Table */}
-        <div className="hidden lg:block bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
+        <div className="hidden lg:block bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -747,7 +741,7 @@ function UsersManagementContent() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-          <div className="relative bg-purple-950/95 backdrop-blur-xl rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-purple-950/95  rounded-2xl p-6 max-w-lg w-full border border-purple-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-6">
               {editingUser ? 'تعديل المستخدم' : 'إضافة مستخدم جديد'}
             </h3>
@@ -1014,9 +1008,5 @@ function UsersManagementContent() {
 }
 
 export default function UsersManagementPage() {
-  return (
-    <AdminAuth>
-      <UsersManagementContent />
-    </AdminAuth>
-  );
+  return <UsersManagementContent />;
 }
