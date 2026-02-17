@@ -30,7 +30,9 @@
         "npm:react@^18.3.0",
         "npm:tailwindcss@4",
         "npm:tsx@^4.7.0",
-        "npm:typescript@5"
+        "npm:typescript@5",
+        "npm:xlsx@~0.18.5",
+        "npm:zod@^4.3.6"
       ]
     }
   }

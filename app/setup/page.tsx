@@ -34,7 +34,7 @@ export default function SetupPage() {
                   <ol className="list-decimal list-inside space-y-2 text-gray-700 text-sm">
                     <li>اذهب إلى <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline font-medium">supabase.com</a></li>
                     <li>أنشئ حساب جديد أو سجل دخول</li>
-                    <li>اضغط على "New Project"</li>
+                    <li>اضغط على &quot;New Project&quot;</li>
                     <li>اختر اسم للمشروع وكلمة مرور قوية</li>
                     <li>انتظر حتى يتم تجهيز قاعدة البيانات (2-3 دقائق)</li>
                   </ol>
