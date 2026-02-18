@@ -579,12 +579,14 @@ function StoreDetailsContent() {
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paramId);
       
       let response;
+      let storeFromApi: any = null;
       if (isUUID) {
         // جلب بيانات المتجر بالـ ID أولاً
         const storeResponse = await fetch(`/api/admin/stores/${paramId}`);
         const storeResult = await storeResponse.json();
         
         if (storeResponse.ok && storeResult.store) {
+          storeFromApi = storeResult.store;
           const storeUrl = storeResult.store.store_url;
           response = await fetch(`/api/tasks?store_url=${encodeURIComponent(storeUrl)}`);
         } else {
@@ -601,7 +603,8 @@ function StoreDetailsContent() {
         setTasks(data.tasks || {});
         setStats(data.stats || { total: 0, completed: 0, percentage: 0 });
         setStoreId(data.store_id);
-        setStoreData(data.store);
+        // استخدم بيانات المتجر من API المتجر (أكمل) أو من API المهام
+        setStoreData(storeFromApi || data.store);
         
         // جلب رسائل واتساب للأقسام من localStorage
         const savedCategoryMessages = localStorage.getItem('categoryWhatsappMessages');
@@ -610,11 +613,12 @@ function StoreDetailsContent() {
         }
         
         // جلب معلومات المتجر (الشعار والاسم)
-        if (data.store_url) {
-          const metaResponse = await fetch(`/api/store/metadata?url=${encodeURIComponent(data.store_url)}`);
+        const metaUrl = storeFromApi?.store_url || data.store_url;
+        if (metaUrl) {
+          const metaResponse = await fetch(`/api/store/metadata?url=${encodeURIComponent(metaUrl)}`);
           const metaData = await metaResponse.json();
           setStoreMetadata({
-            name: metaData.name || data.store_url,
+            name: metaData.name || metaUrl,
             logo: metaData.logo,
           });
         }
