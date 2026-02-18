@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,31 +20,25 @@ function getSupabaseClient() {
 // GET /api/auth/me - جلب معلومات المستخدم الحالي
 export async function GET() {
   try {
-    const cookieStore = cookies();
-    const adminUserCookie = cookieStore.get('admin_user');
+    // التحقق من NextAuth session أولاً
+    const session = await getServerSession(authOptions);
     
-    if (!adminUserCookie?.value) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'غير مسجل الدخول' }, { status: 401 });
     }
 
-    let adminUser;
-    try {
-      adminUser = JSON.parse(adminUserCookie.value);
-    } catch {
-      return NextResponse.json({ error: 'بيانات جلسة غير صالحة' }, { status: 401 });
-    }
-
-    if (!adminUser?.id) {
+    const sessionUser = session.user as any;
+    if (!sessionUser?.id) {
       return NextResponse.json({ error: 'معرف المستخدم غير موجود' }, { status: 401 });
     }
 
     const supabase = getSupabaseClient();
 
-    // جلب بيانات المستخدم الكاملة من قاعدة البيانات
+    // جلب بيانات المستخدم من DB
     const { data: user, error } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, role, roles, permissions, avatar, is_active')
-      .eq('id', adminUser.id)
+      .select('id, username, name, email, avatar, is_active')
+      .eq('id', sessionUser.id)
       .single();
 
     if (error || !user) {
@@ -53,7 +49,25 @@ export async function GET() {
       return NextResponse.json({ error: 'الحساب معطل' }, { status: 403 });
     }
 
-    return NextResponse.json({ user });
+    // جلب صلاحيات RBAC الحقيقية
+    let rbacRoles: string[] = [];
+    let rbacPermissions: string[] = [];
+    try {
+      const rbac = await getUserPermissions(user.id);
+      rbacRoles = rbac.roles;
+      rbacPermissions = rbac.permissions;
+    } catch {
+      // fallback
+    }
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        role: rbacRoles[0] || 'viewer',
+        roles: rbacRoles,
+        permissions: rbacPermissions,
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

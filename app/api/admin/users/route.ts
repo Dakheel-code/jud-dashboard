@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { requireAdmin } from '@/lib/auth-guard';
+import { logAuditFromRequest } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ function hashPassword(password: string): string {
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Database not configured');
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('admin_users')
-      .select('id, username, name, email, role, roles, permissions, is_active, avatar, created_at, updated_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, avatar, created_at, updated_at, last_login')
       .order('name', { ascending: true });
 
     // فلترة المستخدمين النشطين فقط
@@ -110,12 +111,14 @@ export async function POST(request: NextRequest) {
         permissions: permissions || [],
         is_active: true
       })
-      .select('id, username, name, email, role, roles, permissions, is_active, created_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, created_at, last_login')
       .single();
 
     if (error) {
       return NextResponse.json({ error: 'فشل في إنشاء المستخدم' }, { status: 500 });
     }
+
+    await logAuditFromRequest(request, auth.user!.id, 'users.create', { entity: 'admin_users', entity_id: newUser.id, meta: { username, name, roles: userRoles } });
 
     return NextResponse.json({ user: newUser, message: 'تم إنشاء المستخدم بنجاح' });
   } catch (error) {
@@ -159,12 +162,14 @@ export async function PUT(request: NextRequest) {
       .from('admin_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, name, email, role, roles, permissions, is_active, created_at')
+      .select('id, username, name, email, role, roles, permissions, is_active, created_at, last_login')
       .single();
 
     if (error) {
       return NextResponse.json({ error: 'فشل في تحديث المستخدم' }, { status: 500 });
     }
+
+    await logAuditFromRequest(request, auth.user!.id, 'users.update', { entity: 'admin_users', entity_id: id, meta: { changes: updateData } });
 
     return NextResponse.json({ user: updatedUser, message: 'تم تحديث المستخدم بنجاح' });
   } catch (error) {
@@ -200,6 +205,8 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: 'فشل في حذف المستخدم' }, { status: 500 });
     }
+
+    await logAuditFromRequest(request, auth.user!.id, 'users.delete', { entity: 'admin_users', entity_id: id });
 
     return NextResponse.json({ message: 'تم حذف المستخدم بنجاح' });
   } catch (error) {

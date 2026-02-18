@@ -1,11 +1,13 @@
 /**
  * Auth Guard - حماية API routes
- * يتحقق من صلاحية الجلسة قبل تنفيذ العمليات
+ * مصدر الحقيقة الوحيد = جداول RBAC
+ * ممنوع الاعتماد على admin_users.role / roles / permissions
  */
 
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from './auth';
+import { getUserPermissions } from './rbac';
 
 export interface AuthUser {
   id: string;
@@ -13,6 +15,8 @@ export interface AuthUser {
   name: string;
   role: string;
   username?: string;
+  rbacRoles?: string[];
+  rbacPermissions?: string[];
 }
 
 export interface AuthResult {
@@ -22,7 +26,7 @@ export interface AuthResult {
 }
 
 /**
- * التحقق من الجلسة وإرجاع بيانات المستخدم
+ * التحقق من الجلسة وإرجاع بيانات المستخدم + صلاحيات RBAC
  * @returns AuthResult مع بيانات المستخدم أو خطأ 401
  */
 export async function requireAuth(): Promise<AuthResult> {
@@ -40,6 +44,17 @@ export async function requireAuth(): Promise<AuthResult> {
     }
 
     const user = session.user as any;
+
+    // جلب صلاحيات RBAC الحقيقية من DB
+    let rbacRoles: string[] = [];
+    let rbacPermissions: string[] = [];
+    try {
+      const rbac = await getUserPermissions(user.id);
+      rbacRoles = rbac.roles;
+      rbacPermissions = rbac.permissions;
+    } catch {
+      // fallback: إذا جداول RBAC غير موجودة بعد
+    }
     
     return {
       authenticated: true,
@@ -49,6 +64,8 @@ export async function requireAuth(): Promise<AuthResult> {
         name: user.name,
         role: user.role,
         username: user.username,
+        rbacRoles,
+        rbacPermissions,
       },
     };
   } catch (error) {
@@ -63,8 +80,58 @@ export async function requireAuth(): Promise<AuthResult> {
 }
 
 /**
- * التحقق من الجلسة مع صلاحية معينة
- * @param allowedRoles الأدوار المسموح بها
+ * التحقق من صلاحية RBAC معينة
+ * @param permission الصلاحية المطلوبة (e.g. "users.read")
+ */
+export async function requirePermission(permission: string): Promise<AuthResult> {
+  const authResult = await requireAuth();
+  
+  if (!authResult.authenticated) {
+    return authResult;
+  }
+
+  const perms = authResult.user!.rbacPermissions || [];
+  if (!perms.includes(permission)) {
+    return {
+      authenticated: false,
+      error: NextResponse.json(
+        { error: `غير مصرح - تحتاج صلاحية: ${permission}` },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return authResult;
+}
+
+/**
+ * التحقق من أي صلاحية من قائمة
+ * @param permissions قائمة الصلاحيات (يكفي واحدة)
+ */
+export async function requireAnyPermission(permissions: string[]): Promise<AuthResult> {
+  const authResult = await requireAuth();
+  
+  if (!authResult.authenticated) {
+    return authResult;
+  }
+
+  const perms = authResult.user!.rbacPermissions || [];
+  if (!permissions.some(p => perms.includes(p))) {
+    return {
+      authenticated: false,
+      error: NextResponse.json(
+        { error: `غير مصرح - تحتاج إحدى الصلاحيات: ${permissions.join(', ')}` },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return authResult;
+}
+
+/**
+ * @deprecated استخدم requirePermission() بدلاً منها
+ * التحقق من الجلسة مع دور معين (legacy — للتوافق المؤقت)
  */
 export async function requireRole(allowedRoles: string[]): Promise<AuthResult> {
   const authResult = await requireAuth();
@@ -73,7 +140,12 @@ export async function requireRole(allowedRoles: string[]): Promise<AuthResult> {
     return authResult;
   }
 
-  if (!allowedRoles.includes(authResult.user!.role)) {
+  // تحقق من RBAC roles أولاً، ثم fallback للـ legacy role
+  const rbacRoles = authResult.user!.rbacRoles || [];
+  const legacyRole = authResult.user!.role;
+  const hasRole = allowedRoles.some(r => rbacRoles.includes(r)) || allowedRoles.includes(legacyRole);
+
+  if (!hasRole) {
     return {
       authenticated: false,
       error: NextResponse.json(
@@ -87,8 +159,9 @@ export async function requireRole(allowedRoles: string[]): Promise<AuthResult> {
 }
 
 /**
- * التحقق من صلاحية المسؤول (super_admin, admin, team_leader, account_manager)
+ * @deprecated استخدم requirePermission('dashboard.read') بدلاً منها
+ * التحقق من صلاحية المسؤول (legacy — للتوافق المؤقت)
  */
 export async function requireAdmin(): Promise<AuthResult> {
-  return requireRole(['super_admin', 'admin', 'team_leader', 'account_manager']);
+  return requireRole(['super_admin', 'admin', 'team_leader', 'account_manager', 'manager', 'editor', 'viewer']);
 }

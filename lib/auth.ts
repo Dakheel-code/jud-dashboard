@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import type { NextAuthOptions } from "next-auth";
+import { getUserPermissions } from './rbac';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -101,14 +102,25 @@ providers.push(
         .update({ last_login: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', user.id);
 
+      // جلب صلاحيات RBAC الحقيقية
+      let rbacRoles: string[] = [];
+      let rbacPermissions: string[] = [];
+      try {
+        const rbac = await getUserPermissions(user.id);
+        rbacRoles = rbac.roles;
+        rbacPermissions = rbac.permissions;
+      } catch {
+        // fallback
+      }
+
       return {
         id: user.id,
         name: user.name,
         email: user.email || `${user.username}@jud.sa`,
-        role: user.role,
+        role: rbacRoles[0] || user.role,
         username: user.username,
         avatar: user.avatar,
-        permissions: user.permissions || [],
+        permissions: rbacPermissions,
       };
     },
   })
@@ -148,27 +160,42 @@ export const authOptions: NextAuthOptions = {
           const userAvatar = (profile as any)?.picture || user?.image;
           const username = email.split('@')[0];
           
-          
           const { data: newUser, error: insertError } = await supabase.from('admin_users').insert({
             email: emailLower,
             name: userName,
             username: username,
             password_hash: '', // Google users don't have password
-            role: 'employee',
+            role: 'viewer', // أقل صلاحية — RBAC هو مصدر الحقيقة
             is_active: true,
             avatar: userAvatar,
             permissions: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_login: new Date().toISOString(),
-          }).select().single();
+          }).select('id').single();
           
+          // 🚨 امنع الدخول إذا ما انحفظ المستخدم
           if (insertError) {
-          } else {
+            console.error('FAILED TO CREATE GOOGLE USER:', insertError);
+            return false;
+          }
+
+          // RBAC: ربط المستخدم الجديد بدور viewer تلقائياً
+          if (newUser) {
+            const { data: viewerRole } = await supabase
+              .from('admin_roles')
+              .select('id')
+              .eq('key', 'viewer')
+              .single();
+            if (viewerRole) {
+              await supabase.from('admin_user_roles').insert({
+                user_id: newUser.id,
+                role_id: viewerRole.id,
+              }).select().maybeSingle();
+            }
           }
         } else {
-          // تحديث آخر تسجيل دخول فقط - لا نغير الاسم أو الصورة إذا كان المستخدم موجود
-          
+          // تحديث آخر تسجيل دخول فقط
           const { error: updateError } = await supabase
             .from('admin_users')
             .update({ 
@@ -176,8 +203,23 @@ export const authOptions: NextAuthOptions = {
               updated_at: new Date().toISOString(),
             })
             .ilike('email', emailLower);
-            
+
           if (updateError) {
+            console.error('FAILED TO UPDATE LAST LOGIN:', updateError);
+            return false;
+          }
+
+          // RBAC: تأكد أن المستخدم الموجود عنده دور viewer على الأقل
+          const { data: viewerRole } = await supabase
+            .from('admin_roles')
+            .select('id')
+            .eq('key', 'viewer')
+            .single();
+          if (viewerRole) {
+            await supabase.from('admin_user_roles').insert({
+              user_id: existingUser.id,
+              role_id: viewerRole.id,
+            }).select().maybeSingle();
           }
         }
       }
@@ -194,7 +236,7 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.provider) token.provider = account.provider;
 
-      // لو Google: جلب بيانات المستخدم من DB
+      // لو Google: جلب بيانات المستخدم من DB + RBAC
       if (account?.provider === "google") {
         token.email = (profile as any)?.email || token.email;
         token.name = (profile as any)?.name || token.name;
@@ -202,32 +244,39 @@ export const authOptions: NextAuthOptions = {
         const supabase = getSupabaseClient();
         const emailToSearch = (token.email as string)?.trim() || '';
         
-        
-        // البحث بدون تحويل لـ lowercase لأن ilike يتجاهل حالة الأحرف
-        const { data: dbUser, error: dbError } = await supabase
+        const { data: dbUser } = await supabase
           .from('admin_users')
-          .select('id, role, username, email')
+          .select('id, username, email')
           .ilike('email', emailToSearch)
           .single();
 
-
         if (dbUser) {
           token.uid = dbUser.id;
-          token.role = dbUser.role;
           token.username = dbUser.username;
+          // جلب role من RBAC بدل admin_users.role
+          try {
+            const rbac = await getUserPermissions(dbUser.id);
+            token.role = rbac.roles[0] || 'viewer';
+          } catch {
+            token.role = 'viewer';
+          }
         } else {
-          // محاولة ثانية: البحث بـ eq مع lowercase
+          // محاولة ثانية: البحث بـ eq
           const { data: dbUser2 } = await supabase
             .from('admin_users')
-            .select('id, role, username, email')
+            .select('id, username, email')
             .eq('email', emailToSearch)
             .single();
           
           if (dbUser2) {
             token.uid = dbUser2.id;
-            token.role = dbUser2.role;
             token.username = dbUser2.username;
-          } else {
+            try {
+              const rbac = await getUserPermissions(dbUser2.id);
+              token.role = rbac.roles[0] || 'viewer';
+            } catch {
+              token.role = 'viewer';
+            }
           }
         }
       }

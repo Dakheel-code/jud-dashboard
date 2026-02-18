@@ -20,17 +20,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // التحقق من NextAuth session
+  // التحقق من NextAuth session فقط — مصدر الحقيقة الوحيد
   const token = await getToken({ 
     req: request, 
     secret: process.env.NEXTAUTH_SECRET 
   });
 
-  // التحقق من الـ token القديم (للتوافق مع النظام الحالي)
-  const legacyToken = request.cookies.get('admin_token')?.value;
-
-  // إذا لا يوجد أي نوع من التوثيق
-  if (!token && !legacyToken) {
+  if (!token) {
     const loginUrl = new URL('/admin/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { logAuditFromRequest } from '@/lib/audit';
+import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +58,8 @@ export async function POST(request: NextRequest) {
       if (normalizedUsername === 'admin' && password === 'admin123') {
         const token = generateToken();
         
+        await logAuditFromRequest(request, 'default-admin', 'auth.login', { meta: { method: 'credentials', username: 'admin' } });
+
         const response = NextResponse.json({
           success: true,
           token,
@@ -80,6 +84,7 @@ export async function POST(request: NextRequest) {
         return response;
       }
 
+      await logAuditFromRequest(request, null, 'auth.login_failed', { meta: { username: normalizedUsername, reason: 'user_not_found' } });
       return NextResponse.json(
         { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' },
         { status: 401 }
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
 
     // التحقق من كلمة المرور
     if (user.password_hash !== passwordHash) {
+      await logAuditFromRequest(request, user.id, 'auth.login_failed', { meta: { username: normalizedUsername, reason: 'wrong_password' } });
       return NextResponse.json(
         { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' },
         { status: 401 }
@@ -112,6 +118,19 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 
+    await logAuditFromRequest(request, user.id, 'auth.login', { meta: { method: 'credentials', username: user.username } });
+
+    // جلب صلاحيات RBAC الحقيقية
+    let rbacRoles: string[] = [];
+    let rbacPermissions: string[] = [];
+    try {
+      const rbac = await getUserPermissions(user.id);
+      rbacRoles = rbac.roles;
+      rbacPermissions = rbac.permissions;
+    } catch {
+      // fallback
+    }
+
     const response = NextResponse.json({
       success: true,
       token,
@@ -122,8 +141,9 @@ export async function POST(request: NextRequest) {
         email: user.email,
         phone: user.phone,
         avatar: user.avatar,
-        role: user.role,
-        permissions: user.permissions
+        role: rbacRoles[0] || user.role,
+        roles: rbacRoles,
+        permissions: rbacPermissions
       },
       message: 'تم تسجيل الدخول بنجاح'
     });
