@@ -115,6 +115,7 @@ function StoreDetailsContent() {
   const [snapchatAdAccountsForAttach, setSnapchatAdAccountsForAttach] = useState<{id: string; name: string}[]>([]);
   const [loadingSnapchatAdAccounts, setLoadingSnapchatAdAccounts] = useState(false);
   const [selectedSnapchatAdAccount, setSelectedSnapchatAdAccount] = useState<string>('');
+  const [snapchatAdAccountSearch, setSnapchatAdAccountSearch] = useState<string>('');
   const [showWindsorAccountModal, setShowWindsorAccountModal] = useState<string | null>(null);
   const [windsorAccounts, setWindsorAccounts] = useState<{account_name: string; datasource: string}[]>([]);
   const [loadingWindsorAccounts, setLoadingWindsorAccounts] = useState(false);
@@ -562,6 +563,7 @@ function StoreDetailsContent() {
     setSnapchatIdentities([]);
     setSnapchatAdAccountsForAttach([]);
     setSelectedSnapchatAdAccount('');
+    setSnapchatAdAccountSearch('');
     setLoadingSnapchatIdentities(true);
     try {
       const res = await fetch('/api/integrations/snapchat/identities');
@@ -2189,27 +2191,57 @@ function StoreDetailsContent() {
             {/* مرحلة 2: اختيار Ad Account بعد الـ attach */}
             {snapchatAdAccountsForAttach.length > 0 && (
               <>
-                <p className="text-sm text-green-400 mb-4">✓ تم الربط بنجاح! اختر الحساب الإعلاني:</p>
+                <p className="text-sm text-green-400 mb-3">✓ تم الربط بنجاح! اختر الحساب الإعلاني:</p>
+                {/* مربع البحث */}
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    value={snapchatAdAccountSearch}
+                    onChange={e => setSnapchatAdAccountSearch(e.target.value)}
+                    placeholder="ابحث عن حساب..."
+                    className="w-full px-4 py-2 rounded-xl bg-purple-900/40 border border-purple-500/30 text-white placeholder-purple-400/50 text-sm focus:outline-none focus:border-yellow-500/50"
+                    dir="rtl"
+                  />
+                  {snapchatAdAccountSearch && (
+                    <button
+                      onClick={() => setSnapchatAdAccountSearch('')}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-white text-xs"
+                    >✕</button>
+                  )}
+                </div>
                 {loadingSnapchatAdAccounts ? (
                   <div className="flex items-center justify-center py-6">
                     <div className="w-6 h-6 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
-                    {snapchatAdAccountsForAttach.map((acc) => (
-                      <button
-                        key={acc.id}
-                        onClick={() => setSelectedSnapchatAdAccount(acc.id)}
-                        className={`w-full p-3 rounded-xl text-right transition-all ${
-                          selectedSnapchatAdAccount === acc.id
-                            ? 'bg-yellow-500/30 border-2 border-yellow-500 text-white'
-                            : 'bg-purple-900/30 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20'
-                        }`}
-                      >
-                        <p className="font-medium text-sm">{acc.name}</p>
-                        <p className="text-xs opacity-60 mt-0.5" dir="ltr">{acc.id}</p>
-                      </button>
-                    ))}
+                  <div className="space-y-2 max-h-52 overflow-y-auto mb-4">
+                    {snapchatAdAccountsForAttach
+                      .filter(acc =>
+                        !snapchatAdAccountSearch ||
+                        acc.name.toLowerCase().includes(snapchatAdAccountSearch.toLowerCase()) ||
+                        acc.id.toLowerCase().includes(snapchatAdAccountSearch.toLowerCase())
+                      )
+                      .map((acc) => (
+                        <button
+                          key={acc.id}
+                          onClick={() => setSelectedSnapchatAdAccount(acc.id)}
+                          className={`w-full p-3 rounded-xl text-right transition-all ${
+                            selectedSnapchatAdAccount === acc.id
+                              ? 'bg-yellow-500/30 border-2 border-yellow-500 text-white'
+                              : 'bg-purple-900/30 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20'
+                          }`}
+                        >
+                          <p className="font-medium text-sm">{acc.name}</p>
+                          <p className="text-xs opacity-60 mt-0.5" dir="ltr">{acc.id}</p>
+                        </button>
+                      ))}
+                    {snapchatAdAccountsForAttach.filter(acc =>
+                      !snapchatAdAccountSearch ||
+                      acc.name.toLowerCase().includes(snapchatAdAccountSearch.toLowerCase()) ||
+                      acc.id.toLowerCase().includes(snapchatAdAccountSearch.toLowerCase())
+                    ).length === 0 && (
+                      <p className="text-center text-purple-400/60 text-sm py-4">لا توجد نتائج</p>
+                    )}
                   </div>
                 )}
                 <button
