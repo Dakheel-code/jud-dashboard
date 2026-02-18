@@ -457,7 +457,7 @@ function StoreDetailsContent() {
           else if (datePreset === 'last_14d') range = '30d';
           else range = '30d';
           
-          const url = `/api/admin/stores/${storeId}/snapchat-campaigns?range=${range}`;
+          const url = `/api/stores/${storeId}/snapchat/campaigns?range=${range}`;
           const response = await fetch(url);
           const data = await response.json();
           
@@ -481,11 +481,11 @@ function StoreDetailsContent() {
             setPlatformTotals(prev => ({ 
               ...prev, 
               [platformKey]: {
-                spend: data.totals?.spend || 0,
-                clicks: data.totals?.swipes || 0,
-                impressions: data.totals?.impressions || 0,
-                conversions: data.totals?.orders || 0,
-                revenue: data.totals?.sales || 0,
+                spend: data.summary?.spend || 0,
+                clicks: data.summary?.swipes || 0,
+                impressions: data.summary?.impressions || 0,
+                conversions: data.summary?.orders || 0,
+                revenue: data.summary?.sales || 0,
               }
             }));
             return;
