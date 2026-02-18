@@ -26,9 +26,20 @@ export async function GET(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const storeId = params.storeId;
+    let storeId = params.storeId;
 
     const supabase = getSupabaseAdmin();
+
+    // إذا لم يكن UUID، نحوّله إلى UUID عبر store_url
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('store_url', storeId)
+        .single();
+      if (storeRow?.id) storeId = storeRow.id;
+    }
 
     // جلب بيانات الربط من جدول ad_platform_accounts (نفس الجدول الذي يستخدمه token-manager)
     const { data: integration, error: integrationError } = await supabase

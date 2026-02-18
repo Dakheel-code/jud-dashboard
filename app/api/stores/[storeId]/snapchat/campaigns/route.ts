@@ -83,7 +83,7 @@ export async function GET(
   const startTime = Date.now();
 
   try {
-    const storeId = params.storeId;
+    let storeId = params.storeId;
     const searchParams = request.nextUrl.searchParams;
     const range = searchParams.get('range') || '30d';
     const debug = searchParams.get('debug') === 'true';
@@ -91,7 +91,7 @@ export async function GET(
 
     // التحقق من المتغيرات البيئية
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
@@ -104,6 +104,17 @@ export async function GET(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // إذا لم يكن UUID، نحوّله إلى UUID عبر store_url
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('store_url', storeId)
+        .single();
+      if (storeRow?.id) storeId = storeRow.id;
+    }
 
     // جلب بيانات الربط من جدول ad_platform_accounts (نفس الجدول الذي يستخدمه token-manager)
     const { data: integration, error: integrationError } = await supabase
