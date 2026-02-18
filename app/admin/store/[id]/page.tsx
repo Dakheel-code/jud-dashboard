@@ -576,7 +576,7 @@ function StoreDetailsContent() {
       // التحقق إذا كان المعرف هو UUID أو store_url
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paramId);
       
-      let response;
+      let response: Response | null = null;
       let storeFromApi: any = null;
       if (isUUID) {
         // جلب بيانات المتجر بالـ ID أولاً
@@ -585,8 +585,16 @@ function StoreDetailsContent() {
         
         if (storeResponse.ok && storeResult.store) {
           storeFromApi = storeResult.store;
+          // حفظ بيانات المتجر و storeId فوراً
+          setStoreData(storeFromApi);
+          setStoreId(storeFromApi.id);
+          
           const storeUrl = storeResult.store.store_url;
-          response = await fetch(`/api/tasks?store_url=${encodeURIComponent(storeUrl)}`);
+          try {
+            response = await fetch(`/api/tasks?store_url=${encodeURIComponent(storeUrl)}`);
+          } catch {
+            // المهام اختيارية — المتجر يظهر حتى بدونها
+          }
         } else {
           setLoading(false);
           return;
@@ -595,30 +603,35 @@ function StoreDetailsContent() {
         response = await fetch(`/api/tasks?store_url=${encodeURIComponent(paramId)}`);
       }
       
-      const data = await response.json();
-
-      if (response.ok) {
-        setTasks(data.tasks || {});
-        setStats(data.stats || { total: 0, completed: 0, percentage: 0 });
-        setStoreId(data.store_id);
-        // استخدم بيانات المتجر من API المتجر (أكمل) أو من API المهام
-        setStoreData(storeFromApi || data.store);
-        
-        // جلب رسائل واتساب للأقسام من localStorage
-        const savedCategoryMessages = localStorage.getItem('categoryWhatsappMessages');
-        if (savedCategoryMessages) {
-          setCategoryWhatsappMessages(JSON.parse(savedCategoryMessages));
+      if (response) {
+        const data = await response.json();
+        if (response.ok) {
+          setTasks(data.tasks || {});
+          setStats(data.stats || { total: 0, completed: 0, percentage: 0 });
+          if (data.store_id) setStoreId(data.store_id);
+          // بيانات المتجر: الأولوية لـ storeFromApi (أكمل)
+          if (!storeFromApi && data.store) setStoreData(data.store);
         }
-        
-        // جلب معلومات المتجر (الشعار والاسم)
-        const metaUrl = storeFromApi?.store_url || data.store_url;
-        if (metaUrl) {
+      }
+      
+      // جلب رسائل واتساب للأقسام من localStorage
+      const savedCategoryMessages = localStorage.getItem('categoryWhatsappMessages');
+      if (savedCategoryMessages) {
+        setCategoryWhatsappMessages(JSON.parse(savedCategoryMessages));
+      }
+      
+      // جلب معلومات المتجر (الشعار والاسم)
+      const metaUrl = storeFromApi?.store_url || paramId;
+      if (metaUrl) {
+        try {
           const metaResponse = await fetch(`/api/store/metadata?url=${encodeURIComponent(metaUrl)}`);
           const metaData = await metaResponse.json();
           setStoreMetadata({
             name: metaData.name || metaUrl,
             logo: metaData.logo,
           });
+        } catch {
+          // metadata اختياري
         }
       }
       setLoading(false);
