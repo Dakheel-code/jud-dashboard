@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { TaskWithProgress, TasksByCategory } from '@/types';
+
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) throw new Error('Supabase configuration missing');
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseAdmin();
     const searchParams = request.nextUrl.searchParams;
     let store_id = searchParams.get('store_id');
     const store_url = searchParams.get('store_url');

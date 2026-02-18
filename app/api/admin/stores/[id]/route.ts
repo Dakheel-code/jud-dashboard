@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Database configuration error');
@@ -114,19 +114,7 @@ export async function DELETE(
       );
     }
 
-    // إنشاء Supabase client جديد للتأكد من الاتصال
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: 'Database configuration error' },
-        { status: 500 }
-      );
-    }
-
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = getSupabaseClient();
 
     // أولاً: التحقق من وجود المتجر
     const { data: existingStore, error: checkError } = await supabase
@@ -166,22 +154,10 @@ export async function DELETE(
       );
     }
 
-    // ثالثاً: التحقق من أن المتجر تم حذفه فعلياً
-    const { data: verifyData, error: verifyError } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('id', id);
-
-    if (verifyError) {
-    } else {
-    }
-
-
     return NextResponse.json({ 
       success: true,
       message: 'Store deleted successfully',
       deleted: deletedData[0],
-      verified: verifyData?.length === 0
     });
 
   } catch (error: any) {
