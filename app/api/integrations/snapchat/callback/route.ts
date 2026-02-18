@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
     try {
       const userInfo = await getUserInfo({ accessToken: tokens.access_token });
       externalUserId = userInfo.id;
-      externalDisplayName = userInfo.display_name;
+      // الإيميل أوضح للمستخدم من display_name
+      externalDisplayName = userInfo.email || userInfo.display_name;
     } catch {
       // هوية المستخدم اختيارية — لا توقف العملية
     }

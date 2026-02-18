@@ -20,20 +20,37 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
-async function getOrganizationsFromToken(accessToken: string): Promise<{ id: string; name: string } | null> {
+async function getUserEmailFromToken(accessToken: string): Promise<{ email: string | null; orgId: string | null; orgName: string | null }> {
   try {
-    const res = await fetch(`${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`, {
+    // جلب الإيميل من /me
+    const meRes = await fetch(`${SNAPCHAT_API_URL}/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const orgs = data.organizations || [];
-    if (orgs.length === 0) return null;
-    // نرجع أول منظمة (المستخدم عادة لديه منظمة واحدة)
-    const org = orgs[0]?.organization || orgs[0];
-    return { id: org?.id || '', name: org?.name || '' };
+    let email: string | null = null;
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      email = meData.me?.email || meData.me?.display_name || null;
+    }
+
+    // جلب organization_id من /me/organizations
+    const orgRes = await fetch(`${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    let orgId: string | null = null;
+    let orgName: string | null = null;
+    if (orgRes.ok) {
+      const orgData = await orgRes.json();
+      const orgs = orgData.organizations || [];
+      if (orgs.length > 0) {
+        const org = orgs[0]?.organization || orgs[0];
+        orgId = org?.id || null;
+        orgName = org?.name || null;
+      }
+    }
+
+    return { email, orgId, orgName };
   } catch {
-    return null;
+    return { email: null, orgId: null, orgName: null };
   }
 }
 
@@ -53,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // نجمع الهويات — كل سجل له access_token نجلب منظمته من Snapchat API
+    // نجمع الهويات — كل سجل له access_token نجلب إيميله ومنظمته من Snapchat API
     // نتجنب تكرار نفس organization_id
     const seenOrgs = new Set<string>();
     const identities: {
@@ -63,65 +80,37 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     for (const row of data || []) {
-      // إذا كان organization_id محفوظاً مسبقاً — استخدمه مباشرة
-      if (row.organization_id && !seenOrgs.has(row.organization_id)) {
-        seenOrgs.add(row.organization_id);
+      if (!row.access_token_enc) continue;
+
+      try {
+        const accessToken = decrypt(row.access_token_enc);
+        const { email, orgId, orgName } = await getUserEmailFromToken(accessToken);
+
+        // نستخدم organization_id كـ identity_key (أو نحفظه إذا لم يكن موجوداً)
+        const finalOrgId = row.organization_id || orgId;
+        if (!finalOrgId) continue;
+        if (seenOrgs.has(finalOrgId)) continue;
+        seenOrgs.add(finalOrgId);
+
+        // حفظ organization_id إذا لم يكن محفوظاً
+        if (!row.organization_id && orgId) {
+          await supabase
+            .from('ad_platform_accounts')
+            .update({ organization_id: orgId })
+            .eq('store_id', row.store_id)
+            .eq('platform', 'snapchat');
+        }
+
+        // الإيميل هو الاسم الأوضح، ثم اسم المنظمة، ثم ad_account_name
+        const displayName = email || orgName || row.ad_account_name || null;
+
         identities.push({
-          identity_key: row.organization_id,
-          display_name: null, // سنملأه لاحقاً من API
+          identity_key: finalOrgId,
+          display_name: displayName,
           last_used_at: row.last_connected_at || row.updated_at || null,
         });
-        continue;
-      }
-
-      // إذا لم يكن organization_id محفوظاً — نجلبه من API
-      if (!row.organization_id && row.access_token_enc) {
-        try {
-          const accessToken = decrypt(row.access_token_enc);
-          const org = await getOrganizationsFromToken(accessToken);
-          if (org?.id && !seenOrgs.has(org.id)) {
-            seenOrgs.add(org.id);
-            // حفظ organization_id في قاعدة البيانات للمرات القادمة
-            await supabase
-              .from('ad_platform_accounts')
-              .update({ organization_id: org.id })
-              .eq('store_id', row.store_id)
-              .eq('platform', 'snapchat');
-
-            identities.push({
-              identity_key: org.id,
-              display_name: org.name || null,
-              last_used_at: row.last_connected_at || row.updated_at || null,
-            });
-          }
-        } catch {
-          // token منتهي أو خطأ — تجاهل هذا السجل
-        }
-      }
-    }
-
-    // الآن نجلب أسماء المنظمات لمن لم يُجلب اسمه بعد
-    // (السجلات التي كان organization_id محفوظاً لكن لا يوجد اسم)
-    // نستخدم أول سجل لكل منظمة لجلب اسمها
-    const needsName = identities.filter(i => !i.display_name);
-    if (needsName.length > 0) {
-      // جلب access_token لأي سجل من كل منظمة
-      for (const identity of needsName) {
-        const matchRow = (data || []).find(r => r.organization_id === identity.identity_key && r.access_token_enc);
-        if (matchRow?.access_token_enc) {
-          try {
-            const accessToken = decrypt(matchRow.access_token_enc);
-            const org = await getOrganizationsFromToken(accessToken);
-            if (org?.name) identity.display_name = org.name;
-          } catch { /* تجاهل */ }
-        }
-        // إذا لم نجد اسماً، نستخدم ad_account_name من نفس المنظمة
-        if (!identity.display_name) {
-          const matchRows = (data || []).filter(r => r.organization_id === identity.identity_key && r.ad_account_name);
-          if (matchRows.length > 0) {
-            identity.display_name = matchRows.map(r => r.ad_account_name).join(' / ');
-          }
-        }
+      } catch {
+        // token منتهي أو خطأ — تجاهل هذا السجل
       }
     }
 
