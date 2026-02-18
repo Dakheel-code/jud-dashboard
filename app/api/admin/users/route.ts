@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { requireAdmin } from '@/lib/auth-guard';
 import { logAuditFromRequest } from '@/lib/audit';
+import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,18 +39,12 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('admin_users')
-      .select('id, username, name, email, role, roles, permissions, is_active, avatar, created_at, updated_at, last_login')
+      .select('id, username, name, email, is_active, avatar, created_at, updated_at, last_login')
       .order('name', { ascending: true });
 
     // فلترة المستخدمين النشطين فقط
     if (activeOnly) {
       query = query.eq('is_active', true);
-    }
-
-    // فلترة حسب الدور
-    if (role) {
-      // البحث في role أو roles array
-      query = query.or(`role.eq.${role},roles.cs.{${role}}`);
     }
 
     const { data: users, error } = await query;
@@ -58,7 +53,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'فشل في جلب المستخدمين' }, { status: 500 });
     }
 
-    return NextResponse.json({ users });
+    // جلب أدوار وصلاحيات RBAC لكل مستخدم
+    const usersWithRbac = await Promise.all(
+      (users || []).map(async (user) => {
+        let rbacRoles: string[] = [];
+        let rbacPermissions: string[] = [];
+        try {
+          const rbac = await getUserPermissions(user.id);
+          rbacRoles = rbac.roles;
+          rbacPermissions = rbac.permissions;
+        } catch {
+          // fallback
+        }
+        return {
+          ...user,
+          role: rbacRoles[0] || 'employee',
+          roles: rbacRoles,
+          permissions: rbacPermissions,
+        };
+      })
+    );
+
+    // فلترة حسب الدور (بعد جلب RBAC)
+    let filteredUsers = usersWithRbac;
+    if (role) {
+      filteredUsers = usersWithRbac.filter(u => u.roles.includes(role));
+    }
+
+    return NextResponse.json({ users: filteredUsers });
   } catch (error) {
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }

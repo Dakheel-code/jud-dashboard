@@ -25,22 +25,46 @@ interface AdminUser {
 
 const ROLES = [
   { value: 'super_admin', label: 'المسؤول الرئيسي', color: 'red' },
-  { value: 'admin', label: 'المسؤول', color: 'orange' },
-  { value: 'team_leader', label: 'قائد فريق', color: 'blue' },
-  { value: 'account_manager', label: 'مدير حساب', color: 'green' },
-  { value: 'media_buyer', label: 'ميديا باير', color: 'cyan' },
-  { value: 'programmer', label: 'مبرمج', color: 'yellow' },
-  { value: 'designer', label: 'مصمم', color: 'pink' },
-  { value: 'web_developer', label: 'مطور ويب', color: 'indigo' },
+  { value: 'manager', label: 'مدير', color: 'orange' },
+  { value: 'editor', label: 'محرر', color: 'blue' },
+  { value: 'viewer', label: 'مشاهد', color: 'cyan' },
+  { value: 'employee', label: 'موظف', color: 'green' },
+  { value: 'admin', label: 'المسؤول', color: 'purple' },
+  { value: 'team_leader', label: 'قائد فريق', color: 'yellow' },
+  { value: 'account_manager', label: 'مدير حساب', color: 'pink' },
+  { value: 'media_buyer', label: 'ميديا باير', color: 'indigo' },
 ];
 
 const PERMISSIONS = [
-  { value: 'manage_tasks', label: 'إدارة المهام' },
-  { value: 'manage_stores', label: 'إدارة المتاجر' },
-  { value: 'manage_users', label: 'إدارة المستخدمين' },
-  { value: 'manage_help', label: 'إدارة طلبات المساعدة' },
-  { value: 'view_stats', label: 'عرض الإحصائيات' },
+  { value: 'dashboard.read', label: 'عرض لوحة التحكم' },
+  { value: 'users.read', label: 'عرض المستخدمين' },
+  { value: 'users.write', label: 'تعديل المستخدمين' },
+  { value: 'users.delete', label: 'حذف المستخدمين' },
+  { value: 'roles.read', label: 'عرض الأدوار' },
+  { value: 'roles.write', label: 'تعديل الأدوار' },
+  { value: 'audit.read', label: 'عرض سجل التدقيق' },
+  { value: 'settings.read', label: 'عرض الإعدادات' },
+  { value: 'settings.write', label: 'تعديل الإعدادات' },
 ];
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const date = new Date(dateStr).getTime();
+  const diff = now - date;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+
+  if (seconds < 60) return 'الآن';
+  if (minutes < 60) return `منذ ${minutes} د`;
+  if (hours < 24) return `منذ ${hours} س`;
+  if (days < 7) return `منذ ${days} يوم`;
+  if (weeks < 4) return `منذ ${weeks} أسبوع`;
+  return `منذ ${months} شهر`;
+}
 
 function UsersManagementContent() {
   const { branding } = useBranding();
@@ -551,7 +575,7 @@ function UsersManagementContent() {
                     </button>
                     <span className="text-purple-500 text-xs">
                       {user.last_login
-                        ? new Date(user.last_login).toLocaleDateString('ar-SA')
+                        ? timeAgo(user.last_login)
                         : 'لم يسجل دخول'}
                     </span>
                   </div>
@@ -678,7 +702,7 @@ function UsersManagementContent() {
                         </button>
                       </td>
                       <td className="p-4">
-                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 60 * 1000 ? (
+                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 5 * 60 * 1000 ? (
                           <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل الآن"></span>
                         ) : (
                           <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>
@@ -686,7 +710,7 @@ function UsersManagementContent() {
                       </td>
                       <td className="p-4 text-purple-400 text-sm">
                         {user.last_login
-                          ? new Date(user.last_login).toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' })
+                          ? timeAgo(user.last_login)
                           : 'لم يسجل دخول'}
                       </td>
                       <td className="p-4">

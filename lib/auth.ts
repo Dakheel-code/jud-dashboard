@@ -102,6 +102,27 @@ providers.push(
         .update({ last_login: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', user.id);
 
+      // RBAC: تأكد أن المستخدم عنده دور — إذا لا، أعطه employee
+      const { data: existingRoles } = await supabase
+        .from('admin_user_roles')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (!existingRoles || existingRoles.length === 0) {
+        const { data: employeeRole } = await supabase
+          .from('admin_roles')
+          .select('id')
+          .eq('key', 'employee')
+          .single();
+
+        if (employeeRole) {
+          await supabase.from('admin_user_roles').insert({
+            user_id: user.id,
+            role_id: employeeRole.id,
+          });
+        }
+      }
+
       // جلب صلاحيات RBAC الحقيقية
       let rbacRoles: string[] = [];
       let rbacPermissions: string[] = [];
@@ -165,10 +186,8 @@ export const authOptions: NextAuthOptions = {
             name: userName,
             username: username,
             password_hash: '', // Google users don't have password
-            role: 'viewer', // أقل صلاحية — RBAC هو مصدر الحقيقة
             is_active: true,
             avatar: userAvatar,
-            permissions: [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_login: new Date().toISOString(),
@@ -180,20 +199,22 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
 
-          // RBAC: ربط المستخدم الجديد بدور viewer تلقائياً
-          if (newUser) {
-            const { data: viewerRole } = await supabase
-              .from('admin_roles')
-              .select('id')
-              .eq('key', 'viewer')
-              .single();
-            if (viewerRole) {
-              await supabase.from('admin_user_roles').insert({
-                user_id: newUser.id,
-                role_id: viewerRole.id,
-              }).select().maybeSingle();
-            }
+          // RBAC: ربط المستخدم الجديد بدور موظف
+          const { data: employeeRole } = await supabase
+            .from('admin_roles')
+            .select('id')
+            .eq('key', 'employee')
+            .single();
+
+          if (!employeeRole) {
+            console.error('Employee role not found');
+            return false;
           }
+
+          await supabase.from('admin_user_roles').insert({
+            user_id: newUser!.id,
+            role_id: employeeRole.id,
+          });
         } else {
           // تحديث آخر تسجيل دخول فقط
           const { error: updateError } = await supabase
@@ -209,16 +230,16 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
 
-          // RBAC: تأكد أن المستخدم الموجود عنده دور viewer على الأقل
-          const { data: viewerRole } = await supabase
+          // RBAC: تأكد أن المستخدم الموجود عنده دور موظف على الأقل
+          const { data: employeeRole } = await supabase
             .from('admin_roles')
             .select('id')
-            .eq('key', 'viewer')
+            .eq('key', 'employee')
             .single();
-          if (viewerRole) {
+          if (employeeRole) {
             await supabase.from('admin_user_roles').insert({
               user_id: existingUser.id,
-              role_id: viewerRole.id,
+              role_id: employeeRole.id,
             }).select().maybeSingle();
           }
         }
