@@ -420,7 +420,7 @@ function StoresPageContent() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/admin/store/${store.store_url}`);
+                        router.push(`/admin/store/${store.id}`);
                       }}
                       className="p-2 text-purple-400 hover:text-white hover:bg-purple-500/20 rounded-lg transition-all"
                       title="فتح صفحة المتجر"
@@ -504,7 +504,7 @@ function StoresPageContent() {
                   </span>
                   <div className="flex gap-2">
                     <Link
-                      href={`/admin/store/${store.store_url}`}
+                      href={`/admin/store/${store.id}`}
                       className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-all"
                       title="عرض التفاصيل"
                       onClick={(e) => e.stopPropagation()}

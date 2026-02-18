@@ -307,7 +307,7 @@ function UserDetailsContent() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Link 
-                            href={`/admin/store/${cleanStoreUrl(store.store_url)}`}
+                            href={`/admin/store/${store.id}`}
                             className="text-white font-medium hover:text-fuchsia-400 transition-colors"
                           >
                             {store.store_name || cleanStoreUrl(store.store_url)}
@@ -375,7 +375,7 @@ function UserDetailsContent() {
                         </div>
                       </div>
                       <Link
-                        href={`/admin/store/${cleanStoreUrl(store.store_url)}`}
+                        href={`/admin/store/${store.id}`}
                         className="p-2 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-lg transition-all"
                         title="عرض التفاصيل"
                       >

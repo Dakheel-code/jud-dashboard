@@ -431,7 +431,7 @@ function ClientsPageContent() {
                             {client.stores.map(store => (
                               <Link
                                 key={store.id}
-                                href={`/admin/store/${encodeURIComponent(store.store_url)}`}
+                                href={`/admin/store/${store.id}`}
                                 className="flex items-center gap-2 px-3 py-2 bg-purple-900/40 border border-purple-500/20 rounded-xl hover:bg-purple-900/60 hover:border-purple-500/40 transition-all"
                               >
                                 <StoreFavicon storeUrl={store.store_url} alt={store.store_name || store.store_url} size={32} className="w-8 h-8 rounded-lg object-cover" />
@@ -728,7 +728,7 @@ function ClientsPageContent() {
                     {viewingClient.stores.map(store => (
                       <Link
                         key={store.id}
-                        href={`/admin/store/${encodeURIComponent(store.store_url)}`}
+                        href={`/admin/store/${store.id}`}
                         className="flex items-center gap-3 p-3 bg-purple-900/30 rounded-xl hover:bg-purple-900/50 transition-colors flex-row-reverse"
                         onClick={() => setViewingClient(null)}
                       >
