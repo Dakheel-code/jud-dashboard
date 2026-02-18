@@ -408,7 +408,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                 <h3 className="text-lg font-bold text-white mb-2">انتهت صلاحية الربط</h3>
                 <p className="text-sm text-orange-400/70 mb-4">يرجى إعادة ربط حساب Snapchat</p>
                 <button
-                  onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`}
+                  onClick={() => onConnectClick ? onConnectClick() : (window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`)}
                   className="px-6 py-3 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-400 transition-colors"
                 >
                   🔄 إعادة الربط

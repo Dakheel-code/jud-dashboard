@@ -1812,7 +1812,7 @@ function StoreDetailsContent() {
                                     return;
                                   }
                                   if (platform.key === 'snapchat') {
-                                    window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
+                                    openSnapchatIdentityModal();
                                   } else {
                                     window.location.href = `/admin/store/${storeId}/integrations`;
                                   }
@@ -1859,13 +1859,29 @@ function StoreDetailsContent() {
                               </svg>
                             </>
                           ) : needsReauth ? (
-                            <Link
-                              href={`/admin/store/${storeId}/integrations`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="px-4 py-1.5 rounded-lg text-xs bg-orange-500/30 text-orange-300 hover:bg-orange-500/50 transition-colors"
-                            >
-                              إعادة الربط
-                            </Link>
+                            platform.key === 'snapchat' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!storeData?.id) {
+                                    alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
+                                    return;
+                                  }
+                                  openSnapchatIdentityModal();
+                                }}
+                                className="px-4 py-1.5 rounded-lg text-xs bg-orange-500/30 text-orange-300 hover:bg-orange-500/50 transition-colors"
+                              >
+                                إعادة الربط
+                              </button>
+                            ) : (
+                              <Link
+                                href={`/admin/store/${storeId}/integrations`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="px-4 py-1.5 rounded-lg text-xs bg-orange-500/30 text-orange-300 hover:bg-orange-500/50 transition-colors"
+                              >
+                                إعادة الربط
+                              </Link>
+                            )
                           ) : hasError ? (
                             <Link
                               href={`/admin/store/${storeId}/integrations`}
