@@ -243,10 +243,11 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
     try {
       const data = await file.arrayBuffer();
       const XLSX = await import('xlsx');
-      const workbook = XLSX.read(data);
+      // دعم العربية: codepage 65001 = UTF-8
+      const workbook = XLSX.read(data, { type: 'array', codepage: 65001, raw: false });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if (jsonData.length === 0) {
         throw new Error('الملف فارغ أو لا يحتوي على بيانات');
