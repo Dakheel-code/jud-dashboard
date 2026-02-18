@@ -585,6 +585,7 @@ function StoreDetailsContent() {
         body: JSON.stringify({ storeId: storeData.id, identityKey }),
       });
       const data = await res.json();
+      console.log('[attach] response:', data);
       if (!data.success) {
         alert('فشل الربط: ' + (data.error || 'خطأ غير معروف'));
         return;
@@ -594,13 +595,15 @@ function StoreDetailsContent() {
       try {
         const accRes = await fetch(`/api/stores/${storeData.id}/snapchat/adaccounts`);
         const accData = await accRes.json();
+        console.log('[attach] adaccounts response:', accData);
         const accounts = accData.adAccounts || [];
         setSnapchatAdAccountsForAttach(accounts);
-        // إذا كان هناك حساب واحد فقط، اختره تلقائياً وأغلق الـ modal
+        // إذا كان هناك حساب واحد فقط، اختره تلقائياً
         if (accounts.length === 1) {
           setSelectedSnapchatAdAccount(accounts[0].id);
         }
-      } catch {
+      } catch (err) {
+        console.error('[attach] adaccounts error:', err);
         setSnapchatAdAccountsForAttach([]);
       } finally {
         setLoadingSnapchatAdAccounts(false);
