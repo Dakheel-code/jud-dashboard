@@ -75,8 +75,9 @@ function SelectAccountContent() {
 
       const result = await response.json();
       if (result.success) {
-        // الانتقال لصفحة المتجر مع علامة نجاح
-        router.push(`/admin/store/${storeId}?snapchat=connected`);
+        // جلب store_url للتوجيه الصحيح
+        const storeSlug = result.store_url || storeId;
+        router.push(`/admin/store/${storeSlug}?snapchat=connected`);
       } else {
         setError(result.error || 'فشل في حفظ الحساب');
       }

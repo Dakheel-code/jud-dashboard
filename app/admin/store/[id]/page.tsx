@@ -257,7 +257,15 @@ function StoreDetailsContent() {
   useEffect(() => {
     if (searchParams.get('connect') === 'snapchat' && storeData?.id) {
       openSnapchatIdentityModal();
-      // إزالة الـ param من الـ URL
+      router.replace(`/admin/store/${paramId}`);
+    }
+  }, [searchParams, storeData?.id]);
+
+  // بعد OAuth جديد — تحديث الربط وإغلاق أي modal مفتوح
+  useEffect(() => {
+    if (searchParams.get('snapchat') === 'connected' && storeData?.id) {
+      fetchDirectIntegrations();
+      setShowSnapchatIdentityModal(false);
       router.replace(`/admin/store/${paramId}`);
     }
   }, [searchParams, storeData?.id]);
