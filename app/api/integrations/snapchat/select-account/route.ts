@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     if (!storeId || !ad_account_id || !ad_account_name) {
       return NextResponse.json(
-        { error: 'storeId, ad_account_id, and ad_account_name are required' },
+        { error: 'Missing required fields', received: { storeId, ad_account_id, ad_account_name } },
         { status: 400 }
       );
     }

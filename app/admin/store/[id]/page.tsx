@@ -586,21 +586,25 @@ function StoreDetailsContent() {
 
   // ربط هوية سابقة بالمتجر الحالي
   const attachSnapchatIdentity = async (identityKey: string) => {
-    if (!storeData?.id) return;
+    if (!storeData?.id || !identityKey) {
+      alert('خطأ في بيانات الربط');
+      return;
+    }
     setAttachingSnapchat(true);
     try {
       const res = await fetch('/api/integrations/snapchat/attach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: storeData.id, identityKey }),
+        body: JSON.stringify({
+          storeId: storeData.id,
+          identityKey: identityKey,
+        }),
       });
       const data = await res.json();
-      console.log('[attach] response:', data);
       if (!data.success) {
         alert('فشل الربط: ' + (data.error || 'خطأ غير معروف'));
         return;
       }
-      // استخدام Ad Accounts من الـ attach response مباشرة (أسرع وأموثوق)
       const accounts = data.adAccounts || [];
       setSnapchatAdAccountsForAttach(accounts);
       if (accounts.length === 1) {
@@ -615,19 +619,32 @@ function StoreDetailsContent() {
 
   // حفظ Ad Account المختار بعد الـ attach
   const saveSnapchatAdAccountAfterAttach = async () => {
-    if (!storeData?.id || !selectedSnapchatAdAccount) return;
     const account = snapchatAdAccountsForAttach.find(a => a.id === selectedSnapchatAdAccount);
-    if (!account) return;
+    if (!storeData?.id || !account?.id || !account?.name) {
+      alert('اختر حساب إعلاني صحيح أولاً');
+      return;
+    }
     try {
-      const res = await fetch(`/api/integrations/snapchat/select-account`, {
+      const res = await fetch('/api/integrations/snapchat/select-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: storeData.id, adAccountId: account.id, adAccountName: account.name }),
+        body: JSON.stringify({
+          storeId: storeData.id,
+          ad_account_id: account.id,
+          ad_account_name: account.name,
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'فشل حفظ الحساب');
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setShowSnapchatIdentityModal(false);
-        fetchDirectIntegrations();
+        setSnapchatAdAccountsForAttach([]);
+        setSelectedSnapchatAdAccount('');
+        await fetchDirectIntegrations();
       } else {
         alert('فشل حفظ الحساب: ' + (data.error || 'خطأ غير معروف'));
       }
@@ -2217,17 +2234,6 @@ function StoreDetailsContent() {
                       </svg>
                       ربط حساب Snapchat جديد
                     </button>
-                    {snapchatIdentities.length > 0 && (
-                      <button
-                        onClick={() => {
-                          setShowSnapchatIdentityModal(false);
-                          window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
-                        }}
-                        className="w-full py-2 rounded-xl bg-purple-800/40 border border-purple-500/30 text-purple-300 text-sm hover:bg-purple-700/40 transition-colors"
-                      >
-                        استخدام نفس الحساب المسجّل
-                      </button>
-                    )}
                   </>
                 )}
               </>
