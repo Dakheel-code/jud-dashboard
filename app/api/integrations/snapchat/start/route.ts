@@ -46,12 +46,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // التحقق من وجود المتجر
-    const { data: store, error: storeError } = await supabase
-      .from('stores')
-      .select('id')
-      .eq('id', storeId)
-      .single();
+    // التحقق من وجود المتجر (يقبل UUID أو store_url)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(storeId);
+
+    const { data: store, error: storeError } = isUuid
+      ? await supabase.from('stores').select('id').eq('id', storeId).single()
+      : await supabase.from('stores').select('id').eq('store_url', storeId).single();
 
     if (storeError || !store) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const { error: stateError } = await supabase
       .from('oauth_states')
       .insert({
-        store_id: storeId,
+        store_id: store.id,
         platform: 'snapchat',
         state: state,
         redirect_uri: redirectUri,

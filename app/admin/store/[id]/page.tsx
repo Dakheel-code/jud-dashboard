@@ -1698,8 +1698,12 @@ function StoreDetailsContent() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!storeData?.id) {
+                                    alert('Store ID is missing. Refresh the page and try again.');
+                                    return;
+                                  }
                                   if (platform.key === 'snapchat') {
-                                    window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`;
+                                    window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
                                   } else {
                                     window.location.href = `/admin/store/${storeId}/integrations`;
                                   }
@@ -1713,12 +1717,16 @@ function StoreDetailsContent() {
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation();
+                                  if (!storeData?.id) {
+                                    alert('Store ID is missing. Refresh the page and try again.');
+                                    return;
+                                  }
                                   if (!confirm('هل أنت متأكد من فصل الربط؟')) return;
                                   try {
                                     const response = await fetch(`/api/integrations/${platform.key}/disconnect`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ storeId }),
+                                      body: JSON.stringify({ storeId: storeData?.id }),
                                     });
                                     const data = await response.json();
                                     if (data.success) {
@@ -1761,9 +1769,13 @@ function StoreDetailsContent() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                if (!storeData?.id) {
+                                  alert('Store ID is missing. Refresh the page and try again.');
+                                  return;
+                                }
                                 // فتح OAuth مباشرة للمنصات المدعومة
                                 if (platform.key === 'snapchat') {
-                                  window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`;
+                                  window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
                                 } else {
                                   // للمنصات غير المدعومة بعد، نوجه لصفحة الإعدادات
                                   window.location.href = `/admin/store/${storeId}/integrations`;
