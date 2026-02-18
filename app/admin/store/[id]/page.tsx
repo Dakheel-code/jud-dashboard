@@ -1699,7 +1699,7 @@ function StoreDetailsContent() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (!storeData?.id) {
-                                    alert('Store ID is missing. Refresh the page and try again.');
+                                    alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
                                     return;
                                   }
                                   if (platform.key === 'snapchat') {
@@ -1718,7 +1718,7 @@ function StoreDetailsContent() {
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   if (!storeData?.id) {
-                                    alert('Store ID is missing. Refresh the page and try again.');
+                                    alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
                                     return;
                                   }
                                   if (!confirm('هل أنت متأكد من فصل الربط؟')) return;
@@ -1770,7 +1770,7 @@ function StoreDetailsContent() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (!storeData?.id) {
-                                  alert('Store ID is missing. Refresh the page and try again.');
+                                  alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
                                   return;
                                 }
                                 // فتح OAuth مباشرة للمنصات المدعومة
