@@ -11,10 +11,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decrypt } from '@/lib/encryption';
+import { listAdAccounts } from '@/lib/integrations/snapchat';
 
 export const dynamic = 'force-dynamic';
 
 const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
+const SNAPCHAT_TOKEN_URL = 'https://accounts.snapchat.com/login/oauth2/access_token';
 
 async function getOrgIdFromToken(accessToken: string): Promise<string | null> {
   try {
@@ -143,10 +145,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // جلب Ad Accounts مباشرة من Snapchat API باستخدام توكن السجل المصدر
+    // هذا أفضل من جلبها من adaccounts endpoint الذي قد يفشل إذا كان التوكن منتهياً
+    let adAccounts: { id: string; name: string; organization_id: string }[] = [];
+    try {
+      const sourceAccessToken = decrypt(source.access_token_enc);
+      const result = await listAdAccounts({ accessToken: sourceAccessToken });
+      adAccounts = result.adAccounts.map(a => ({ id: a.id, name: a.name, organization_id: a.organization_id }));
+    } catch { /* تجاهل — الـ frontend سيجلبها بطريقة أخرى */ }
+
     return NextResponse.json({
       success: true,
       ad_account_id: source.ad_account_id,
       ad_account_name: source.ad_account_name,
+      adAccounts,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -590,23 +590,11 @@ function StoreDetailsContent() {
         alert('فشل الربط: ' + (data.error || 'خطأ غير معروف'));
         return;
       }
-      // جلب Ad Accounts بعد الربط — دائماً اعرضها للاختيار
-      setLoadingSnapchatAdAccounts(true);
-      try {
-        const accRes = await fetch(`/api/stores/${storeData.id}/snapchat/adaccounts`);
-        const accData = await accRes.json();
-        console.log('[attach] adaccounts response:', accData);
-        const accounts = accData.adAccounts || [];
-        setSnapchatAdAccountsForAttach(accounts);
-        // إذا كان هناك حساب واحد فقط، اختره تلقائياً
-        if (accounts.length === 1) {
-          setSelectedSnapchatAdAccount(accounts[0].id);
-        }
-      } catch (err) {
-        console.error('[attach] adaccounts error:', err);
-        setSnapchatAdAccountsForAttach([]);
-      } finally {
-        setLoadingSnapchatAdAccounts(false);
+      // استخدام Ad Accounts من الـ attach response مباشرة (أسرع وأموثوق)
+      const accounts = data.adAccounts || [];
+      setSnapchatAdAccountsForAttach(accounts);
+      if (accounts.length === 1) {
+        setSelectedSnapchatAdAccount(accounts[0].id);
       }
     } catch {
       alert('حدث خطأ في الاتصال');
