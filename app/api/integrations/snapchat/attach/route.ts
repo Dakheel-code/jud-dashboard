@@ -10,8 +10,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { decrypt } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
+
+const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
+
+async function getOrgIdFromToken(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const orgs = data.organizations || [];
+    if (orgs.length === 0) return null;
+    const org = orgs[0]?.organization || orgs[0];
+    return org?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -46,8 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // جلب أحدث سجل tokens لهذه الهوية
-    // identityKey قد يكون external_user_id أو organization_id
-    const { data: sourceRecords, error: sourceError } = await supabase
+    // identityKey هو organization_id
+    let { data: sourceRecords, error: sourceError } = await supabase
       .from('ad_platform_accounts')
       .select('*')
       .eq('platform', 'snapchat')
@@ -55,6 +74,35 @@ export async function POST(request: NextRequest) {
       .or(`external_user_id.eq.${identityKey},organization_id.eq.${identityKey}`)
       .order('updated_at', { ascending: false })
       .limit(1);
+
+    // Fallback: إذا لم نجد بـ organization_id (سجلات قديمة بدون organization_id)
+    // نبحث في كل السجلات ونتحقق من organization_id عبر Snapchat API
+    if (!sourceError && (!sourceRecords || sourceRecords.length === 0)) {
+      const { data: allRecords } = await supabase
+        .from('ad_platform_accounts')
+        .select('*')
+        .eq('platform', 'snapchat')
+        .not('refresh_token_enc', 'is', null)
+        .is('organization_id', null)
+        .order('updated_at', { ascending: false });
+
+      for (const rec of allRecords || []) {
+        if (!rec.access_token_enc) continue;
+        try {
+          const accessToken = decrypt(rec.access_token_enc);
+          const orgId = await getOrgIdFromToken(accessToken);
+          if (orgId === identityKey) {
+            // حفظ organization_id في قاعدة البيانات
+            await supabase
+              .from('ad_platform_accounts')
+              .update({ organization_id: orgId })
+              .eq('id', rec.id);
+            sourceRecords = [{ ...rec, organization_id: orgId }];
+            break;
+          }
+        } catch { /* تجاهل */ }
+      }
+    }
 
     if (sourceError || !sourceRecords || sourceRecords.length === 0) {
       return NextResponse.json(
