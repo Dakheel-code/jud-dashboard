@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase configuration missing');
@@ -87,6 +87,13 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
 
+    // جلب store_url لتوجيه المستخدم بشكل موحّد
+    const { data: storeInfo } = await supabase
+      .from('stores')
+      .select('store_url')
+      .eq('id', storeId)
+      .single();
+    const storeSlug = storeInfo?.store_url || storeId;
 
     // جلب الحسابات الإعلانية تلقائياً
     try {
@@ -101,7 +108,7 @@ export async function GET(request: NextRequest) {
           organizationId: account.organization_id,
         });
         // إعادة التوجيه مباشرة لصفحة المتجر مع علامة نجاح
-        return NextResponse.redirect(`${baseUrl}/admin/store/${storeId}?snapchat=connected`);
+        return NextResponse.redirect(`${baseUrl}/admin/store/${storeSlug}?snapchat=connected`);
       }
     } catch (err) {
     }

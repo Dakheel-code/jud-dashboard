@@ -454,8 +454,6 @@ function StoreDetailsContent() {
           let range = '30d';
           if (datePreset === 'last_7d') range = '7d';
           else if (datePreset === 'last_30d' || datePreset === 'this_month') range = '30d';
-          else if (datePreset === 'last_14d') range = '30d';
-          else range = '30d';
           
           const url = `/api/stores/${storeId}/snapchat/campaigns?range=${range}`;
           const response = await fetch(url);
