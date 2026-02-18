@@ -106,6 +106,14 @@ function StoreDetailsContent() {
   });
   const [dailyUpdateTemplate, setDailyUpdateTemplate] = useState('');
   const [snapchatSummary, setSnapchatSummary] = useState<{ spend: number; orders: number; sales: number; roas: number } | null>(null);
+  // واجهة اختيار هوية Snapchat
+  const [showSnapchatIdentityModal, setShowSnapchatIdentityModal] = useState(false);
+  const [snapchatIdentities, setSnapchatIdentities] = useState<{identity_key: string; display_name: string | null; last_used_at: string | null}[]>([]);
+  const [loadingSnapchatIdentities, setLoadingSnapchatIdentities] = useState(false);
+  const [attachingSnapchat, setAttachingSnapchat] = useState(false);
+  const [snapchatAdAccountsForAttach, setSnapchatAdAccountsForAttach] = useState<{id: string; name: string}[]>([]);
+  const [loadingSnapchatAdAccounts, setLoadingSnapchatAdAccounts] = useState(false);
+  const [selectedSnapchatAdAccount, setSelectedSnapchatAdAccount] = useState<string>('');
   const [showWindsorAccountModal, setShowWindsorAccountModal] = useState<string | null>(null);
   const [windsorAccounts, setWindsorAccounts] = useState<{account_name: string; datasource: string}[]>([]);
   const [loadingWindsorAccounts, setLoadingWindsorAccounts] = useState(false);
@@ -538,9 +546,88 @@ function StoreDetailsContent() {
     }
   };
 
+  // فتح modal اختيار هوية Snapchat
+  const openSnapchatIdentityModal = async () => {
+    setShowSnapchatIdentityModal(true);
+    setSnapchatIdentities([]);
+    setSnapchatAdAccountsForAttach([]);
+    setSelectedSnapchatAdAccount('');
+    setLoadingSnapchatIdentities(true);
+    try {
+      const res = await fetch('/api/integrations/snapchat/identities');
+      const data = await res.json();
+      setSnapchatIdentities(data.identities || []);
+    } catch {
+      setSnapchatIdentities([]);
+    } finally {
+      setLoadingSnapchatIdentities(false);
+    }
+  };
+
+  // ربط هوية سابقة بالمتجر الحالي
+  const attachSnapchatIdentity = async (identityKey: string) => {
+    if (!storeData?.id) return;
+    setAttachingSnapchat(true);
+    try {
+      const res = await fetch('/api/integrations/snapchat/attach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: storeData.id, identityKey }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert('فشل الربط: ' + (data.error || 'خطأ غير معروف'));
+        return;
+      }
+      // جلب Ad Accounts بعد الربط
+      setLoadingSnapchatAdAccounts(true);
+      try {
+        const accRes = await fetch(`/api/stores/${storeData.id}/snapchat/adaccounts`);
+        const accData = await accRes.json();
+        setSnapchatAdAccountsForAttach(accData.adAccounts || []);
+        // إذا كان الحساب محدداً مسبقاً، أغلق الـ modal مباشرة
+        if (data.ad_account_id) {
+          setShowSnapchatIdentityModal(false);
+          fetchDirectIntegrations();
+        }
+      } catch {
+        setSnapchatAdAccountsForAttach([]);
+      } finally {
+        setLoadingSnapchatAdAccounts(false);
+      }
+    } catch {
+      alert('حدث خطأ في الاتصال');
+    } finally {
+      setAttachingSnapchat(false);
+    }
+  };
+
+  // حفظ Ad Account المختار بعد الـ attach
+  const saveSnapchatAdAccountAfterAttach = async () => {
+    if (!storeData?.id || !selectedSnapchatAdAccount) return;
+    const account = snapchatAdAccountsForAttach.find(a => a.id === selectedSnapchatAdAccount);
+    if (!account) return;
+    try {
+      const res = await fetch(`/api/integrations/snapchat/select-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: storeData.id, adAccountId: account.id, adAccountName: account.name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowSnapchatIdentityModal(false);
+        fetchDirectIntegrations();
+      } else {
+        alert('فشل حفظ الحساب: ' + (data.error || 'خطأ غير معروف'));
+      }
+    } catch {
+      alert('حدث خطأ في الاتصال');
+    }
+  };
+
   // ربط حساب Windsor بالمتجر
   const linkWindsorAccount = async () => {
-    if (!storeId || !showWindsorAccountModal || !selectedWindsorAccount) return;
+    if (!storeData?.id || !showWindsorAccountModal || !selectedWindsorAccount) return;
     
     const fieldMap: { [key: string]: string } = {
       'snapchat': 'snapchat_account',
@@ -553,7 +640,7 @@ function StoreDetailsContent() {
     if (!field) return;
 
     try {
-      const response = await fetch(`/api/admin/stores/${storeId}`, {
+      const response = await fetch(`/api/admin/stores/${storeData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: selectedWindsorAccount })
@@ -768,10 +855,10 @@ function StoreDetailsContent() {
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!storeId) return;
+    if (!storeData?.id) return;
 
     try {
-      const response = await fetch(`/api/admin/stores/${storeId}`, {
+      const response = await fetch(`/api/admin/stores/${storeData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -786,10 +873,10 @@ function StoreDetailsContent() {
   };
 
   const handleAdAccountChange = async (field: string, value: string) => {
-    if (!storeId) return;
+    if (!storeData?.id) return;
 
     try {
-      const response = await fetch(`/api/admin/stores/${storeId}`, {
+      const response = await fetch(`/api/admin/stores/${storeData.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value || null })
@@ -1781,25 +1868,31 @@ function StoreDetailsContent() {
                               إصلاح
                             </Link>
                           ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!storeData?.id) {
-                                  alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
-                                  return;
-                                }
-                                // فتح OAuth مباشرة للمنصات المدعومة
-                                if (platform.key === 'snapchat') {
-                                  window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
-                                } else {
-                                  // للمنصات غير المدعومة بعد، نوجه لصفحة الإعدادات
+                            platform.key === 'snapchat' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!storeData?.id) {
+                                    alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
+                                    return;
+                                  }
+                                  openSnapchatIdentityModal();
+                                }}
+                                className="px-4 py-1.5 rounded-lg text-xs bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30 transition-colors"
+                              >
+                                ربط Snapchat
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   window.location.href = `/admin/store/${storeId}/integrations`;
-                                }
-                              }}
-                              className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
-                            >
-                              ربط
-                            </button>
+                                }}
+                                className="px-4 py-1.5 rounded-lg text-xs bg-purple-500/30 text-purple-300 hover:bg-purple-500/50 transition-colors"
+                              >
+                                ربط
+                              </button>
+                            )
                           )}
                         </div>
                       </div>
@@ -1992,6 +2085,121 @@ function StoreDetailsContent() {
           )}
         </div>
       </div>
+
+      {/* نافذة اختيار هوية Snapchat */}
+      {showSnapchatIdentityModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSnapchatIdentityModal(false)}>
+          <div className="bg-[#1a0a2e] border border-yellow-500/30 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-xl font-bold text-white">ربط Snapchat</h3>
+              <button onClick={() => setShowSnapchatIdentityModal(false)} className="text-purple-400 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* مرحلة 1: اختيار هوية أو ربط جديد */}
+            {snapchatAdAccountsForAttach.length === 0 && (
+              <>
+                {loadingSnapchatIdentities ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-8 h-8 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                    <span className="mr-3 text-yellow-400 text-sm">جاري تحميل الحسابات...</span>
+                  </div>
+                ) : (
+                  <>
+                    {snapchatIdentities.length > 0 && (
+                      <div className="mb-5">
+                        <p className="text-sm text-purple-300 mb-3">حسابات سبق ربطها — اختر للربط الفوري:</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {snapchatIdentities.map((identity) => (
+                            <button
+                              key={identity.identity_key}
+                              onClick={() => attachSnapchatIdentity(identity.identity_key)}
+                              disabled={attachingSnapchat}
+                              className="w-full flex items-center justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors text-right disabled:opacity-50"
+                            >
+                              <div>
+                                <p className="text-white text-sm font-medium">{identity.display_name || identity.identity_key}</p>
+                                {identity.last_used_at && (
+                                  <p className="text-xs text-purple-400 mt-0.5">
+                                    آخر استخدام: {new Date(identity.last_used_at).toLocaleDateString('ar-SA')}
+                                  </p>
+                                )}
+                              </div>
+                              {attachingSnapchat ? (
+                                <div className="w-4 h-4 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                              ) : (
+                                <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="my-4 flex items-center gap-3">
+                          <div className="flex-1 h-px bg-purple-500/20"></div>
+                          <span className="text-xs text-purple-400">أو</span>
+                          <div className="flex-1 h-px bg-purple-500/20"></div>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowSnapchatIdentityModal(false);
+                        window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
+                      }}
+                      className="w-full py-3 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 512 512" fill="currentColor">
+                        <path d="M496.926 366.6c-3.7 9.5-9.3 18.3-16.6 25.5-6.4 6.4-13.8 11.5-21.9 15.2-8.1 3.7-16.8 5.6-25.6 5.6H78.3c-8.8 0-17.5-1.9-25.6-5.6-8.1-3.7-15.5-8.8-21.9-15.2-7.3-7.2-12.9-16-16.6-25.5-3.7-9.5-5.2-19.7-4.3-29.8L46.6 96.3C48.5 77.2 65 62.5 84.2 62.5h343.6c19.2 0 35.7 14.7 37.6 33.8l36.7 240.5c.9 10.1-.6 20.3-4.3 29.8z"/>
+                      </svg>
+                      ربط حساب Snapchat جديد
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* مرحلة 2: اختيار Ad Account بعد الـ attach */}
+            {snapchatAdAccountsForAttach.length > 0 && (
+              <>
+                <p className="text-sm text-green-400 mb-4">✓ تم الربط بنجاح! اختر الحساب الإعلاني:</p>
+                {loadingSnapchatAdAccounts ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="w-6 h-6 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                    {snapchatAdAccountsForAttach.map((acc) => (
+                      <button
+                        key={acc.id}
+                        onClick={() => setSelectedSnapchatAdAccount(acc.id)}
+                        className={`w-full p-3 rounded-xl text-right transition-all ${
+                          selectedSnapchatAdAccount === acc.id
+                            ? 'bg-yellow-500/30 border-2 border-yellow-500 text-white'
+                            : 'bg-purple-900/30 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20'
+                        }`}
+                      >
+                        <p className="font-medium text-sm">{acc.name}</p>
+                        <p className="text-xs opacity-60 mt-0.5" dir="ltr">{acc.id}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={saveSnapchatAdAccountAfterAttach}
+                  disabled={!selectedSnapchatAdAccount}
+                  className="w-full py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  حفظ الحساب الإعلاني
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* نافذة اختيار حساب Windsor */}
       {showWindsorAccountModal && (

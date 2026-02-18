@@ -133,24 +133,30 @@ export async function saveTokens(
     refreshToken?: string;
     expiresIn: number;
     scopes?: string[];
+    externalUserId?: string;
+    externalDisplayName?: string;
   }
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   const expiresAt = new Date(Date.now() + tokens.expiresIn * 1000);
 
+  const upsertData: Record<string, any> = {
+    store_id: storeId,
+    platform: platform,
+    status: 'connected',
+    access_token_enc: encrypt(tokens.accessToken),
+    refresh_token_enc: tokens.refreshToken ? encrypt(tokens.refreshToken) : null,
+    token_expires_at: expiresAt.toISOString(),
+    scopes: tokens.scopes || [],
+    last_connected_at: new Date().toISOString(),
+    error_message: null,
+  };
+
+  if (tokens.externalUserId) upsertData.external_user_id = tokens.externalUserId;
+
   const { error } = await supabase
     .from('ad_platform_accounts')
-    .upsert({
-      store_id: storeId,
-      platform: platform,
-      status: 'connected',
-      access_token_enc: encrypt(tokens.accessToken),
-      refresh_token_enc: tokens.refreshToken ? encrypt(tokens.refreshToken) : null,
-      token_expires_at: expiresAt.toISOString(),
-      scopes: tokens.scopes || [],
-      last_connected_at: new Date().toISOString(),
-      error_message: null,
-    }, {
+    .upsert(upsertData, {
       onConflict: 'store_id,platform',
     });
 

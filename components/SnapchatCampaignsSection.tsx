@@ -130,7 +130,7 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
     
     setLoadingAccounts(true);
     try {
-      const response = await fetch(`/api/integrations/snapchat/ad-accounts?storeId=${storeId}`);
+      const response = await fetch(`/api/stores/${storeId}/snapchat/adaccounts`);
       const result = await response.json();
       
       if (result.success && result.adAccounts) {

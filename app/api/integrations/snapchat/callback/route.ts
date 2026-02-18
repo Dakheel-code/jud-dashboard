@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { exchangeCodeForToken, listAdAccounts } from '@/lib/integrations/snapchat';
+import { exchangeCodeForToken, listAdAccounts, getUserInfo } from '@/lib/integrations/snapchat';
 import { saveTokens, updateSelectedAdAccount } from '@/lib/integrations/token-manager';
 
 export const dynamic = 'force-dynamic';
@@ -77,12 +77,25 @@ export async function GET(request: NextRequest) {
       clientSecret,
     });
 
-    // حفظ التوكنات
+    // جلب هوية المستخدم من Snapchat لحفظها
+    let externalUserId: string | undefined;
+    let externalDisplayName: string | undefined;
+    try {
+      const userInfo = await getUserInfo({ accessToken: tokens.access_token });
+      externalUserId = userInfo.id;
+      externalDisplayName = userInfo.display_name;
+    } catch {
+      // هوية المستخدم اختيارية — لا توقف العملية
+    }
+
+    // حفظ التوكنات مع هوية المستخدم
     await saveTokens(storeId, 'snapchat', {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresIn: tokens.expires_in,
       scopes: tokens.scope ? tokens.scope.split(' ') : [],
+      externalUserId,
+      externalDisplayName,
     });
 
     const baseUrl = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '';
