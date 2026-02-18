@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Database not configured');
@@ -93,21 +93,24 @@ export async function POST(request: NextRequest) {
 
     for (const store of stores) {
       try {
-        // تحويل الأسماء العربية للحقول الإنجليزية
-        const storeName = store['اسم المتجر'] || store.store_name;
-        const storeUrl = store['رابط المتجر'] || store.store_url;
-        const ownerName = store['اسم صاحب المتجر'] || store.owner_name;
-        const ownerPhone = store['رقم الجوال'] || store.owner_phone;
-        const ownerEmail = store['البريد الإلكتروني'] || store.owner_email;
-        const priorityAr = store['الأولوية'] || store.priority;
-        const statusAr = store['الحالة'] || store.status;
-        const budget = store['الميزانية'] || store.budget;
-        const category = store['التصنيف'] || store.category;
-        const storeGroupUrl = store['رابط قروب المتجر'] || store.store_group_url;
-        const subscriptionDate = store['تاريخ بداية الاشتراك'] || store.subscription_start_date;
-        const accountManagerName = store['مدير الحساب'] || store.account_manager;
-        const mediaBuyerName = store['الميديا باير'] || store.media_buyer;
-        const notes = store['ملاحظات'] || store.notes;
+        // دعم أسماء الأعمدة الإنجليزية (snake_case) والعربية معاً
+        const storeName = store.store_name || store['اسم المتجر'];
+        const storeUrl = store.store_url || store['رابط المتجر'];
+        const ownerName = store.owner_name || store['اسم صاحب المتجر'];
+        const ownerPhone = store.owner_phone || store['رقم الجوال'];
+        const ownerEmail = store.owner_email || store['البريد الإلكتروني'];
+        const priorityAr = store.priority || store['الأولوية'];
+        const statusAr = store.status || store['الحالة'];
+        const budget = store.budget || store['الميزانية'];
+        const category = store.category || store['التصنيف'];
+        const storeGroupUrl = store.store_group_url || store['رابط قروب المتجر'];
+        const subscriptionDate = store.subscription_start_date || store['تاريخ بداية الاشتراك'];
+        // account_manager_id: UUID مباشر أو اسم للبحث عنه
+        const accountManagerId_direct = store.account_manager_id || null;
+        const accountManagerName = store.account_manager || store['مدير الحساب'];
+        const mediaBuyerId_direct = store.media_buyer_id || null;
+        const mediaBuyerName = store.media_buyer || store['الميديا باير'];
+        const notes = store.notes || store['ملاحظات'];
 
         // التحقق من الحقول المطلوبة
         if (!storeName || !storeUrl || !ownerPhone) {
@@ -136,9 +139,9 @@ export async function POST(request: NextRequest) {
         // تنظيف رقم الجوال
         const cleanPhone = String(ownerPhone).replace(/[^0-9+]/g, '');
 
-        // البحث عن مدير الحساب والميديا باير
-        const accountManagerId = accountManagerName ? userMap.get(accountManagerName.toLowerCase()) : null;
-        const mediaBuyerId = mediaBuyerName ? userMap.get(mediaBuyerName.toLowerCase()) : null;
+        // البحث عن مدير الحساب والميديا باير (UUID مباشر أو بحث بالاسم)
+        const accountManagerId = accountManagerId_direct || (accountManagerName ? userMap.get(accountManagerName.toLowerCase()) : null);
+        const mediaBuyerId = mediaBuyerId_direct || (mediaBuyerName ? userMap.get(mediaBuyerName.toLowerCase()) : null);
 
         // التحقق من وجود المتجر
         const { data: existingStore } = await supabase

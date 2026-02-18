@@ -13,6 +13,7 @@ interface User {
 
 export default function StoreImportExport({ onImportSuccess }: StoreImportExportProps) {
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
   const [exporting, setExporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [importResult, setImportResult] = useState<{
@@ -58,39 +59,39 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       // إنشاء workbook جديد
       const wb = XLSX.utils.book_new();
       
-      // البيانات النموذجية
+      // البيانات النموذجية — أسماء الأعمدة بالإنجليزية (snake_case)
       const templateData = [
         {
-          'اسم المتجر': 'متجر الأمثلة',
-          'رابط المتجر': 'example-store.com',
-          'اسم صاحب المتجر': 'أحمد محمد',
-          'رقم الجوال': '0501234567',
-          'البريد الإلكتروني': 'ahmed@example.com',
-          'الأولوية': 'متوسط',
-          'الحالة': 'جديد',
-          'الميزانية': '5000',
-          'التصنيف': categories[0] || 'ملابس',
-          'رابط قروب المتجر': 'https://chat.whatsapp.com/xxx',
-          'تاريخ بداية الاشتراك': '2024-01-15',
-          'مدير الحساب': users[0]?.name || '',
-          'الميديا باير': users[1]?.name || '',
-          'ملاحظات': 'متجر جديد - هذا مثال'
+          store_name: 'متجر الأمثلة',
+          store_url: 'example-store.com',
+          owner_name: 'أحمد محمد',
+          owner_phone: '0501234567',
+          owner_email: 'ahmed@example.com',
+          priority: 'medium',
+          status: 'new',
+          budget: '5000',
+          category: categories[0] || 'ملابس',
+          store_group_url: 'https://chat.whatsapp.com/xxx',
+          subscription_start_date: '2024-01-15',
+          account_manager_id: '',
+          media_buyer_id: '',
+          notes: 'متجر جديد - هذا مثال'
         },
         {
-          'اسم المتجر': 'متجر آخر',
-          'رابط المتجر': 'another-store.com',
-          'اسم صاحب المتجر': 'سارة علي',
-          'رقم الجوال': '0559876543',
-          'البريد الإلكتروني': 'sara@example.com',
-          'الأولوية': 'مرتفع',
-          'الحالة': 'نشط',
-          'الميزانية': '10000',
-          'التصنيف': categories[1] || 'إلكترونيات',
-          'رابط قروب المتجر': '',
-          'تاريخ بداية الاشتراك': '2024-02-01',
-          'مدير الحساب': '',
-          'الميديا باير': '',
-          'ملاحظات': ''
+          store_name: 'متجر آخر',
+          store_url: 'another-store.com',
+          owner_name: 'سارة علي',
+          owner_phone: '0559876543',
+          owner_email: 'sara@example.com',
+          priority: 'high',
+          status: 'active',
+          budget: '10000',
+          category: categories[1] || 'إلكترونيات',
+          store_group_url: '',
+          subscription_start_date: '2024-02-01',
+          account_manager_id: '',
+          media_buyer_id: '',
+          notes: ''
         }
       ];
 
@@ -99,20 +100,20 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       
       // تعيين عرض الأعمدة
       ws['!cols'] = [
-        { wch: 22 }, // اسم المتجر
-        { wch: 28 }, // رابط المتجر
-        { wch: 22 }, // اسم صاحب المتجر
-        { wch: 15 }, // رقم الجوال
-        { wch: 28 }, // البريد الإلكتروني
-        { wch: 12 }, // الأولوية
-        { wch: 12 }, // الحالة
-        { wch: 12 }, // الميزانية
-        { wch: 18 }, // التصنيف
-        { wch: 38 }, // رابط قروب المتجر
-        { wch: 20 }, // تاريخ بداية الاشتراك
-        { wch: 18 }, // مدير الحساب
-        { wch: 18 }, // الميديا باير
-        { wch: 35 }, // ملاحظات
+        { wch: 22 }, // store_name
+        { wch: 28 }, // store_url
+        { wch: 22 }, // owner_name
+        { wch: 15 }, // owner_phone
+        { wch: 28 }, // owner_email
+        { wch: 12 }, // priority
+        { wch: 12 }, // status
+        { wch: 12 }, // budget
+        { wch: 18 }, // category
+        { wch: 38 }, // store_group_url
+        { wch: 20 }, // subscription_start_date
+        { wch: 36 }, // account_manager_id
+        { wch: 36 }, // media_buyer_id
+        { wch: 35 }, // notes
       ];
 
       // تنسيق الهيدر
@@ -128,31 +129,29 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       // إنشاء ورقة الخيارات المتاحة
       const optionsData: any[] = [];
       
-      // الأولويات
-      const priorities = ['مرتفع', 'متوسط', 'منخفض'];
-      // الحالات
-      const statuses = ['جديد', 'نشط', 'متوقف', 'منتهي'];
-      // أسماء المستخدمين
-      const userNames = users.map(u => u.name).filter(Boolean);
+      const priorities = ['high', 'medium', 'low'];
+      const statuses = ['new', 'active', 'paused', 'expired'];
+      const userRows = users.map(u => ({ id: u.id, name: u.name }));
       
-      // أقصى طول للقوائم
-      const maxLen = Math.max(priorities.length, statuses.length, categories.length, userNames.length);
+      const maxLen = Math.max(priorities.length, statuses.length, categories.length, userRows.length);
       
       for (let i = 0; i < maxLen; i++) {
         optionsData.push({
-          'الأولويات': priorities[i] || '',
-          'الحالات': statuses[i] || '',
-          'التصنيفات': categories[i] || '',
-          'المستخدمين (مدير الحساب / ميديا باير)': userNames[i] || ''
+          'priority (القيم المتاحة)': priorities[i] || '',
+          'status (القيم المتاحة)': statuses[i] || '',
+          'category (التصنيفات)': categories[i] || '',
+          'account_manager_id / media_buyer_id (UUID)': userRows[i]?.id || '',
+          'اسم المستخدم': userRows[i]?.name || '',
         });
       }
 
       const wsOptions = XLSX.utils.json_to_sheet(optionsData);
       wsOptions['!cols'] = [
-        { wch: 15 },
-        { wch: 15 },
         { wch: 25 },
-        { wch: 40 }
+        { wch: 25 },
+        { wch: 25 },
+        { wch: 40 },
+        { wch: 25 },
       ];
       
       XLSX.utils.book_append_sheet(wb, wsOptions, 'الخيارات المتاحة');
@@ -161,28 +160,28 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       const instructionsData = [
         { 'التعليمات': '📋 تعليمات استخدام قالب استيراد المتاجر' },
         { 'التعليمات': '' },
-        { 'التعليمات': '✅ الحقول المطلوبة:' },
-        { 'التعليمات': '   • اسم المتجر' },
-        { 'التعليمات': '   • رابط المتجر (بدون https:// أو www.)' },
-        { 'التعليمات': '   • رقم الجوال' },
+        { 'التعليمات': '✅ أسماء الأعمدة المطلوبة (بالإنجليزية):' },
+        { 'التعليمات': '   store_name — اسم المتجر (مطلوب)' },
+        { 'التعليمات': '   store_url — رابط المتجر بدون https:// أو www. (مطلوب)' },
+        { 'التعليمات': '   owner_phone — رقم الجوال (مطلوب)' },
         { 'التعليمات': '' },
-        { 'التعليمات': '📝 الحقول الاختيارية:' },
-        { 'التعليمات': '   • اسم صاحب المتجر' },
-        { 'التعليمات': '   • البريد الإلكتروني' },
-        { 'التعليمات': '   • الأولوية (مرتفع / متوسط / منخفض)' },
-        { 'التعليمات': '   • الحالة (جديد / نشط / متوقف / منتهي)' },
-        { 'التعليمات': '   • الميزانية (رقم فقط)' },
-        { 'التعليمات': '   • التصنيف (راجع ورقة الخيارات المتاحة)' },
-        { 'التعليمات': '   • رابط قروب المتجر' },
-        { 'التعليمات': '   • تاريخ بداية الاشتراك (YYYY-MM-DD)' },
-        { 'التعليمات': '   • مدير الحساب (اسم المستخدم من ورقة الخيارات)' },
-        { 'التعليمات': '   • الميديا باير (اسم المستخدم من ورقة الخيارات)' },
-        { 'التعليمات': '   • ملاحظات' },
+        { 'التعليمات': '📝 الأعمدة الاختيارية:' },
+        { 'التعليمات': '   owner_name — اسم صاحب المتجر' },
+        { 'التعليمات': '   owner_email — البريد الإلكتروني' },
+        { 'التعليمات': '   priority — high / medium / low' },
+        { 'التعليمات': '   status — new / active / paused / expired' },
+        { 'التعليمات': '   budget — رقم فقط' },
+        { 'التعليمات': '   category — راجع ورقة الخيارات المتاحة' },
+        { 'التعليمات': '   store_group_url — رابط قروب المتجر' },
+        { 'التعليمات': '   subscription_start_date — YYYY-MM-DD' },
+        { 'التعليمات': '   account_manager_id — UUID من ورقة الخيارات' },
+        { 'التعليمات': '   media_buyer_id — UUID من ورقة الخيارات' },
+        { 'التعليمات': '   notes — ملاحظات' },
         { 'التعليمات': '' },
         { 'التعليمات': '⚠️ ملاحظات مهمة:' },
-        { 'التعليمات': '   • إذا كان رابط المتجر موجوداً مسبقاً، سيتم تحديث بياناته' },
+        { 'التعليمات': '   • إذا كان store_url موجوداً مسبقاً، سيتم تحديث بياناته' },
         { 'التعليمات': '   • احذف صفوف الأمثلة قبل الاستيراد' },
-        { 'التعليمات': '   • تأكد من صحة أرقام الجوال' },
+        { 'التعليمات': '   • account_manager_id و media_buyer_id هي UUID من ورقة الخيارات' },
       ];
 
       const wsInstructions = XLSX.utils.json_to_sheet(instructionsData);
@@ -238,6 +237,7 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
     if (!file) return;
 
     setImporting(true);
+    setImportProgress('جاري قراءة الملف...');
     setImportResult(null);
 
     try {
@@ -249,8 +249,10 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       if (jsonData.length === 0) {
-        throw new Error('الملف فارغ');
+        throw new Error('الملف فارغ أو لا يحتوي على بيانات');
       }
+
+      setImportProgress(`جاري استيراد ${jsonData.length} متجر...`);
 
       // إرسال البيانات للـ API
       const response = await fetch('/api/admin/stores/import-export', {
@@ -278,6 +280,7 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
       });
     } finally {
       setImporting(false);
+      setImportProgress('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -286,6 +289,27 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
 
   return (
     <>
+      {/* شاشة التحميل أثناء الاستيراد */}
+      {importing && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#1a0a2e] border border-purple-500/40 rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl">
+            <div className="relative w-20 h-20 mx-auto mb-5">
+              <svg className="w-20 h-20 animate-spin text-purple-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">جاري الاستيراد</h3>
+            <p className="text-purple-300 text-sm">{importProgress || 'يرجى الانتظار...'}</p>
+          </div>
+        </div>
+      )}
+
       {/* أزرار الاستيراد والتصدير */}
       <div className="flex gap-2">
         {/* زر تحميل القالب */}
@@ -349,41 +373,64 @@ export default function StoreImportExport({ onImportSuccess }: StoreImportExport
         </button>
       </div>
 
-      {/* نافذة نتيجة الاستيراد */}
+      {/* نافذة تقرير الاستيراد */}
       {importResult && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold text-white mb-4">نتيجة الاستيراد</h3>
-            
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/30 rounded-xl">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-green-300">تم استيراد {importResult.success} متجر بنجاح</span>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${importResult.failed === 0 ? 'bg-green-500/20' : importResult.success === 0 ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                {importResult.failed === 0 ? (
+                  <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : importResult.success === 0 ? (
+                  <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-7 h-7 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
               </div>
-
-              {importResult.failed > 0 && (
-                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
-                  <div className="flex items-center gap-3 mb-2">
-                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-red-300">فشل استيراد {importResult.failed} متجر</span>
-                  </div>
-                  {importResult.errors.length > 0 && (
-                    <div className="mt-2 text-sm text-red-400 max-h-32 overflow-y-auto">
-                      {importResult.errors.slice(0, 5).map((err, i) => (
-                        <p key={i} className="mb-1">• {err}</p>
-                      ))}
-                      {importResult.errors.length > 5 && (
-                        <p className="text-red-500">... و {importResult.errors.length - 5} أخطاء أخرى</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div>
+                <h3 className="text-xl font-bold text-white">تقرير الاستيراد</h3>
+                <p className="text-purple-400 text-sm">إجمالي: {importResult.success + importResult.failed} صف</p>
+              </div>
             </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-green-400">{importResult.success}</p>
+                <p className="text-green-300 text-sm mt-1">تم بنجاح</p>
+              </div>
+              <div className={`border rounded-xl p-4 text-center ${importResult.failed > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-gray-500/10 border-gray-500/20'}`}>
+                <p className={`text-3xl font-bold ${importResult.failed > 0 ? 'text-red-400' : 'text-gray-500'}`}>{importResult.failed}</p>
+                <p className={`text-sm mt-1 ${importResult.failed > 0 ? 'text-red-300' : 'text-gray-500'}`}>فشل</p>
+              </div>
+            </div>
+
+            {/* Errors */}
+            {importResult.errors.length > 0 && (
+              <div className="mb-4">
+                <p className="text-red-400 text-sm font-semibold mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  تفاصيل الأخطاء ({importResult.errors.length})
+                </p>
+                <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-3 max-h-40 overflow-y-auto space-y-1">
+                  {importResult.errors.map((err, i) => (
+                    <p key={i} className="text-red-300 text-xs flex gap-2">
+                      <span className="text-red-500 shrink-0">{i + 1}.</span>
+                      <span>{err}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button
               onClick={() => setImportResult(null)}
