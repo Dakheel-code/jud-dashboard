@@ -6,6 +6,7 @@ interface SnapchatCampaignsSectionProps {
   storeId: string | null;
   directIntegrations: Record<string, { status: string; ad_account_id?: string; ad_account_name?: string }>;
   onDataLoaded?: (summary: { spend: number; orders: number; sales: number; roas: number } | null) => void;
+  onConnectClick?: () => void;
 }
 
 interface Campaign {
@@ -69,7 +70,7 @@ interface SnapchatStatus {
   organization_id: string | null;
 }
 
-export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: SnapchatCampaignsSectionProps) {
+export default function SnapchatCampaignsSection({ storeId, directIntegrations, onDataLoaded, onConnectClick }: SnapchatCampaignsSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [loading, setLoading] = useState(false);
@@ -390,7 +391,7 @@ export default function SnapchatCampaignsSection({ storeId, onDataLoaded }: Snap
                 <h3 className="text-lg font-bold text-white mb-2">ربط Snapchat Ads</h3>
                 <p className="text-sm text-yellow-400/70 mb-4">اربط حسابك الإعلاني لعرض إحصائيات الحملات</p>
                 <button
-                  onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`}
+                  onClick={() => onConnectClick ? onConnectClick() : (window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}`)}
                   className="px-6 py-3 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors"
                 >
                   🔗 ربط Snapchat

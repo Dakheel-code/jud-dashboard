@@ -1558,6 +1558,13 @@ function StoreDetailsContent() {
           storeId={storeId} 
           directIntegrations={directIntegrations} 
           onDataLoaded={(summary) => setSnapchatSummary(summary)}
+          onConnectClick={() => {
+            if (!storeData?.id) {
+              alert('لم يتم تحميل معرف المتجر بعد، حدّث الصفحة وحاول مرة أخرى.');
+              return;
+            }
+            openSnapchatIdentityModal();
+          }}
         />
 
         {/* قسم الحملات الإعلانية القديم - مخفي */}
