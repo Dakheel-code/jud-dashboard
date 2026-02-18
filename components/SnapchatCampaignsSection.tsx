@@ -455,7 +455,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                       تغيير الحساب
                     </button>
                     <button
-                      onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`}
+                      onClick={() => onConnectClick ? onConnectClick() : (window.location.href = `/api/integrations/snapchat/start?storeId=${storeId}&force=true`)}
                       className="flex-1 sm:flex-none px-3 py-1.5 text-xs rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors"
                     >
                       إعادة الربط
