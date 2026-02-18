@@ -1671,28 +1671,54 @@ function StoreDetailsContent() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
-                  <p className="text-xs text-green-400 mb-1">النقرات</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? (campaignData.clicks || 0).toLocaleString() : '--'}</p>
-                  <p className="text-xs text-green-400/70">نقرة</p>
+              {/* بطاقات الأرقام — تعطي الأولوية لبيانات Snapchat المباشرة */}
+              {snapchatSummary ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 rounded-xl p-4 border border-yellow-500/20">
+                    <p className="text-xs text-yellow-400 mb-1">الطلبات</p>
+                    <p className="text-2xl font-bold text-white">{snapchatSummary.orders.toLocaleString('en-US')}</p>
+                    <p className="text-xs text-yellow-400/70">طلب</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
+                    <p className="text-xs text-blue-400 mb-1">المبيعات</p>
+                    <p className="text-2xl font-bold text-white">{snapchatSummary.sales.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-xs text-blue-400/70">ر.س</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
+                    <p className="text-xs text-orange-400 mb-1">الصرف</p>
+                    <p className="text-2xl font-bold text-white">{snapchatSummary.spend.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                    <p className="text-xs text-orange-400/70">ر.س</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
+                    <p className="text-xs text-purple-400 mb-1">ROAS</p>
+                    <p className={`text-2xl font-bold ${snapchatSummary.roas < 1 ? 'text-red-400' : 'text-white'}`}>{snapchatSummary.roas.toFixed(2)}x</p>
+                    <p className="text-xs text-purple-400/70">العائد على الإنفاق</p>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
-                  <p className="text-xs text-blue-400 mb-1">التحويلات</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.sales.toLocaleString() : '--'}</p>
-                  <p className="text-xs text-blue-400/70">تحويل</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
+                    <p className="text-xs text-green-400 mb-1">النقرات</p>
+                    <p className="text-2xl font-bold text-white">{campaignData ? (campaignData.clicks || 0).toLocaleString() : '--'}</p>
+                    <p className="text-xs text-green-400/70">نقرة</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
+                    <p className="text-xs text-blue-400 mb-1">التحويلات</p>
+                    <p className="text-2xl font-bold text-white">{campaignData ? campaignData.sales.toLocaleString() : '--'}</p>
+                    <p className="text-xs text-blue-400/70">تحويل</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
+                    <p className="text-xs text-orange-400 mb-1">الصرف</p>
+                    <p className="text-2xl font-bold text-white">{campaignData ? campaignData.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '--'}</p>
+                    <p className="text-xs text-orange-400/70">ر.س</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
+                    <p className="text-xs text-purple-400 mb-1">ROAS</p>
+                    <p className="text-2xl font-bold text-white">{campaignData ? campaignData.roas.toFixed(2) : '--'}</p>
+                    <p className="text-xs text-purple-400/70">x</p>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
-                  <p className="text-xs text-orange-400 mb-1">الصرف</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.spend.toLocaleString('ar-SA', { maximumFractionDigits: 0 }) : '--'}</p>
-                  <p className="text-xs text-orange-400/70">ر.س</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
-                  <p className="text-xs text-purple-400 mb-1">ROAS</p>
-                  <p className="text-2xl font-bold text-white">{campaignData ? campaignData.roas.toFixed(2) : '--'}</p>
-                  <p className="text-xs text-purple-400/70">x</p>
-                </div>
-              </div>
+              )}
 
               {/* المنصات - الربط المباشر */}
               <div className="space-y-3 relative">
