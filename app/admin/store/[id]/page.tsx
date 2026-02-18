@@ -2208,7 +2208,7 @@ function StoreDetailsContent() {
                     <button
                       onClick={() => {
                         setShowSnapchatIdentityModal(false);
-                        window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
+                        window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}&force=true`;
                       }}
                       className="w-full py-3 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
                     >
@@ -2217,6 +2217,17 @@ function StoreDetailsContent() {
                       </svg>
                       ربط حساب Snapchat جديد
                     </button>
+                    {snapchatIdentities.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setShowSnapchatIdentityModal(false);
+                          window.location.href = `/api/integrations/snapchat/start?storeId=${storeData?.id}`;
+                        }}
+                        className="w-full py-2 rounded-xl bg-purple-800/40 border border-purple-500/30 text-purple-300 text-sm hover:bg-purple-700/40 transition-colors"
+                      >
+                        استخدام نفس الحساب المسجّل
+                      </button>
+                    )}
                   </>
                 )}
               </>

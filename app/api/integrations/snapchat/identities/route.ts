@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     // جلب كل سجلات Snapchat التي لديها refresh_token — distinct بـ store_id
     const { data, error } = await supabase
       .from('ad_platform_accounts')
-      .select('store_id, access_token_enc, refresh_token_enc, token_expires_at, organization_id, external_user_id, ad_account_name, last_connected_at, updated_at')
+      .select('store_id, access_token_enc, refresh_token_enc, token_expires_at, organization_id, external_user_id, external_display_name, ad_account_name, last_connected_at, updated_at')
       .eq('platform', 'snapchat')
       .not('refresh_token_enc', 'is', null)
       .order('updated_at', { ascending: false });
@@ -106,9 +106,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // نجمع الهويات — كل سجل له access_token نجلب إيميله ومنظمته من Snapchat API
-    // نتجنب تكرار نفس organization_id
-    const seenOrgs = new Set<string>();
+    // نجمع الهويات — نستخدم external_user_id كـ identity_key الأساسي
+    // fallback على organization_id للسجلات القديمة التي لا تملك external_user_id
+    const seenKeys = new Set<string>();
     const identities: {
       identity_key: string;
       display_name: string | null;
@@ -119,18 +119,33 @@ export async function GET(request: NextRequest) {
       if (!row.refresh_token_enc) continue;
 
       try {
-        // جلب توكن صالح — مع تجديد تلقائي إذا انتهى
+        // إذا كان external_user_id موجوداً — نستخدمه مباشرة بدون API call
+        if (row.external_user_id) {
+          const key = row.external_user_id;
+          if (seenKeys.has(key)) continue;
+          seenKeys.add(key);
+
+          // display_name: external_display_name أو ad_account_name
+          const displayName = row.external_display_name || row.ad_account_name || null;
+
+          identities.push({
+            identity_key: key,
+            display_name: displayName,
+            last_used_at: row.last_connected_at || row.updated_at || null,
+          });
+          continue;
+        }
+
+        // fallback للسجلات القديمة: نجلب من Snapchat API
         const accessToken = await getValidToken(row);
         if (!accessToken) continue;
         const { email, orgId, orgName } = await getUserEmailFromToken(accessToken);
 
-        // نستخدم organization_id كـ identity_key (أو نحفظه إذا لم يكن موجوداً)
         const finalOrgId = row.organization_id || orgId;
         if (!finalOrgId) continue;
-        if (seenOrgs.has(finalOrgId)) continue;
-        seenOrgs.add(finalOrgId);
+        if (seenKeys.has(finalOrgId)) continue;
+        seenKeys.add(finalOrgId);
 
-        // حفظ organization_id إذا لم يكن محفوظاً
         if (!row.organization_id && orgId) {
           await supabase
             .from('ad_platform_accounts')
@@ -139,7 +154,6 @@ export async function GET(request: NextRequest) {
             .eq('platform', 'snapchat');
         }
 
-        // الإيميل هو الاسم الأوضح، ثم اسم المنظمة، ثم ad_account_name
         const displayName = email || orgName || row.ad_account_name || null;
 
         identities.push({
