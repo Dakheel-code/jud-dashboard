@@ -10,13 +10,44 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decrypt } from '@/lib/encryption';
+import { decrypt, encrypt } from '@/lib/encryption';
 import { listAdAccounts } from '@/lib/integrations/snapchat';
 
 export const dynamic = 'force-dynamic';
 
 const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
 const SNAPCHAT_TOKEN_URL = 'https://accounts.snapchat.com/login/oauth2/access_token';
+
+async function getRefreshedToken(source: any): Promise<string | null> {
+  // إذا كان التوكن صالحاً استخدمه مباشرة
+  if (source.access_token_enc && source.token_expires_at) {
+    const expiresAt = new Date(source.token_expires_at);
+    if (expiresAt > new Date(Date.now() + 5 * 60 * 1000)) {
+      return decrypt(source.access_token_enc);
+    }
+  }
+  // جدّد التوكن باستخدام refresh_token
+  if (!source.refresh_token_enc) return null;
+  try {
+    const refreshToken = decrypt(source.refresh_token_enc);
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: process.env.SNAPCHAT_CLIENT_ID!,
+      client_secret: process.env.SNAPCHAT_CLIENT_SECRET!,
+    });
+    const res = await fetch(SNAPCHAT_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.access_token || null;
+  } catch {
+    return null;
+  }
+}
 
 async function getOrgIdFromToken(accessToken: string): Promise<string | null> {
   try {
@@ -145,14 +176,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // جلب Ad Accounts مباشرة من Snapchat API باستخدام توكن السجل المصدر
-    // هذا أفضل من جلبها من adaccounts endpoint الذي قد يفشل إذا كان التوكن منتهياً
+    // جلب Ad Accounts مباشرة من Snapchat API — مع تجديد التوكن إذا انتهى
     let adAccounts: { id: string; name: string; organization_id: string }[] = [];
     try {
-      const sourceAccessToken = decrypt(source.access_token_enc);
-      const result = await listAdAccounts({ accessToken: sourceAccessToken });
-      adAccounts = result.adAccounts.map(a => ({ id: a.id, name: a.name, organization_id: a.organization_id }));
-    } catch { /* تجاهل — الـ frontend سيجلبها بطريقة أخرى */ }
+      const validToken = await getRefreshedToken(source);
+      if (validToken) {
+        const result = await listAdAccounts({ accessToken: validToken });
+        adAccounts = result.adAccounts.map(a => ({ id: a.id, name: a.name, organization_id: a.organization_id }));
+      }
+    } catch { /* تجاهل */ }
 
     return NextResponse.json({
       success: true,
