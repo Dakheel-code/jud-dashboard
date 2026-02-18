@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // جلب كل سجلات Snapchat التي لديها refresh_token
     const { data, error } = await supabase
       .from('ad_platform_accounts')
-      .select('external_user_id, ad_account_name, ad_account_id, organization_id, last_connected_at, updated_at, store_id')
+      .select('external_user_id, external_display_name, organization_id, last_connected_at, updated_at, store_id')
       .eq('platform', 'snapchat')
       .not('refresh_token_enc', 'is', null)
       .order('updated_at', { ascending: false });
@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Distinct بناءً على external_user_id
+    // Distinct بناءً على external_user_id أولاً، ثم organization_id كـ fallback
+    // نتجاهل السجلات التي ليس فيها أي منهما (لا نعرضها كهوية)
     const seen = new Set<string>();
     const identities: {
       identity_key: string;
@@ -42,12 +43,13 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     for (const row of data || []) {
-      const key = row.external_user_id || row.ad_account_id || row.store_id;
+      // الأولوية: external_user_id → organization_id (لا ad_account_id)
+      const key = row.external_user_id || row.organization_id;
       if (!key || seen.has(key)) continue;
       seen.add(key);
       identities.push({
         identity_key: key,
-        display_name: row.ad_account_name || row.external_user_id || null,
+        display_name: row.external_display_name || row.external_user_id || null,
         last_used_at: row.last_connected_at || row.updated_at || null,
       });
     }

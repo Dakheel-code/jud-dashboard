@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
     }
 
     // جلب أحدث سجل tokens لهذه الهوية
-    // identityKey قد يكون external_user_id أو ad_account_id
+    // identityKey قد يكون external_user_id أو organization_id
     const { data: sourceRecords, error: sourceError } = await supabase
       .from('ad_platform_accounts')
       .select('*')
       .eq('platform', 'snapchat')
       .not('refresh_token_enc', 'is', null)
-      .or(`external_user_id.eq.${identityKey},ad_account_id.eq.${identityKey}`)
+      .or(`external_user_id.eq.${identityKey},organization_id.eq.${identityKey}`)
       .order('updated_at', { ascending: false })
       .limit(1);
 
@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
           platform: 'snapchat',
           status: 'connected',
           external_user_id: source.external_user_id,
+          external_display_name: source.external_display_name,
           organization_id: source.organization_id,
           ad_account_id: source.ad_account_id,
           ad_account_name: source.ad_account_name,

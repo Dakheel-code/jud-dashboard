@@ -153,6 +153,7 @@ export async function saveTokens(
   };
 
   if (tokens.externalUserId) upsertData.external_user_id = tokens.externalUserId;
+  if (tokens.externalDisplayName) upsertData.external_display_name = tokens.externalDisplayName;
 
   const { error } = await supabase
     .from('ad_platform_accounts')
