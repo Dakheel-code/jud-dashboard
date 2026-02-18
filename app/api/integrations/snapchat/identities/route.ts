@@ -12,6 +12,7 @@ import { decrypt } from '@/lib/encryption';
 export const dynamic = 'force-dynamic';
 
 const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
+const SNAPCHAT_TOKEN_URL = 'https://accounts.snapchat.com/login/oauth2/access_token';
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,22 +21,57 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: process.env.SNAPCHAT_CLIENT_ID!,
+      client_secret: process.env.SNAPCHAT_CLIENT_SECRET!,
+    });
+    const res = await fetch(SNAPCHAT_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.access_token || null;
+  } catch {
+    return null;
+  }
+}
+
+async function getValidToken(row: { access_token_enc: string | null; refresh_token_enc: string | null; token_expires_at: string | null }): Promise<string | null> {
+  // تحقق إذا كان التوكن الحالي صالحاً
+  if (row.access_token_enc && row.token_expires_at) {
+    const expiresAt = new Date(row.token_expires_at);
+    const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000);
+    if (expiresAt > fiveMinFromNow) {
+      return decrypt(row.access_token_enc);
+    }
+  }
+  // جدّد التوكن باستخدام refresh_token
+  if (row.refresh_token_enc) {
+    const refreshToken = decrypt(row.refresh_token_enc);
+    return await refreshAccessToken(refreshToken);
+  }
+  return null;
+}
+
 async function getUserEmailFromToken(accessToken: string): Promise<{ email: string | null; orgId: string | null; orgName: string | null }> {
   try {
-    // جلب الإيميل من /me
-    const meRes = await fetch(`${SNAPCHAT_API_URL}/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const [meRes, orgRes] = await Promise.all([
+      fetch(`${SNAPCHAT_API_URL}/me`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+      fetch(`${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+    ]);
+
     let email: string | null = null;
     if (meRes.ok) {
       const meData = await meRes.json();
       email = meData.me?.email || meData.me?.display_name || null;
     }
 
-    // جلب organization_id من /me/organizations
-    const orgRes = await fetch(`${SNAPCHAT_API_URL}/me/organizations?with_ad_accounts=true`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
     let orgId: string | null = null;
     let orgName: string | null = null;
     if (orgRes.ok) {
@@ -80,10 +116,12 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     for (const row of data || []) {
-      if (!row.access_token_enc) continue;
+      if (!row.refresh_token_enc) continue;
 
       try {
-        const accessToken = decrypt(row.access_token_enc);
+        // جلب توكن صالح — مع تجديد تلقائي إذا انتهى
+        const accessToken = await getValidToken(row);
+        if (!accessToken) continue;
         const { email, orgId, orgName } = await getUserEmailFromToken(accessToken);
 
         // نستخدم organization_id كـ identity_key (أو نحفظه إذا لم يكن موجوداً)
