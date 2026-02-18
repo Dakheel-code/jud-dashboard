@@ -73,6 +73,11 @@ export default function IntegrationsPage() {
 
   // بدء الربط
   const handleConnect = (platform: string) => {
+    if (platform === 'snapchat') {
+      // إعادة التوجيه لصفحة المتجر مع فتح modal اختيار الهوية
+      window.location.href = `/admin/store/${storeId}?connect=snapchat`;
+      return;
+    }
     window.location.href = `/api/integrations/${platform}/start?storeId=${storeId}`;
   };
 

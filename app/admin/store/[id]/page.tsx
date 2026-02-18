@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { TasksByCategory } from '@/types';
@@ -66,6 +66,7 @@ const getTimeAgo = (dateString: string) => {
 function StoreDetailsContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const paramId = decodeURIComponent(params.id as string);
 
   const [storeData, setStoreData] = useState<StoreFullData | null>(null);
@@ -250,6 +251,15 @@ function StoreDetailsContent() {
       fetchDirectIntegrations();
     }
   }, [storeId]);
+
+  // فتح modal Snapchat تلقائياً إذا جاء من صفحة integrations بـ ?connect=snapchat
+  useEffect(() => {
+    if (searchParams.get('connect') === 'snapchat' && storeData?.id) {
+      openSnapchatIdentityModal();
+      // إزالة الـ param من الـ URL
+      router.replace(`/admin/store/${paramId}`);
+    }
+  }, [searchParams, storeData?.id]);
 
   // جلب بيانات جميع المنصات فقط عند فتح قسم الحملات (lazy load)
   useEffect(() => {
