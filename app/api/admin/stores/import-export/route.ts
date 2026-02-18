@@ -91,6 +91,12 @@ export async function POST(request: NextRequest) {
       errors: [] as string[]
     };
 
+    // DEBUG: أول صف للتشخيص — يُرجع في الـ response
+    const debugFirstRow = stores.length > 0 ? {
+      keys: Object.keys(stores[0]),
+      values: stores[0]
+    } : null;
+
     for (const store of stores) {
       try {
         // دعم أسماء الأعمدة الإنجليزية (snake_case) والعربية معاً
@@ -216,7 +222,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `تم استيراد ${results.success} متجر بنجاح${results.failed > 0 ? `، فشل ${results.failed}` : ''}`,
-      results
+      results,
+      debug: debugFirstRow
     });
 
   } catch (error: any) {
