@@ -2515,23 +2515,30 @@ function StoreDetailsContent() {
             </div>
 
             <div className="space-y-4">
-              {/* المبيعات */}
+              {/* الصرف */}
               <div>
-                <label className="block text-sm text-purple-300 mb-2">المبيعات</label>
+                <label className="block text-sm text-purple-300 mb-2">الصرف</label>
                 <input
-                  type="text"
-                  value={dailyUpdateForm.sales}
-                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, sales: e.target.value }))}
-                  placeholder="أدخل قيمة المبيعات"
+                  type="number"
+                  value={dailyUpdateForm.spend}
+                  onChange={e => {
+                    const spend = e.target.value;
+                    const sales = dailyUpdateForm.sales;
+                    const roas = spend && sales && parseFloat(spend) > 0
+                      ? (parseFloat(sales) / parseFloat(spend)).toFixed(2)
+                      : '';
+                    setDailyUpdateForm(prev => ({ ...prev, spend, roas }));
+                  }}
+                  placeholder="أدخل قيمة الصرف"
                   className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
                 />
               </div>
 
-              {/* العائد */}
+              {/* الطلبات */}
               <div>
                 <label className="block text-sm text-purple-300 mb-2">الطلبات</label>
                 <input
-                  type="text"
+                  type="number"
                   value={dailyUpdateForm.orders}
                   onChange={e => setDailyUpdateForm(prev => ({ ...prev, orders: e.target.value }))}
                   placeholder="أدخل عدد الطلبات"
@@ -2539,27 +2546,37 @@ function StoreDetailsContent() {
                 />
               </div>
 
-              {/* العائد ROAS */}
+              {/* المبيعات */}
               <div>
-                <label className="block text-sm text-purple-300 mb-2">العائد (ROAS)</label>
+                <label className="block text-sm text-purple-300 mb-2">المبيعات</label>
                 <input
-                  type="text"
-                  value={dailyUpdateForm.roas}
-                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, roas: e.target.value }))}
-                  placeholder="أدخل قيمة العائد"
+                  type="number"
+                  value={dailyUpdateForm.sales}
+                  onChange={e => {
+                    const sales = e.target.value;
+                    const spend = dailyUpdateForm.spend;
+                    const roas = sales && spend && parseFloat(spend) > 0
+                      ? (parseFloat(sales) / parseFloat(spend)).toFixed(2)
+                      : '';
+                    setDailyUpdateForm(prev => ({ ...prev, sales, roas }));
+                  }}
+                  placeholder="أدخل قيمة المبيعات"
                   className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
                 />
               </div>
 
-              {/* الصرف */}
+              {/* العائد ROAS — محسوب تلقائياً */}
               <div>
-                <label className="block text-sm text-purple-300 mb-2">الصرف</label>
+                <label className="block text-sm text-purple-300 mb-2 flex items-center gap-2">
+                  العائد (ROAS)
+                  <span className="text-xs text-purple-400/60 font-normal">المبيعات ÷ الصرف</span>
+                </label>
                 <input
-                  type="text"
-                  value={dailyUpdateForm.spend}
-                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, spend: e.target.value }))}
-                  placeholder="أدخل قيمة الصرف"
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
+                  type="number"
+                  value={dailyUpdateForm.roas}
+                  onChange={e => setDailyUpdateForm(prev => ({ ...prev, roas: e.target.value }))}
+                  placeholder="يُحسب تلقائياً"
+                  className="w-full px-4 py-3 bg-purple-900/50 border border-purple-500/20 text-green-400 font-semibold rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
                 />
               </div>
 
