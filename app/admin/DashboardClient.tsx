@@ -160,13 +160,21 @@ function AdminPageContent() {
         window.dispatchEvent(new Event('user-updated'));
       };
 
-      // جلب من DB مباشرة (محدّث دائماً) بدل /api/me التي تقرأ JWT قديم
+      // جلب من DB مباشرة، fallback لـ /api/me إذا فشل
       const fetchFromDB = async () => {
         try {
           const res = await fetch('/api/admin/profile/me');
           if (res.ok) {
             const data = await res.json();
             if (data.user) { mergeAndStore(data.user); return true; }
+          }
+        } catch {}
+        // fallback: /api/me (يقرأ من NextAuth session)
+        try {
+          const res2 = await fetch('/api/me');
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (data2.user) { mergeAndStore(data2.user); return true; }
           }
         } catch {}
         return false;
