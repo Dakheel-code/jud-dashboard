@@ -16,49 +16,47 @@ const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
 // سعر صرف الدولار إلى الريال السعودي
 const USD_TO_SAR = 3.75;
 
-function toSnapchatTime(date: Date): string {
-  return date.toISOString().replace('.000Z', '-00:00').replace(/\.\d{3}Z$/, '-00:00');
+// Snapchat يقبل صيغة YYYY-MM-DD مع وقت كامل
+function toSnapDate(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toSnapStartTime(date: Date): string {
+  return `${toSnapDate(date)}T00:00:00.000-00:00`;
+}
+
+function toSnapEndTime(date: Date): string {
+  return `${toSnapDate(date)}T23:59:59.999-00:00`;
 }
 
 /**
- * حساب تاريخ البداية والنهاية حسب الفترة
- * الفترات 7d/30d/90d تستثني اليوم الحالي (من أمس للخلف)
- * today = اليوم الحالي فقط
- * yesterday = أمس فقط
+ * حساب تاريخ البداية والنهاية حسب الفترة (بتوقيت UTC)
  */
 function getDateRange(range: string): { start: Date; end: Date } {
   const now = new Date();
-  
+  // اليوم الحالي بتوقيت UTC
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
   if (range === 'today') {
-    // اليوم: من بداية اليوم إلى الآن
-    const start = new Date(now);
-    start.setUTCHours(0, 0, 0, 0);
-    return { start, end: now };
+    return { start: todayUTC, end: todayUTC };
   }
-  
+
   if (range === 'yesterday') {
-    // أمس: من بداية أمس إلى نهاية أمس
-    const start = new Date(now);
-    start.setDate(start.getDate() - 1);
-    start.setUTCHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setUTCHours(23, 59, 59, 999);
-    return { start, end };
+    const yesterday = new Date(todayUTC);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    return { start: yesterday, end: yesterday };
   }
-  
-  // باقي الفترات: تستثني اليوم الحالي
+
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
-  
-  // النهاية = نهاية أمس (23:59:59)
-  const end = new Date(now);
-  end.setDate(end.getDate() - 1);
-  end.setUTCHours(23, 59, 59, 999);
-  
-  // البداية = قبل X أيام من أمس
+  const end = new Date(todayUTC);
+  end.setUTCDate(end.getUTCDate() - 1); // أمس
+
   const start = new Date(end);
-  start.setDate(start.getDate() - days + 1);
-  start.setUTCHours(0, 0, 0, 0);
-  
+  start.setUTCDate(start.getUTCDate() - days + 1);
+
   return { start, end };
 }
 
@@ -152,8 +150,8 @@ export async function GET(
 
     // حساب التواريخ
     const { start: startDate, end: endDate } = getDateRange(range);
-    const normalizedStart = toSnapchatTime(startDate);
-    const normalizedEnd   = toSnapchatTime(endDate);
+    const normalizedStart = toSnapStartTime(startDate);
+    const normalizedEnd   = toSnapEndTime(endDate);
 
     // ========== الخطوة 1: جلب الحملات ==========
     const campaignsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(
