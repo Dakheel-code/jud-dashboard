@@ -446,23 +446,16 @@ export async function GET(
       response_time_ms: responseTime,
     };
 
-    // Debug info
-    if (debug) {
-      response.debug = {
-        ad_account_id: adAccountId,
-        fields_used: fields,
-        campaigns_count: campaignsList.length,
-        stats_rows: Object.keys(campaignStatsMap).length,
-        stats_url: statsUrl,
-        raw_stats: statsData,
-        sample_mapped_campaign_ids: Object.keys(campaignStatsMap).slice(0, 10),
-        currency_conversion: {
-          from: accountCurrency,
-          to: displayCurrency,
-          rate: conversionRate,
-        },
-      };
-    }
+    // Debug info — دائماً نُرجع معلومات التشخيص
+    response.debug = {
+      ad_account_id: adAccountId,
+      account_currency: accountCurrency,
+      conversion_rate: conversionRate,
+      date_range: { start: normalizedStart, end: normalizedEnd },
+      account_level_stats_raw: accountLevelStats,
+      campaign_stats_map_count: Object.keys(campaignStatsMap).length,
+      campaign_stats_map_ids: Object.keys(campaignStatsMap).slice(0, 5),
+    };
 
     // تحذير إذا البيانات غير مكتملة
     if (finalizedDataEndTime && new Date(finalizedDataEndTime) < new Date(normalizedEnd)) {
