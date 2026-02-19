@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdAccounts } from '@/lib/meta/client';
 import { decryptToken } from '@/lib/meta/encryption';
+import { requireMetaManage } from '@/lib/meta/guard';
 
 function getSupabase() {
   return createClient(
@@ -16,6 +17,9 @@ function getSupabase() {
 }
 
 export async function GET(request: NextRequest) {
+  const guard = await requireMetaManage();
+  if (!guard.ok) return guard.error!;
+
   const storeId = request.nextUrl.searchParams.get('storeId');
   if (!storeId) {
     return NextResponse.json({ error: 'storeId مطلوب' }, { status: 400 });
