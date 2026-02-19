@@ -79,8 +79,15 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
 
   const fetchCachedInsights = useCallback(async (preset: string) => {
     try {
-      const res = await fetch(`/api/meta/insights?storeId=${storeId}&datePreset=${preset}`);
-      if (res.ok) { const d = await res.json(); setInsights(d.summary || null); }
+      // أولاً: جرّب الكاش
+      const cached = await fetch(`/api/meta/insights?storeId=${storeId}&datePreset=${preset}`);
+      if (cached.ok) {
+        const d = await cached.json();
+        if (d.summary) { setInsights(d.summary); return; }
+      }
+      // ثانياً: جلب مباشر من Meta API
+      const live = await fetch(`/api/meta/insights-live?storeId=${storeId}&datePreset=${preset}`);
+      if (live.ok) { const d = await live.json(); setInsights(d.summary || null); }
     } catch { /* silent */ }
   }, [storeId]);
 

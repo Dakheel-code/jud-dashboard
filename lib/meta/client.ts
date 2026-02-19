@@ -88,16 +88,48 @@ export async function fetchAds(adAccountId: string, token: string): Promise<any[
   return data.data || [];
 }
 
-/** جلب Insights */
+/** جلب Insights على مستوى الإعلانات */
 export async function fetchInsights(
   adAccountId: string,
   token: string,
   datePreset: string = 'last_7d'
 ): Promise<any[]> {
-  const fields = 'ad_id,campaign_id,date_start,date_stop,spend,impressions,clicks,reach,ctr,cpc,cpm,conversions,cost_per_conversion';
+  const fields = 'ad_id,campaign_id,date_start,date_stop,spend,impressions,clicks,reach,ctr,cpc,cpm,conversions,cost_per_conversion,account_currency';
   const url = `${META_BASE}/${adAccountId}/insights?fields=${fields}&date_preset=${datePreset}&level=ad&limit=500&access_token=${token}`;
   const res = await fetch(url);
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   return data.data || [];
+}
+
+/** جلب ملخص Insights مباشرة (account level) */
+export async function fetchInsightsSummary(
+  adAccountId: string,
+  token: string,
+  datePreset: string = 'last_7d'
+): Promise<{ spend: number; impressions: number; clicks: number; reach: number; ctr: number; cpc: number; cpm: number; conversions: number; currency: string } | null> {
+  const fields = 'spend,impressions,clicks,reach,ctr,cpc,cpm,conversions';
+  const url = `${META_BASE}/${adAccountId}/insights?fields=${fields}&date_preset=${datePreset}&level=account&access_token=${token}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const row = data.data?.[0];
+  if (!row) return null;
+
+  // جلب العملة من الحساب
+  const accRes = await fetch(`${META_BASE}/${adAccountId}?fields=currency&access_token=${token}`);
+  const accData = await accRes.json();
+  const currency = accData.currency || 'SAR';
+
+  return {
+    spend:       parseFloat(row.spend       || '0'),
+    impressions: parseInt(row.impressions   || '0', 10),
+    clicks:      parseInt(row.clicks        || '0', 10),
+    reach:       parseInt(row.reach         || '0', 10),
+    ctr:         parseFloat(row.ctr         || '0'),
+    cpc:         parseFloat(row.cpc         || '0'),
+    cpm:         parseFloat(row.cpm         || '0'),
+    conversions: parseInt(row.conversions   || '0', 10),
+    currency,
+  };
 }
