@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { StoreWithProgress } from '@/types';
 import { requireAuth, requireAdmin } from '@/lib/auth-guard';
+import { upsertClient, cleanPhone } from './_lib/upsertClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -163,38 +164,8 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // تنظيف رقم الجوال (إزالة المسافات والرموز)
-    const cleanPhone = owner_phone.replace(/[^0-9+]/g, '');
-
-    // التحقق من وجود عميل بنفس رقم الجوال
-    let finalClientId = client_id || null;
-    
-    const { data: existingClient, error: clientCheckError } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('phone', cleanPhone)
-      .maybeSingle();
-
-    if (!clientCheckError && !existingClient && owner_name) {
-      // إضافة عميل جديد إذا لم يكن رقم الجوال موجوداً
-      const { data: newClient, error: clientError } = await supabase
-        .from('clients')
-        .insert({
-          name: owner_name,
-          phone: cleanPhone,
-          email: owner_email || null
-        })
-        .select('id')
-        .single();
-
-      if (!clientError && newClient) {
-        finalClientId = newClient.id;
-      } else {
-      }
-    } else if (existingClient) {
-      // استخدام العميل الموجود
-      finalClientId = existingClient.id;
-    }
+    // تنظيف رقم الجوال
+    const phone = cleanPhone(owner_phone);
 
     // تنظيف رابط المتجر - إزالة https:// و http:// و www.
     const cleanStoreUrl = store_url
@@ -202,25 +173,33 @@ export async function POST(request: Request) {
       .replace(/^www\./i, '')
       .replace(/\/+$/, '');
 
-    // إنشاء المتجر
+    // ── إنشاء/ربط العميل أولاً (قبل المتجر) ───────────────
+    const clientResult = await upsertClient(supabase as any, {
+      owner_name,
+      owner_phone: phone,
+      owner_email: owner_email || null,
+    });
+    const finalClientId = client_id || clientResult?.clientId || null;
+
+    // ── إنشاء المتجر ─────────────────────────────────────────
     const { data: newStore, error: createError } = await supabase
       .from('stores')
       .insert({
         store_name,
-        store_url: cleanStoreUrl,
-        owner_name: owner_name,
-        owner_phone: cleanPhone,
-        owner_email: owner_email || null,
-        account_manager_id: account_manager_id || null,
-        media_buyer_id: media_buyer_id || null,
-        priority: priority || 'medium',
-        status: status || 'new',
-        budget: budget || null,
-        notes: notes || null,
-        client_id: finalClientId,
+        store_url:               cleanStoreUrl,
+        owner_name,
+        owner_phone:             phone,
+        owner_email:             owner_email             || null,
+        account_manager_id:      account_manager_id      || null,
+        media_buyer_id:          media_buyer_id          || null,
+        priority:                priority                || 'medium',
+        status:                  status                  || 'new',
+        budget:                  budget                  || null,
+        notes:                   notes                   || null,
+        client_id:               finalClientId,
         subscription_start_date: subscription_start_date || null,
-        store_group_url: store_group_url || null,
-        category: category || null,
+        store_group_url:         store_group_url         || null,
+        category:                category                || null,
         is_active: true
       })
       .select()
@@ -233,11 +212,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'فشل إنشاء المتجر' }, { status: 500 });
     }
 
+    // ── ربط المتجر الجديد بالعميل ────────────────────────────
+    if (clientResult?.clientId && newStore?.id) {
+      await supabase
+        .from('stores')
+        .update({ client_id: clientResult.clientId })
+        .eq('id', newStore.id);
+    }
+
     return NextResponse.json({ 
-      success: true, 
-      store: newStore,
-      message: 'تم إنشاء المتجر بنجاح',
-      clientCreated: finalClientId && !client_id && !existingClient
+      success:       true, 
+      store:         newStore,
+      message:       'تم إنشاء المتجر بنجاح',
+      clientCreated: clientResult?.action === 'created',
+      clientId:      finalClientId,
     });
 
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '../../_lib/supabase';
+import { upsertClient } from '@/app/api/admin/stores/_lib/upsertClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +149,26 @@ export async function POST(
 
     const result = rpcData as RpcResult;
 
+    // ── upsert العملاء بناءً على owner_phone لكل صف ناجح ────────
+    // يعمل بالتوازي مع تحديث الصفوف
+    const rowIndexToNorm = new Map(rows.map(r => [r.row_index, r.normalized_row as Record<string, unknown>]));
+
+    const clientUpserts = result.rows
+      .filter((r: RpcRowResult) => r.action !== 'error' && r.store_id)
+      .map(async (r: RpcRowResult) => {
+        const norm = rowIndexToNorm.get(r.row_index);
+        if (!norm?.owner_phone) return;
+        await upsertClient(
+          supabase,
+          {
+            owner_name:  (norm.owner_name  as string) || '',
+            owner_phone: (norm.owner_phone as string),
+            owner_email: (norm.owner_email as string) || null,
+          },
+          r.store_id!,
+        );
+      });
+
     // ── تحديث store_import_rows بنتائج الـ RPC ────────────────
     const rowIndexToDbId = new Map(rows.map(r => [r.row_index, r.id]));
     const now = new Date().toISOString();
@@ -164,7 +185,7 @@ export async function POST(
       }).eq('id', dbId);
     }).filter(Boolean);
 
-    await Promise.all(rowUpdates);
+    await Promise.all([...rowUpdates, ...clientUpserts]);
 
     // ── تحديث الـ Job ─────────────────────────────────────────
     const commitErrors = result.rows
@@ -250,10 +271,14 @@ async function fallbackDirectUpsert(
       if (existingId) {
         await supabase.from('stores').update(storeData).eq('id', existingId);
         if (dbRowId) await supabase.from('store_import_rows').update({ status: 'committed', action: 'update', store_id: existingId, committed_at: now }).eq('id', dbRowId);
+        // ربط العميل بالمتجر المحدَّث
+        if (p.owner_phone) await upsertClient(supabase, { owner_name: p.owner_name as string || '', owner_phone: p.owner_phone as string, owner_email: p.owner_email as string || null }, existingId);
         updatedCount++;
       } else {
         const { data: ins } = await supabase.from('stores').insert(storeData).select('id').single();
         if (dbRowId && ins) await supabase.from('store_import_rows').update({ status: 'committed', action: 'insert', store_id: ins.id, committed_at: now }).eq('id', dbRowId);
+        // ربط العميل بالمتجر الجديد
+        if (ins && p.owner_phone) await upsertClient(supabase, { owner_name: p.owner_name as string || '', owner_phone: p.owner_phone as string, owner_email: p.owner_email as string || null }, ins.id);
         insertedCount++;
       }
     } catch (err: any) {
