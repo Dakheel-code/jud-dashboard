@@ -16,22 +16,8 @@ const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
 // سعر صرف الدولار إلى الريال السعودي
 const USD_TO_SAR = 3.75;
 
-/**
- * تطبيع إلى بداية اليوم UTC
- */
-function normalizeToStartOfDay(date: Date): string {
-  const d = new Date(date);
-  d.setUTCHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-/**
- * تطبيع إلى بداية الساعة الحالية UTC
- */
-function normalizeToStartOfHour(date: Date): string {
-  const d = new Date(date);
-  d.setUTCMinutes(0, 0, 0);
-  return d.toISOString();
+function toSnapchatTime(date: Date): string {
+  return date.toISOString().replace('.000Z', '-00:00').replace(/\.\d{3}Z$/, '-00:00');
 }
 
 /**
@@ -166,8 +152,8 @@ export async function GET(
 
     // حساب التواريخ
     const { start: startDate, end: endDate } = getDateRange(range);
-    const normalizedStart = normalizeToStartOfDay(startDate);
-    const normalizedEnd = normalizeToStartOfHour(endDate);
+    const normalizedStart = toSnapchatTime(startDate);
+    const normalizedEnd   = toSnapchatTime(endDate);
 
     // ========== الخطوة 1: جلب الحملات ==========
     const campaignsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(
