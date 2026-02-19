@@ -224,10 +224,13 @@ export async function GET(
       normalizedStart
     )}&end_time=${encodeURIComponent(
       normalizedEnd
-    )}&breakdown=campaign&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
+    )}&breakdown=campaign`;
 
     const statsResponse = await fetch(statsUrl, { headers });
-    const statsData = await statsResponse.json().catch(() => ({}));
+    const statsRawText = await statsResponse.text();
+    let statsData: any = {};
+    let statsRawDebug: any = null;
+    try { statsData = JSON.parse(statsRawText); statsRawDebug = statsData; } catch { statsRawDebug = statsRawText; }
 
     // معالجة الإحصائيات
     const campaignStatsMap: Record<string, any> = {};
@@ -312,7 +315,7 @@ export async function GET(
     // ========== جلب spend على مستوى الحساب — Snapchat يدعم spend فقط على هذا المستوى ==========
     let accountSpend: number | null = null;
     {
-      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=spend&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
+      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=spend&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
         if (accRes.ok) {
@@ -438,6 +441,11 @@ export async function GET(
       date_range: { start: normalizedStart, end: normalizedEnd },
       account_spend_usd: accountSpend,
       campaign_stats_map_count: Object.keys(campaignStatsMap).length,
+      stats_url: statsUrl,
+      stats_http_status: statsResponse.status,
+      stats_raw: typeof statsRawDebug === 'object'
+        ? { request_status: statsRawDebug?.request_status, error: statsRawDebug?.debug_message, total_stats_count: statsRawDebug?.total_stats?.length }
+        : String(statsRawDebug).slice(0, 300),
     };
 
     // تحذير إذا البيانات غير مكتملة
