@@ -28,8 +28,12 @@ function toSnapStartTime(date: Date): string {
   return `${toSnapDate(date)}T00:00:00.000-00:00`;
 }
 
+// Snapchat يتطلب end_time أن يكون بداية ساعة
+// نستخدم اليوم التالي 00:00:00 (exclusive end)
 function toSnapEndTime(date: Date): string {
-  return `${toSnapDate(date)}T23:59:59.999-00:00`;
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return `${toSnapDate(next)}T00:00:00.000-00:00`;
 }
 
 /**
