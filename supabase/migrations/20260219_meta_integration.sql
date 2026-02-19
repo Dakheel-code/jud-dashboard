@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS store_meta_connections (
   store_id              uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
   meta_user_id          text NOT NULL,
   meta_user_name        text,
-  ad_account_id         text NOT NULL,          -- e.g. act_123456789
+  ad_account_id         text,                   -- يُختار بعد الربط — nullable
   ad_account_name       text,
   access_token_encrypted text NOT NULL,         -- مشفّر قبل الحفظ
   token_expires_at      timestamptz,
