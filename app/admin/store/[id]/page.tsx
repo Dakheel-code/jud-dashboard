@@ -8,6 +8,7 @@ import { TasksByCategory } from '@/types';
 
 const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false });
 const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
+const MetaAdsCard = dynamic(() => import('@/components/MetaAdsCard'), { ssr: false });
 
 interface StoreFullData {
   id: string;
@@ -1594,6 +1595,9 @@ function StoreDetailsContent() {
             openSnapchatIdentityModal();
           }}
         />
+
+        {/* Meta Ads */}
+        {storeId && <MetaAdsCard storeId={storeId} />}
 
         {/* قسم الحملات الإعلانية القديم - مخفي */}
         <div className="hidden bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
