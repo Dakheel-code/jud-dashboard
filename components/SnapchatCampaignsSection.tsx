@@ -196,7 +196,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
 
   // المنصات المتصلة
   const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
-  const metaConnected = !!metaData;
+  const metaConnected = !!metaConn?.ad_account_id && (metaConn?.status === 'active' || metaConn?.status === 'connected');
   const connectedCount = [snapConnected, metaConnected].filter(Boolean).length;
 
   // بناء صفوف الجدول
