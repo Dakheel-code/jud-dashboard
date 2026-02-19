@@ -97,12 +97,15 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       const range = preset === 'today' ? 'today' : preset === 'yesterday' ? 'yesterday' : preset;
       const res = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${range}`);
       const d = await res.json();
-      if (d.success && d.summary) {
-        const s = { spend: d.summary.spend || 0, sales: d.summary.sales || 0, orders: d.summary.orders || 0, roas: d.summary.roas || 0 };
-        setSnapData(s);
-        onDataLoaded?.(s);
-      }
-    } catch { /* silent */ }
+      const s = {
+        spend:  d.summary?.spend  || 0,
+        sales:  d.summary?.sales  || 0,
+        orders: d.summary?.orders || 0,
+        roas:   d.summary?.roas   || 0,
+      };
+      setSnapData(s);
+      if (d.success) onDataLoaded?.(s);
+    } catch { setSnapData({ spend: 0, sales: 0, orders: 0, roas: 0 }); }
     finally { setSnapLoading(false); }
   }, [storeId, directIntegrations, onDataLoaded]);
 
