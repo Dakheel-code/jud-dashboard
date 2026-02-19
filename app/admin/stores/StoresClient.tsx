@@ -373,6 +373,15 @@ function StoresPageContent() {
 
             {/* أزرار الاستيراد والتصدير */}
             <div className="flex items-center gap-2 mr-auto">
+              <Link
+                href="/admin/stores/import"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/40 hover:border-purple-500/70 rounded-xl text-purple-300 hover:text-white transition-all text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                استيراد مجمّع
+              </Link>
               <StoreImportExport onImportSuccess={fetchData} />
             </div>
           </div>
