@@ -246,6 +246,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
               <span className="text-center">العائد</span>
             </div>
 
+            {/* حساب إجمالي الصفوف المرئية */}
             {filteredRows.map((row, i) => {
               const cfg = PLATFORM_CONFIG[row.key];
               const isLast = i === filteredRows.length - 1;
@@ -278,7 +279,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
 
                     {/* الصرف */}
                     <div className="text-center">
-                      {row.loading ? (
+                      {row.loading && row.spend === 0 ? (
                         <div className="w-4 h-4 border border-purple-400 border-t-transparent rounded-full animate-spin mx-auto" />
                       ) : row.connected ? (
                         <p className="text-sm font-bold text-orange-300">{fmtNum(row.spend)}</p>
@@ -339,6 +340,35 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                 </div>
               );
             })}
+            {/* ─── صف الإجمالي ─── */}
+            {(() => {
+              const connectedRows = filteredRows.filter(r => r.connected);
+              if (connectedRows.length === 0) return null;
+              const sumSpend  = connectedRows.reduce((a, r) => a + r.spend,  0);
+              const sumSales  = connectedRows.reduce((a, r) => a + r.sales,  0);
+              const sumOrders = connectedRows.reduce((a, r) => a + r.orders, 0);
+              const avgRoas   = sumSpend > 0 ? sumSales / sumSpend : 0;
+              return (
+                <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-0 px-4 py-3 items-center border-t-2 border-purple-500/30 bg-purple-900/20">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-black text-white">الإجمالي</p>
+                    <span className="text-xs text-purple-400/50">({connectedRows.length} منصة)</span>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-black text-orange-300">{fmtNum(sumSpend)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-black text-blue-300">{fmtNum(sumSales)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-black text-green-300">{fmtNum(sumOrders)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className={`text-sm font-black ${avgRoas < 1 ? 'text-red-400' : 'text-purple-300'}`}>{avgRoas.toFixed(2)}x</p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* MetaAdsCard مخفي لجلب البيانات تلقائياً */}
