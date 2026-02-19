@@ -157,20 +157,24 @@ ALTER TABLE meta_ads_cache         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meta_insights_cache    ENABLE ROW LEVEL SECURITY;
 
 -- سياسة: service_role يملك صلاحية كاملة (API routes تستخدم service key)
+DROP POLICY IF EXISTS "service_role_full_access_meta_connections" ON store_meta_connections;
 CREATE POLICY "service_role_full_access_meta_connections"
   ON store_meta_connections FOR ALL
   TO service_role USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "service_role_full_access_meta_ads" ON meta_ads_cache;
 CREATE POLICY "service_role_full_access_meta_ads"
   ON meta_ads_cache FOR ALL
   TO service_role USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "service_role_full_access_meta_insights" ON meta_insights_cache;
 CREATE POLICY "service_role_full_access_meta_insights"
   ON meta_insights_cache FOR ALL
   TO service_role USING (true) WITH CHECK (true);
 
 ALTER TABLE meta_oauth_states ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_full_access_meta_oauth_states" ON meta_oauth_states;
 CREATE POLICY "service_role_full_access_meta_oauth_states"
   ON meta_oauth_states FOR ALL
   TO service_role USING (true) WITH CHECK (true);
