@@ -162,3 +162,61 @@ export const ROLE_NAMES: Record<UserRole, string> = {
   designer: 'مصمم',
   web_developer: 'مطور ويب'
 };
+
+// ─────────────────────────────────────────────────────
+// Meta Ads Integration Types
+// ─────────────────────────────────────────────────────
+
+export type MetaConnectionStatus = 'active' | 'revoked' | 'error';
+
+export interface StoreMetaConnection {
+  id: string;
+  store_id: string;
+  meta_user_id: string;
+  meta_user_name?: string;
+  ad_account_id: string;       // e.g. act_123456789
+  ad_account_name?: string;
+  access_token_encrypted: string;
+  token_expires_at?: string;
+  status: MetaConnectionStatus;
+  last_sync_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MetaAdCache {
+  id: string;
+  store_id: string;
+  ad_account_id: string;
+  ad_id: string;
+  ad_name?: string;
+  campaign_id?: string;
+  campaign_name?: string;
+  adset_id?: string;
+  adset_name?: string;
+  status?: string;
+  effective_status?: string;
+  creative_preview_url?: string;
+  updated_at: string;
+}
+
+export interface MetaInsightsCache {
+  id: string;
+  store_id: string;
+  ad_account_id: string;
+  ad_id?: string;
+  campaign_id?: string;
+  date_start: string;
+  date_stop: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  reach: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  conversions: number;
+  cost_per_conversion: number;
+  currency: string;
+  updated_at: string;
+}
