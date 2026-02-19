@@ -221,17 +221,25 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
 
-          // RBAC: تأكد أن المستخدم الموجود عنده دور موظف على الأقل
-          const { data: employeeRole } = await supabase
-            .from('admin_roles')
-            .select('id')
-            .eq('key', 'employee')
-            .single();
-          if (employeeRole) {
-            await supabase.from('admin_user_roles').insert({
-              user_id: existingUser.id,
-              role_id: employeeRole.id,
-            }).select().maybeSingle();
+          // RBAC: أضف employee فقط إذا ما عنده أي roles
+          const { data: anyRoles } = await supabase
+            .from('admin_user_roles')
+            .select('role_id')
+            .eq('user_id', existingUser.id);
+
+          if (!anyRoles || anyRoles.length === 0) {
+            const { data: employeeRole } = await supabase
+              .from('admin_roles')
+              .select('id')
+              .eq('key', 'employee')
+              .single();
+
+            if (employeeRole) {
+              await supabase.from('admin_user_roles').insert({
+                user_id: existingUser.id,
+                role_id: employeeRole.id,
+              });
+            }
           }
         }
       }
