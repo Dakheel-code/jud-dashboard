@@ -76,20 +76,26 @@ export async function GET(request: NextRequest) {
     const encryptedToken = encryptToken(longToken);
     const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString();
 
-    // 6) حفظ الاتصال في DB (upsert بناءً على store_id)
-    const { error: upsertErr } = await supabase
+    // 6) حفظ الاتصال في DB — حذف القديم ثم إدراج جديد (يتجنب مشكلة ON CONFLICT)
+    await supabase
       .from('store_meta_connections')
-      .upsert({
+      .delete()
+      .eq('store_id', storeId);
+
+    const { error: insertErr } = await supabase
+      .from('store_meta_connections')
+      .insert({
         store_id:               storeId,
         meta_user_id:           metaUser.id,
         meta_user_name:         metaUser.name,
         access_token_encrypted: encryptedToken,
         token_expires_at:       expiresAt,
         status:                 'active',
+        created_at:             new Date().toISOString(),
         updated_at:             new Date().toISOString(),
-      }, { onConflict: 'store_id' });
+      });
 
-    if (upsertErr) throw new Error(upsertErr.message);
+    if (insertErr) throw new Error(insertErr.message);
 
     // توجيه لصفحة المتجر مع إشارة نجاح الربط
     return NextResponse.redirect(
