@@ -339,45 +339,36 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
     return <div className="bg-transparent">{renderBody()}</div>;
   }
 
-  const isNotConnected = !connection || connection.status === 'revoked' || connection.status === 'error';
-
   return (
-    <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
-      {/* Header — نفس نمط Snapchat/Google */}
+    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl overflow-hidden mb-0">
+      {/* Header — مطابق لـ Snapchat/Google */}
       <button onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full px-4 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all">
+        className="w-full p-4 flex items-center justify-between hover:bg-indigo-500/5 transition-all">
 
-        {/* يسار: سهم + نقطة الحالة */}
+        {/* يسار: سهم + نقطة خضراء */}
         <div className="flex items-center gap-2">
-          <svg className={`w-5 h-5 text-purple-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+          <svg className={`w-5 h-5 text-indigo-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
           {connection?.status === 'active' && (
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           )}
-          {/* زر ربط بجانب السهم إذا غير مرتبط */}
-          {isNotConnected && !loadingConn && (
-            <a
-              href={`/api/meta/connect?storeId=${storeId}`}
-              onClick={e => e.stopPropagation()}
-              className="px-3 py-1 text-xs bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-lg hover:bg-blue-600/50 transition-all"
-            >
+          {!loadingConn && (!connection || connection.status === 'revoked' || connection.status === 'error') && (
+            <a href={`/api/meta/connect?storeId=${storeId}`} onClick={e => e.stopPropagation()}
+              className="px-3 py-1 text-xs bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-lg hover:bg-blue-600/50 transition-all">
               ربط
             </a>
           )}
         </div>
 
-        {/* يمين: عنوان + أيقونة */}
+        {/* يمين: عنوان + أيقونة — مطابق لـ Snapchat */}
         <div className="flex items-center gap-3">
-          <div className="text-right">
-            <h2 className="text-base font-black text-white tracking-widest">META ADS</h2>
-            {connection?.ad_account_name && (
-              <p className="text-xs text-purple-300/60">{connection.ad_account_name}</p>
-            )}
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
-            <MetaIcon className="w-5 h-5 text-white" />
+          <p className="text-white font-bold text-base tracking-wide">META ADS</p>
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+            <svg className="w-6 h-6 text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/>
+            </svg>
           </div>
         </div>
       </button>
