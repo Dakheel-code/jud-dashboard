@@ -55,8 +55,9 @@ function getDateRange(range: string): { start: Date; end: Date } {
   }
 
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
-  // end = اليوم الحالي (مثل Snapchat Ads Manager)
+  // end = أمس (آخر يوم مكتمل)
   const end = new Date(todayUTC);
+  end.setUTCDate(end.getUTCDate() - 1);
 
   const start = new Date(end);
   start.setUTCDate(start.getUTCDate() - days + 1);
@@ -223,7 +224,7 @@ export async function GET(
       normalizedStart
     )}&end_time=${encodeURIComponent(
       normalizedEnd
-    )}&breakdown=campaign&swipe_up_attribution_window=28DAY&view_attribution_window=28DAY`;
+    )}&breakdown=campaign&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
 
     const statsResponse = await fetch(statsUrl, { headers });
     const statsData = await statsResponse.json().catch(() => ({}));
