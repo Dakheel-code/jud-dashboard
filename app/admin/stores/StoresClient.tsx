@@ -285,43 +285,123 @@ function StoresPageContent() {
         </div>
 
         {/* Stats - Clickable for filtering */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <button 
-            onClick={() => setStatusFilter('all')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'all' ? 'border-purple-400 ring-2 ring-purple-500/30' : 'border-purple-500/20 hover:border-purple-400/50'}`}
-          >
-            <h3 className="text-sm text-purple-300/80 mb-1">إجمالي المتاجر</h3>
-            <p className="text-2xl font-bold text-white">{stores.length}</p>
-          </button>
-          <button 
-            onClick={() => setStatusFilter('new')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'new' ? 'border-blue-400 ring-2 ring-blue-500/30' : 'border-blue-500/20 hover:border-blue-400/50'}`}
-          >
-            <h3 className="text-sm text-blue-300/80 mb-1">المتاجر الجديدة</h3>
-            <p className="text-2xl font-bold text-blue-400">{stores.filter(s => s.status === 'new' || !s.status).length}</p>
-          </button>
-          <button 
-            onClick={() => setStatusFilter('active')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'active' ? 'border-green-400 ring-2 ring-green-500/30' : 'border-green-500/20 hover:border-green-400/50'}`}
-          >
-            <h3 className="text-sm text-green-300/80 mb-1">المتاجر النشطة</h3>
-            <p className="text-2xl font-bold text-green-400">{stores.filter(s => s.status === 'active').length}</p>
-          </button>
-          <button 
-            onClick={() => setStatusFilter('paused')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'paused' ? 'border-orange-400 ring-2 ring-orange-500/30' : 'border-orange-500/20 hover:border-orange-400/50'}`}
-          >
-            <h3 className="text-sm text-orange-300/80 mb-1">المتاجر المتوقفة</h3>
-            <p className="text-2xl font-bold text-orange-400">{stores.filter(s => s.status === 'paused').length}</p>
-          </button>
-          <button 
-            onClick={() => setStatusFilter('expired')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'expired' ? 'border-red-400 ring-2 ring-red-500/30' : 'border-red-500/20 hover:border-red-400/50'}`}
-          >
-            <h3 className="text-sm text-red-300/80 mb-1">المتاجر المنتهية</h3>
-            <p className="text-2xl font-bold text-red-400">{stores.filter(s => s.status === 'expired').length}</p>
-          </button>
-        </div>
+        {(() => {
+          const total   = stores.length;
+          const newCount     = stores.filter(s => s.status === 'new' || !s.status).length;
+          const activeCount  = stores.filter(s => s.status === 'active').length;
+          const pausedCount  = stores.filter(s => s.status === 'paused').length;
+          const expiredCount = stores.filter(s => s.status === 'expired').length;
+          const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
+
+          const stats = [
+            {
+              key: 'all', label: 'إجمالي المتاجر', value: total, pct: 100,
+              color: 'purple', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              ),
+              activeBorder: 'border-purple-400 ring-2 ring-purple-500/30',
+              idleBorder: 'border-purple-500/20 hover:border-purple-400/50',
+              iconBg: 'bg-purple-500/20 text-purple-400',
+              bar: 'bg-purple-500',
+              valueColor: 'text-white',
+            },
+            {
+              key: 'new', label: 'المتاجر الجديدة', value: newCount, pct: pct(newCount),
+              color: 'blue', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              ),
+              activeBorder: 'border-blue-400 ring-2 ring-blue-500/30',
+              idleBorder: 'border-blue-500/20 hover:border-blue-400/50',
+              iconBg: 'bg-blue-500/20 text-blue-400',
+              bar: 'bg-blue-500',
+              valueColor: 'text-blue-400',
+            },
+            {
+              key: 'active', label: 'المتاجر النشطة', value: activeCount, pct: pct(activeCount),
+              color: 'green', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              activeBorder: 'border-green-400 ring-2 ring-green-500/30',
+              idleBorder: 'border-green-500/20 hover:border-green-400/50',
+              iconBg: 'bg-green-500/20 text-green-400',
+              bar: 'bg-green-500',
+              valueColor: 'text-green-400',
+            },
+            {
+              key: 'paused', label: 'المتاجر المتوقفة', value: pausedCount, pct: pct(pausedCount),
+              color: 'orange', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              activeBorder: 'border-orange-400 ring-2 ring-orange-500/30',
+              idleBorder: 'border-orange-500/20 hover:border-orange-400/50',
+              iconBg: 'bg-orange-500/20 text-orange-400',
+              bar: 'bg-orange-500',
+              valueColor: 'text-orange-400',
+            },
+            {
+              key: 'expired', label: 'المتاجر المنتهية', value: expiredCount, pct: pct(expiredCount),
+              color: 'red', icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              activeBorder: 'border-red-400 ring-2 ring-red-500/30',
+              idleBorder: 'border-red-500/20 hover:border-red-400/50',
+              iconBg: 'bg-red-500/20 text-red-400',
+              bar: 'bg-red-500',
+              valueColor: 'text-red-400',
+            },
+          ];
+
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              {stats.map(stat => (
+                <button
+                  key={stat.key}
+                  onClick={() => setStatusFilter(stat.key)}
+                  className={`relative overflow-hidden bg-purple-950/40 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border transition-all duration-200 text-right group ${statusFilter === stat.key ? stat.activeBorder : stat.idleBorder}`}
+                >
+                  {/* glow on active */}
+                  {statusFilter === stat.key && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-2xl" />
+                  )}
+
+                  {/* top row: icon + pct */}
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-xs font-semibold text-purple-300/60 bg-purple-900/40 px-2 py-0.5 rounded-full">
+                      {stat.pct}%
+                    </span>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${stat.iconBg}`}>
+                      {stat.icon}
+                    </div>
+                  </div>
+
+                  {/* value */}
+                  <p className={`text-3xl font-black mb-1 ${stat.valueColor}`}>{stat.value}</p>
+
+                  {/* label */}
+                  <h3 className="text-xs sm:text-sm text-purple-300/70 leading-tight">{stat.label}</h3>
+
+                  {/* progress bar */}
+                  <div className="mt-3 h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${stat.bar}`}
+                      style={{ width: `${stat.pct}%` }}
+                    />
+                  </div>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Filters */}
         <div className="bg-purple-950/40 rounded-2xl p-3 sm:p-4 border border-purple-500/20 mb-4 sm:mb-6">
