@@ -248,6 +248,7 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account, profile }) {
+      // تخزين الحد الأدنى فقط لتجنب HTTP 400 (حجم JWT كبير)
       if (user) {
         token.uid      = user.id;
         token.role     = (user as any).role;
@@ -255,44 +256,24 @@ export const authOptions: NextAuthOptions = {
       }
       if (account?.provider) token.provider = account.provider;
 
-      // عند تسجيل الدخول بـ Google: احفظ الـ email في token
+      // Google: جلب uid من DB عند تسجيل الدخول فقط
       if (account?.provider === "google") {
         token.email = (profile as any)?.email || token.email;
-      }
-
-      // جلب name وavatar وrole من DB في كل مرة (يعكس التعديلات فوراً)
-      const userId = token.uid as string;
-      if (userId && userId !== 'default-admin') {
-        try {
-          const supabase = getSupabaseClient();
-          
-          // إذا لم يكن uid محدداً بعد (Google أول مرة) — ابحث بالـ email
-          let dbUser: any = null;
-          if (userId) {
-            const { data } = await supabase
-              .from('admin_users')
-              .select('id, username, name, avatar, role')
-              .eq('id', userId)
-              .single();
-            dbUser = data;
-          }
-          
-          if (!dbUser && token.email) {
-            const { data } = await supabase
-              .from('admin_users')
-              .select('id, username, name, avatar, role')
-              .ilike('email', (token.email as string).trim())
-              .single();
-            dbUser = data;
-            if (dbUser) token.uid = dbUser.id;
-          }
-
-          if (dbUser) {
-            token.name     = dbUser.name;
-            token.avatar   = dbUser.avatar;
-            token.username = dbUser.username;
-          }
-        } catch {}
+        const supabase = getSupabaseClient();
+        const emailToSearch = (token.email as string)?.trim() || '';
+        const { data: dbUser } = await supabase
+          .from('admin_users')
+          .select('id, username')
+          .ilike('email', emailToSearch)
+          .single();
+        if (dbUser) {
+          token.uid      = dbUser.id;
+          token.username = dbUser.username;
+          try {
+            const rbac = await getUserPermissions(dbUser.id);
+            token.role = rbac.roles[0] || 'viewer';
+          } catch { token.role = 'viewer'; }
+        }
       }
 
       return token;
@@ -304,9 +285,6 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).role     = token.role;
         (session.user as any).provider = token.provider;
         (session.user as any).username = token.username;
-        // name وavatar من DB (محدّثة دائماً)
-        if (token.name)   session.user.name  = token.name as string;
-        if (token.avatar) (session.user as any).avatar = token.avatar;
       }
       return session;
     },
