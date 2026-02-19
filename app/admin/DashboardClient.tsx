@@ -138,43 +138,46 @@ function AdminPageContent() {
   useEffect(() => {
     const syncUserToLocalStorage = async () => {
       const urlParams = new URLSearchParams(window.location.search);
-      // دالة مساعدة: دمج بيانات الـ session مع localStorage (يحافظ على name/avatar المحدّثة)
-      const mergeAndStore = (sessionUser: any) => {
+      // دالة مساعدة: دمج بيانات DB مع localStorage
+      // role/roles/permissions → دائماً من DB (مصدر الحقيقة)
+      // name/avatar/phone     → من localStorage إذا كانت محدّثة
+      const mergeAndStore = (dbUser: any) => {
         const stored = localStorage.getItem('admin_user');
         const existing = stored ? JSON.parse(stored) : {};
-        // الأولوية لـ localStorage في name/avatar/phone (قد تكون محدّثة من الملف الشخصي)
         const merged = {
-          ...sessionUser,
-          name:   existing.name   || sessionUser.name,
-          avatar: existing.avatar || sessionUser.avatar,
-          phone:  existing.phone  || sessionUser.phone,
+          ...existing,
+          ...dbUser,
+          // name/avatar/phone: من localStorage إذا أحدث (محدّث من الملف الشخصي)
+          name:   existing.name   || dbUser.name,
+          avatar: existing.avatar || dbUser.avatar,
+          phone:  existing.phone  || dbUser.phone,
+          // role/roles/permissions: من DB دائماً بلا استثناء
+          role:        dbUser.role,
+          roles:       dbUser.roles,
+          permissions: dbUser.permissions,
         };
         localStorage.setItem('admin_user', JSON.stringify(merged));
         window.dispatchEvent(new Event('user-updated'));
       };
 
-      if (urlParams.get('sync') === '1') {
+      // جلب من DB مباشرة (محدّث دائماً) بدل /api/me التي تقرأ JWT قديم
+      const fetchFromDB = async () => {
         try {
-          const response = await fetch('/api/me');
-          if (response.ok) {
-            const data = await response.json();
-            if (data.user) mergeAndStore(data.user);
+          const res = await fetch('/api/admin/profile/me');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.user) { mergeAndStore(data.user); return true; }
           }
-          window.history.replaceState({}, '', '/admin');
-        } catch (err) {
-        }
+        } catch {}
+        return false;
+      };
+
+      if (urlParams.get('sync') === '1') {
+        await fetchFromDB();
+        window.history.replaceState({}, '', '/admin');
       } else {
-        const storedUser = localStorage.getItem('admin_user');
-        if (!storedUser) {
-          try {
-            const response = await fetch('/api/me');
-            if (response.ok) {
-              const data = await response.json();
-              if (data.user) mergeAndStore(data.user);
-            }
-          } catch (err) {
-          }
-        }
+        // جلب من DB في كل تحميل لضمان أن الـ role محدّث
+        await fetchFromDB();
       }
     };
     syncUserToLocalStorage();
