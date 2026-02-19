@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth-guard';
+import crypto from 'crypto';
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -108,5 +122,48 @@ export async function GET(
 
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH - تحديث بيانات مستخدم محدد
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
+    const id = params.id;
+    const body = await request.json();
+
+    const supabase = getAdminClient();
+
+    const updateData: any = { updated_at: new Date().toISOString() };
+
+    if (body.name       !== undefined) updateData.name       = body.name;
+    if (body.email      !== undefined) updateData.email      = body.email;
+    if (body.username   !== undefined) updateData.username   = body.username;
+    if (body.role       !== undefined) updateData.role       = body.role;
+    if (body.roles      !== undefined) { updateData.roles = body.roles; updateData.role = body.roles[0]; }
+    if (body.permissions !== undefined) updateData.permissions = body.permissions;
+    if (body.is_active  !== undefined) updateData.is_active  = body.is_active;
+    if (body.avatar     !== undefined) updateData.avatar     = body.avatar;
+    if (body.password)                 updateData.password_hash = hashPassword(body.password);
+
+    const { data, error } = await supabase
+      .from('admin_users')
+      .update(updateData)
+      .eq('id', id)
+      .select('id, username, name, email, role, roles, permissions, avatar, is_active, created_at, last_login')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ ok: false, message: error.message, code: error.code }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true, user: data });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, message: e?.message ?? 'Unknown error' }, { status: 500 });
   }
 }

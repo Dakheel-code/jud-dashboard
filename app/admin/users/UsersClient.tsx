@@ -208,32 +208,53 @@ function UsersManagementContent() {
     e.preventDefault();
     
     try {
-      const url = '/api/admin/users';
-      const method = editingUser ? 'PUT' : 'POST';
-      const body = editingUser 
-        ? { id: editingUser.id, ...formData }
-        : formData;
+      let response: Response;
+      let data: any;
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      if (editingUser) {
+        // تحديث مستخدم موجود — PATCH /api/admin/users/[id]
+        response = await fetch(`/api/admin/users/${editingUser.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        data = await response.json();
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setResultModalType('success');
-        setResultModalMessage(editingUser ? 'تم تحديث المستخدم بنجاح' : 'تم إضافة المستخدم بنجاح');
-        setShowResultModal(true);
-        setShowAddModal(false);
-        setEditingUser(null);
-        resetForm();
-        fetchUsers();
+        if (response.ok && data.ok) {
+          // تحديث الـ state محلياً فوراً بدل refetch كامل
+          setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data.user } : u));
+          setResultModalType('success');
+          setResultModalMessage('تم تحديث المستخدم بنجاح');
+          setShowResultModal(true);
+          setShowAddModal(false);
+          setEditingUser(null);
+          resetForm();
+        } else {
+          setResultModalType('error');
+          setResultModalMessage(data.message || data.error || 'فشل في تحديث المستخدم');
+          setShowResultModal(true);
+        }
       } else {
-        setResultModalType('error');
-        setResultModalMessage(data.error + (data.detail ? ` — ${data.detail}` : ''));
-        setShowResultModal(true);
+        // إنشاء مستخدم جديد — POST /api/admin/users
+        response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        data = await response.json();
+
+        if (response.ok) {
+          setResultModalType('success');
+          setResultModalMessage('تم إضافة المستخدم بنجاح');
+          setShowResultModal(true);
+          setShowAddModal(false);
+          resetForm();
+          fetchUsers();
+        } else {
+          setResultModalType('error');
+          setResultModalMessage(data.error + (data.detail ? ` — ${data.detail}` : ''));
+          setShowResultModal(true);
+        }
       }
     } catch (err) {
       setResultModalType('error');
