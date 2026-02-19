@@ -8,7 +8,7 @@ import { TasksByCategory } from '@/types';
 
 const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false });
 const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
-const MetaAdsCard = dynamic(() => import('@/components/MetaAdsCard'), { ssr: false });
+const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false });
 
 interface StoreFullData {
   id: string;
@@ -1802,6 +1802,15 @@ function StoreDetailsContent() {
                       <div 
                         className={`p-4 flex items-center justify-between cursor-pointer hover:bg-purple-900/30 transition-colors ${isConnected ? '' : 'cursor-default'}`}
                         onClick={() => {
+                          if (platform.key === 'meta') {
+                            setExpandedPlatforms(prev => {
+                              const newSet = new Set(prev);
+                              if (isExpanded) newSet.delete('meta');
+                              else newSet.add('meta');
+                              return newSet;
+                            });
+                            return;
+                          }
                           if (isConnected) {
                             if (!isExpanded) {
                               fetchPlatformCampaigns(platform.key, platform.datasource);
