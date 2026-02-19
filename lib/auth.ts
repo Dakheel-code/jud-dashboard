@@ -51,20 +51,7 @@ providers.push(
 
       if (!identifier || !password) return null;
 
-      // بيانات افتراضية للمسؤول (يُنصح بإزالتها في الإنتاج وإنشاء مستخدم في قاعدة البيانات)
-      if ((identifier === 'admin' || identifier === 'admin@jud.sa') && password === 'admin123') {
-        return {
-          id: 'default-admin',
-          name: 'المسؤول الرئيسي',
-          email: 'admin@jud.sa',
-          role: 'super_admin',
-          username: 'admin',
-          avatar: null,
-          permissions: ['manage_tasks', 'manage_stores', 'manage_users', 'manage_help', 'view_stats', 'manage_team'],
-        };
-      }
-
-      // البحث في قاعدة البيانات
+      // البحث في قاعدة البيانات أولاً دائماً
       const supabase = getSupabaseClient();
       const passwordHash = hashPassword(password);
 
