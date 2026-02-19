@@ -163,37 +163,64 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    };
-
-    if (username) updateData.username = username;
-    if (name) updateData.name = name;
-    if (email !== undefined) updateData.email = email;
-    if (roles) {
-      updateData.roles = roles;
-      updateData.role = roles[0];
-    } else if (role) {
-      updateData.role = role;
-    }
-    if (permissions) updateData.permissions = permissions;
+    // 1) تحديث بيانات user الأساسية فقط (بدون roles/permissions)
+    const updateData: any = { updated_at: new Date().toISOString() };
+    if (username)            updateData.username      = username;
+    if (name)                updateData.name          = name;
+    if (email !== undefined) updateData.email         = email;
     if (is_active !== undefined) updateData.is_active = is_active;
-    if (password) updateData.password_hash = hashPassword(password);
+    if (password)            updateData.password_hash = hashPassword(password);
 
-    const { data: updatedUser, error } = await supabase
+    const { data: updatedUser, error: userUpdateError } = await supabase
       .from('admin_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, name, email, role, roles, permissions, is_active, created_at, last_login')
+      .select('id, username, name, email, is_active, created_at, last_login')
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: 'فشل في تحديث المستخدم', detail: error.message, code: error.code }, { status: 500 });
+    if (userUpdateError) {
+      return NextResponse.json({ error: 'فشل في تحديث المستخدم', detail: userUpdateError.message, code: userUpdateError.code }, { status: 500 });
     }
 
-    await logAuditFromRequest(request, auth.user!.id, 'users.update', { entity: 'admin_users', entity_id: id, meta: { changes: updateData } });
+    // 2) تحديث RBAC roles إذا أُرسلت
+    const desiredRoles: string[] = roles || (role ? [role] : []);
 
-    return NextResponse.json({ user: updatedUser, message: 'تم تحديث المستخدم بنجاح' });
+    if (desiredRoles.length > 0) {
+      await supabase.from('admin_user_roles').delete().eq('user_id', id);
+
+      const { data: roleRows, error: rolesErr } = await supabase
+        .from('admin_roles')
+        .select('id, key')
+        .in('key', desiredRoles);
+
+      if (rolesErr) {
+        return NextResponse.json({ error: 'فشل في جلب الأدوار', detail: rolesErr.message }, { status: 500 });
+      }
+
+      const links = (roleRows || []).map((r: any) => ({ user_id: id, role_id: r.id }));
+
+      if (links.length > 0) {
+        const { error: linkErr } = await supabase.from('admin_user_roles').insert(links);
+        if (linkErr) {
+          return NextResponse.json({ error: 'فشل في ربط الأدوار بالمستخدم', detail: linkErr.message }, { status: 500 });
+        }
+      }
+    }
+
+    // 3) إرجاع RBAC الحقيقي للواجهة
+    const rbac = await getUserPermissions(id);
+
+    await logAuditFromRequest(request, auth.user!.id, 'users.update', { entity: 'admin_users', entity_id: id, meta: { changes: updateData, roles: desiredRoles } });
+
+    return NextResponse.json({
+      user: {
+        ...updatedUser,
+        role:        rbac.roles[0] || 'employee',
+        roles:       rbac.roles,
+        permissions: rbac.permissions,
+      },
+      message: 'تم تحديث المستخدم بنجاح',
+    });
   } catch (error) {
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
