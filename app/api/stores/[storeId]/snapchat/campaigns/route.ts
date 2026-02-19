@@ -306,33 +306,22 @@ export async function GET(
       }
     }
 
-    // ========== جلب stats على مستوى الحساب — المصدر الأساسي للـ summary ==========
-    let accountLevelStats: { spend: number; orders: number; sales: number } | null = null;
-    let accRawDebug: any = null;
+    // ========== جلب spend على مستوى الحساب — Snapchat يدعم spend فقط على هذا المستوى ==========
+    let accountSpend: number | null = null;
     {
-      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${encodeURIComponent('spend,conversion_purchases,conversion_purchases_value')}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
+      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=spend&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
-        const accText = await accRes.text();
-        try { accRawDebug = JSON.parse(accText); } catch { accRawDebug = accText; }
-        const accData = typeof accRawDebug === 'object' ? accRawDebug : {};
-
         if (accRes.ok) {
-          // محاولة كل المسارات الممكنة
+          const accData = await accRes.json();
           const s = accData?.total_stats?.[0]?.total_stat?.stats
                  || accData?.total_stats?.[0]?.stats
-                 || accData?.timeseries_stats?.[0]?.timeseries_stat?.timeseries?.[0]?.stats
-                 || accData?.timeseries_stats?.[0]?.timeseries?.[0]?.stats
                  || null;
-          if (s) {
-            accountLevelStats = {
-              spend:  (s.spend || 0) / 1_000_000,
-              orders: s.conversion_purchases || 0,
-              sales:  (s.conversion_purchases_value || 0) / 1_000_000,
-            };
+          if (s?.spend != null) {
+            accountSpend = (s.spend || 0) / 1_000_000;
           }
         }
-      } catch (e: any) { accRawDebug = { error: e.message }; }
+      } catch { /* silent */ }
     }
 
     // ========== الخطوة 3: دمج الحملات مع الإحصائيات ==========
@@ -391,16 +380,15 @@ export async function GET(
       { spend: 0, orders: 0, sales: 0 }
     );
 
-    // استخدام account-level stats دائماً كمصدر أساسي (يطابق Snapchat Ads Manager)
-    // fallback: جمع الحملات إذا لم يُرجع account-level أي بيانات
-    if (accountLevelStats) {
-      summary.spend  = Math.round(accountLevelStats.spend  * conversionRate * 100) / 100;
-      summary.orders = accountLevelStats.orders;
-      summary.sales  = Math.round(accountLevelStats.sales  * conversionRate * 100) / 100;
+    // استخدام account-level spend إذا توفر (أدق من جمع الحملات)
+    // orders/sales تأتي دائماً من campaign breakdown
+    if (accountSpend !== null) {
+      summary.spend = Math.round(accountSpend * conversionRate * 100) / 100;
     } else {
       summary.spend = Math.round(summary.spend * 100) / 100;
-      summary.sales = Math.round(summary.sales * 100) / 100;
     }
+    summary.orders = Math.round(summary.orders);
+    summary.sales  = Math.round(summary.sales * 100) / 100;
 
     const summaryRoas =
       summary.spend > 0 ? Math.round((summary.sales / summary.spend) * 100) / 100 : 0;
@@ -445,8 +433,7 @@ export async function GET(
       account_currency: accountCurrency,
       conversion_rate: conversionRate,
       date_range: { start: normalizedStart, end: normalizedEnd },
-      account_level_stats_parsed: accountLevelStats,
-      account_level_stats_raw: accRawDebug,
+      account_spend_usd: accountSpend,
       campaign_stats_map_count: Object.keys(campaignStatsMap).length,
     };
 
