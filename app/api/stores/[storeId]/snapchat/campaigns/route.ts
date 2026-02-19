@@ -221,7 +221,9 @@ export async function GET(
       fields
     )}&start_time=${encodeURIComponent(
       normalizedStart
-    )}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
+    )}&end_time=${encodeURIComponent(
+      normalizedEnd
+    )}&breakdown=campaign&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
 
     const statsResponse = await fetch(statsUrl, { headers });
     const statsData = await statsResponse.json().catch(() => ({}));
@@ -309,7 +311,7 @@ export async function GET(
     // ========== جلب spend على مستوى الحساب — Snapchat يدعم spend فقط على هذا المستوى ==========
     let accountSpend: number | null = null;
     {
-      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=spend&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
+      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=spend&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
         if (accRes.ok) {
