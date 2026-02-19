@@ -305,17 +305,21 @@ export async function GET(
     }
 
     // ========== جلب stats على مستوى الحساب — المصدر الأساسي للـ summary ==========
-    // هذا يضمن التطابق مع Snapchat Ads Manager (يشمل كل الحملات)
     let accountLevelStats: { spend: number; orders: number; sales: number } | null = null;
+    let accRawDebug: any = null;
     {
       const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${encodeURIComponent('spend,conversion_purchases,conversion_purchases_value')}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
+        const accData = await accRes.json();
+        accRawDebug = accData; // حفظ الـ raw response للـ debug
+
         if (accRes.ok) {
-          const accData = await accRes.json();
+          // محاولة كل المسارات الممكنة
           const s = accData?.total_stats?.[0]?.total_stat?.stats
                  || accData?.total_stats?.[0]?.stats
                  || accData?.timeseries_stats?.[0]?.timeseries_stat?.timeseries?.[0]?.stats
+                 || accData?.timeseries_stats?.[0]?.timeseries?.[0]?.stats
                  || null;
           if (s) {
             accountLevelStats = {
@@ -325,7 +329,7 @@ export async function GET(
             };
           }
         }
-      } catch { /* silent */ }
+      } catch (e: any) { accRawDebug = { error: e.message }; }
     }
 
     // ========== الخطوة 3: دمج الحملات مع الإحصائيات ==========
@@ -438,9 +442,9 @@ export async function GET(
       account_currency: accountCurrency,
       conversion_rate: conversionRate,
       date_range: { start: normalizedStart, end: normalizedEnd },
-      account_level_stats_raw: accountLevelStats,
+      account_level_stats_parsed: accountLevelStats,
+      account_level_stats_raw: accRawDebug,
       campaign_stats_map_count: Object.keys(campaignStatsMap).length,
-      campaign_stats_map_ids: Object.keys(campaignStatsMap).slice(0, 5),
     };
 
     // تحذير إذا البيانات غير مكتملة
