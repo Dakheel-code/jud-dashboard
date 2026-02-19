@@ -5,35 +5,25 @@ import { getToken } from 'next-auth/jwt';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // استثناء مسارات NextAuth و API
-  if (pathname.startsWith('/api/auth') || pathname.includes('callback')) {
-    return NextResponse.next();
-  }
-
-  // المسارات المحمية
-  const protectedPaths = ['/admin', '/announcements'];
-  const isProtectedPath = protectedPaths.some(path => 
-    pathname.startsWith(path) && !pathname.startsWith('/admin/login')
-  );
-
-  if (!isProtectedPath) {
-    return NextResponse.next();
-  }
-
-  // التحقق من NextAuth session فقط — مصدر الحقيقة الوحيد
+  // التحقق من NextAuth session — مصدر الحقيقة الوحيد
+  // ملاحظة: token.provider يُخزَّن صراحةً في jwt callback داخل lib/auth.ts
+  // عبر: if (account?.provider) token.provider = account.provider;
+  // لذا هذا الفحص آمن حتى بعد انتهاء الجلسة وتجديدها
   const token = await getToken({ 
     req: request, 
     secret: process.env.NEXTAUTH_SECRET 
   });
 
-  if (!token) {
+  if (!token || !token.uid) {
+    // token فارغ أو بدون uid = جلسة غير صالحة
     const loginUrl = new URL('/admin/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // إذا كان تسجيل الدخول عبر Google، تأكد من الدومين
-  if (token?.provider === 'google') {
+  // هذا فحص دفاعي إضافي — signIn callback في auth.ts يمنع الدخول أصلاً
+  if (token.provider === 'google') {
     const email = token.email as string;
     if (!email || !email.endsWith('@jud.sa')) {
       const loginUrl = new URL('/admin/login', request.url);
@@ -47,7 +37,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/admin/:path*',
+    // استثناء /admin/login و /api/auth من الـ matcher مباشرة
+    '/admin/((?!login$|login/).*)',
     '/announcements/:path*',
   ],
 };
