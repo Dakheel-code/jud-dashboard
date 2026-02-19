@@ -28,7 +28,14 @@ export async function GET(
 
     const { data: store, error } = await supabase
       .from('stores')
-      .select('id, store_name, store_url, owner_name, owner_phone, owner_email, account_manager_id, media_buyer_id, notes, priority, budget, status, is_active, created_at, updated_at, subscription_start_date, store_group_url, category, client_id, snapchat_account, tiktok_account, google_account, meta_account')
+      .select(`
+        id, store_name, store_url, owner_name, owner_phone, owner_email,
+        account_manager_id, media_buyer_id, notes, priority, budget, status,
+        is_active, created_at, updated_at, subscription_start_date,
+        store_group_url, category, client_id,
+        snapchat_account, tiktok_account, google_account, meta_account,
+        client:clients(id, name, phone, email)
+      `)
       .eq('id', id)
       .single();
 
@@ -39,7 +46,16 @@ export async function GET(
       throw error;
     }
 
-    return NextResponse.json({ store });
+    // استخدام اسم العميل من جدول clients إذا كان متاحاً (أصح من owner_name)
+    const client = store.client as any;
+    const enrichedStore = {
+      ...store,
+      owner_name: client?.name || store.owner_name,
+      owner_phone: client?.phone || store.owner_phone,
+      owner_email: client?.email || store.owner_email,
+    };
+
+    return NextResponse.json({ store: enrichedStore });
   } catch (error: any) {
     return NextResponse.json({ error: 'Failed to fetch store' }, { status: 500 });
   }
