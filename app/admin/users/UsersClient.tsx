@@ -232,7 +232,7 @@ function UsersManagementContent() {
         fetchUsers();
       } else {
         setResultModalType('error');
-        setResultModalMessage(data.error || 'حدث خطأ');
+        setResultModalMessage(data.error + (data.detail ? ` — ${data.detail}` : ''));
         setShowResultModal(true);
       }
     } catch (err) {

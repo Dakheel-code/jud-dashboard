@@ -188,7 +188,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'فشل في تحديث المستخدم' }, { status: 500 });
+      return NextResponse.json({ error: 'فشل في تحديث المستخدم', detail: error.message, code: error.code }, { status: 500 });
     }
 
     await logAuditFromRequest(request, auth.user!.id, 'users.update', { entity: 'admin_users', entity_id: id, meta: { changes: updateData } });

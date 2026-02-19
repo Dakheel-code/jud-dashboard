@@ -282,21 +282,26 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
 
       if (response.ok) {
         setProfileSuccess('تم تحديث البيانات بنجاح');
-        // Update local storage
+        // تحديث localStorage بالبيانات الجديدة من الـ API مباشرة
         const storedUser = localStorage.getItem('admin_user');
-        if (storedUser) {
-          const parsed = JSON.parse(storedUser);
-          parsed.name = profileForm.name;
-          parsed.email = profileForm.email;
-          if (profileForm.avatar) {
-            parsed.avatar = profileForm.avatar;
-          }
-          if (profileForm.phone) {
-            parsed.phone = profileForm.phone;
-          }
-          localStorage.setItem('admin_user', JSON.stringify(parsed));
-          setUser(prev => prev ? { ...prev, name: profileForm.name, email: profileForm.email, avatar: profileForm.avatar || prev.avatar } : null);
-        }
+        const parsed = storedUser ? JSON.parse(storedUser) : {};
+        const updatedUser = {
+          ...parsed,
+          name:   data.user?.name   ?? profileForm.name,
+          email:  data.user?.email  ?? profileForm.email,
+          phone:  data.user?.phone  ?? profileForm.phone  ?? parsed.phone,
+          avatar: data.user?.avatar ?? profileForm.avatar ?? parsed.avatar,
+        };
+        localStorage.setItem('admin_user', JSON.stringify(updatedUser));
+        setUser(prev => prev ? {
+          ...prev,
+          name:   updatedUser.name,
+          email:  updatedUser.email,
+          avatar: updatedUser.avatar,
+        } : null);
+        setAvatarPreview(updatedUser.avatar || null);
+        // إعلام باقي الـ components بالتحديث
+        window.dispatchEvent(new Event('user-updated'));
         setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
       } else {
         setProfileError(data.error || 'فشل تحديث البيانات');

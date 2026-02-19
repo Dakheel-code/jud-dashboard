@@ -138,33 +138,39 @@ function AdminPageContent() {
   useEffect(() => {
     const syncUserToLocalStorage = async () => {
       const urlParams = new URLSearchParams(window.location.search);
+      // دالة مساعدة: دمج بيانات الـ session مع localStorage (يحافظ على name/avatar المحدّثة)
+      const mergeAndStore = (sessionUser: any) => {
+        const stored = localStorage.getItem('admin_user');
+        const existing = stored ? JSON.parse(stored) : {};
+        // الأولوية لـ localStorage في name/avatar/phone (قد تكون محدّثة من الملف الشخصي)
+        const merged = {
+          ...sessionUser,
+          name:   existing.name   || sessionUser.name,
+          avatar: existing.avatar || sessionUser.avatar,
+          phone:  existing.phone  || sessionUser.phone,
+        };
+        localStorage.setItem('admin_user', JSON.stringify(merged));
+        window.dispatchEvent(new Event('user-updated'));
+      };
+
       if (urlParams.get('sync') === '1') {
         try {
           const response = await fetch('/api/me');
           if (response.ok) {
             const data = await response.json();
-            if (data.user) {
-              localStorage.setItem('admin_user', JSON.stringify(data.user));
-              // إرسال event لإعلام المكونات الأخرى بتحديث بيانات المستخدم
-              window.dispatchEvent(new Event('user-updated'));
-            }
+            if (data.user) mergeAndStore(data.user);
           }
-          // إزالة sync من URL بدون إعادة تحميل
           window.history.replaceState({}, '', '/admin');
         } catch (err) {
         }
       } else {
-        // حتى لو لم يكن sync=1، تأكد من وجود بيانات المستخدم
         const storedUser = localStorage.getItem('admin_user');
         if (!storedUser) {
           try {
             const response = await fetch('/api/me');
             if (response.ok) {
               const data = await response.json();
-              if (data.user) {
-                localStorage.setItem('admin_user', JSON.stringify(data.user));
-                window.dispatchEvent(new Event('user-updated'));
-              }
+              if (data.user) mergeAndStore(data.user);
             }
           } catch (err) {
           }
