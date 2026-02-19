@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
-const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; onSummaryLoaded?: (s: any) => void }>(
+const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; onSummaryLoaded?: (s: any) => void; externalPreset?: string }>(
   () => import('@/components/MetaAdsCard'), { ssr: false }
 );
 
@@ -86,16 +86,22 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [metaData, setMetaData]         = useState<{ spend: number; sales: number; orders: number; roas: number } | null>(null);
   const [snapLoading, setSnapLoading]   = useState(false);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
+  const snapAbortRef = useRef<AbortController | null>(null);
 
-  // جلب بيانات Snapchat
+  // جلب بيانات Snapchat مع إلغاء الطلب السابق
   const fetchSnap = useCallback(async (preset: string) => {
     if (!storeId) return;
     const snapInt = directIntegrations?.snapchat;
     if (!snapInt || snapInt.status !== 'connected' || !snapInt.ad_account_id) return;
+
+    // إلغاء الطلب السابق
+    snapAbortRef.current?.abort();
+    const controller = new AbortController();
+    snapAbortRef.current = controller;
+
     setSnapLoading(true);
     try {
-      const range = preset === 'today' ? 'today' : preset === 'yesterday' ? 'yesterday' : preset;
-      const res = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${range}`);
+      const res = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${preset}`, { signal: controller.signal });
       const d = await res.json();
       const s = {
         spend:  d.summary?.spend  || 0,
@@ -105,11 +111,19 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       };
       setSnapData(s);
       if (d.success) onDataLoaded?.(s);
-    } catch { setSnapData({ spend: 0, sales: 0, orders: 0, roas: 0 }); }
-    finally { setSnapLoading(false); }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setSnapData({ spend: 0, sales: 0, orders: 0, roas: 0 });
+    } finally {
+      if (!controller.signal.aborted) setSnapLoading(false);
+    }
   }, [storeId, directIntegrations, onDataLoaded]);
 
-  useEffect(() => { fetchSnap(datePreset); }, [datePreset, fetchSnap]);
+  // عند تغيير الفترة: مسح البيانات القديمة فوراً ثم جلب الجديدة
+  useEffect(() => {
+    setSnapData(null);
+    setMetaData(null);
+    fetchSnap(datePreset);
+  }, [datePreset, fetchSnap]);
 
   // حساب الإجماليات
   const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0);
@@ -374,16 +388,20 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             })()}
           </div>
 
-          {/* MetaAdsCard مخفي لجلب البيانات تلقائياً */}
-          {storeId && (
-            <div className="hidden">
-              <MetaAdsCard storeId={storeId} embedded
-                onSummaryLoaded={(s) => {
-                  if (s) setMetaData({ spend: s.spend, sales: s.revenue ?? 0, orders: s.conversions, roas: s.roas ?? 0 });
-                }}
-              />
-            </div>
-          )}
+          {/* MetaAdsCard مخفي لجلب البيانات تلقائياً مع مزامنة الفترة */}
+          {storeId && (() => {
+            const metaPreset = datePreset === '7d' ? 'last_7d' : datePreset === '30d' ? 'last_30d' : datePreset === '90d' ? 'last_90d' : datePreset;
+            return (
+              <div className="hidden">
+                <MetaAdsCard storeId={storeId} embedded externalPreset={metaPreset}
+                  onSummaryLoaded={(s) => {
+                    if (s) setMetaData({ spend: s.spend, sales: s.revenue ?? 0, orders: s.conversions, roas: s.roas ?? 0 });
+                    else setMetaData(null);
+                  }}
+                />
+              </div>
+            );
+          })()}
 
         </div>
       )}

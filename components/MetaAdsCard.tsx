@@ -21,7 +21,7 @@ interface MetaInsights {
   ctr: number; cpc: number; cpm: number; conversions: number; currency: string;
 }
 interface SummaryOut { spend: number; conversions: number; revenue: number; roas: number; currency: string; }
-interface Props { storeId: string; embedded?: boolean; onSummaryLoaded?: (s: SummaryOut | null) => void; }
+interface Props { storeId: string; embedded?: boolean; onSummaryLoaded?: (s: SummaryOut | null) => void; externalPreset?: string; }
 
 const DATE_PRESETS = [
   { label: 'اليوم',   value: 'today' },
@@ -47,7 +47,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function fmt(n: number) { return n?.toLocaleString('ar-SA') ?? '0'; }
 
-export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded }: Props) {
+export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded, externalPreset }: Props) {
   const [connection, setConnection]           = useState<MetaConnection | null>(null);
   const [loadingConn, setLoadingConn]         = useState(true);
   const [isCollapsed, setIsCollapsed]         = useState(true);
@@ -101,7 +101,16 @@ export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded
       fetchCachedAds();
       fetchCachedInsights(datePreset);
     }
-  }, [connection]); // يُشغَّل فور تحميل الاتصال بغض النظر عن isCollapsed
+  }, [connection]);
+
+  // إعادة الجلب عند تغيير الفترة من الخارج (embedded mode)
+  useEffect(() => {
+    if (!externalPreset) return;
+    if (connection?.ad_account_id && connection.status === 'active') {
+      setInsights(null);
+      fetchCachedInsights(externalPreset);
+    }
+  }, [externalPreset]);
 
   const handlePreset = (p: string) => {
     setDatePreset(p);
