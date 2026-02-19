@@ -97,6 +97,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [metaSelected, setMetaSelected]     = useState('');
   const [metaSaving, setMetaSaving]         = useState(false);
   const [metaConn, setMetaConn]             = useState<{ status: string; ad_account_id?: string; ad_account_name?: string; meta_user_name?: string } | null>(null);
+  const [metaSearch, setMetaSearch]         = useState('');
 
   const fetchMetaConn = useCallback(async () => {
     if (!storeId) return;
@@ -469,23 +470,24 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
 
       {/* ─── Modal اختيار الحساب الإعلاني لـ Meta ─── */}
       {metaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setMetaModal(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-[#1a0a2e] border border-indigo-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-indigo-500/10"
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={() => setMetaModal(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+          <div className="relative bg-[#130826] border border-indigo-500/40 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl shadow-indigo-500/20"
+            style={{ maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
             onClick={e => e.stopPropagation()}>
 
             {/* Header */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/>
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-bold">اختيار الحساب الإعلاني</h3>
+                  <h3 className="text-white font-bold text-base">اختيار الحساب الإعلاني</h3>
                   {metaConn?.meta_user_name && (
-                    <p className="text-xs text-green-400/80 flex items-center gap-1">
+                    <p className="text-xs text-green-400/80 flex items-center gap-1 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
                       {metaConn.meta_user_name}
                     </p>
@@ -493,7 +495,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                 </div>
               </div>
               <button onClick={() => setMetaModal(false)}
-                className="w-8 h-8 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center text-purple-400 transition-all">
+                className="w-8 h-8 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center text-purple-400 transition-all shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -515,23 +517,45 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-purple-400/60 mb-2">اختر الحساب الإعلاني لهذا المتجر:</p>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {metaAccounts.map(acc => (
-                    <button key={acc.id} onClick={() => setMetaSelected(acc.id)}
-                      className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${
-                        metaSelected === acc.id
-                          ? 'bg-indigo-600/30 border-indigo-500/60 text-white'
-                          : 'bg-purple-900/20 border-purple-500/10 text-purple-300/70 hover:border-indigo-500/30 hover:bg-indigo-500/10'
-                      }`}>
-                      <p className="text-sm font-semibold">{acc.name}</p>
-                      <p className="text-xs text-purple-400/50 mt-0.5">{acc.id} · {acc.currency}</p>
-                    </button>
-                  ))}
+              <div className="flex flex-col gap-3 overflow-hidden">
+                <p className="text-xs text-purple-400/60 shrink-0">اختر الحساب الإعلاني لهذا المتجر:</p>
+
+                {/* حقل البحث */}
+                <div className="relative shrink-0">
+                  <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="ابحث عن حساب..."
+                    value={metaSearch}
+                    onChange={e => setMetaSearch(e.target.value)}
+                    className="w-full pr-9 pl-3 py-2.5 bg-purple-900/30 border border-purple-500/20 text-white text-sm rounded-xl outline-none focus:border-indigo-500/50 placeholder:text-purple-400/40 transition-all"
+                  />
                 </div>
+
+                {/* قائمة الحسابات */}
+                <div className="space-y-2 overflow-y-auto flex-1" style={{ maxHeight: '280px' }}>
+                  {metaAccounts
+                    .filter(acc => acc.name.toLowerCase().includes(metaSearch.toLowerCase()) || acc.id.includes(metaSearch))
+                    .map(acc => (
+                      <button key={acc.id} onClick={() => setMetaSelected(acc.id)}
+                        className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${
+                          metaSelected === acc.id
+                            ? 'bg-indigo-600/30 border-indigo-500/60 text-white'
+                            : 'bg-purple-900/20 border-purple-500/10 text-purple-300/70 hover:border-indigo-500/30 hover:bg-indigo-500/10'
+                        }`}>
+                        <p className="text-sm font-semibold">{acc.name}</p>
+                        <p className="text-xs text-purple-400/50 mt-0.5">{acc.id} · {acc.currency}</p>
+                      </button>
+                    ))}
+                  {metaAccounts.filter(acc => acc.name.toLowerCase().includes(metaSearch.toLowerCase()) || acc.id.includes(metaSearch)).length === 0 && (
+                    <p className="text-center text-sm text-purple-400/40 py-4">لا توجد نتائج</p>
+                  )}
+                </div>
+
                 <button onClick={saveMetaAccount} disabled={!metaSelected || metaSaving}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all mt-2">
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all shrink-0">
                   {metaSaving ? 'جاري الحفظ...' : 'تأكيد الاختيار'}
                 </button>
               </div>
