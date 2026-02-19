@@ -318,15 +318,15 @@ export async function GET(
       }
     }
 
-    // ========== Fallback: جلب stats على مستوى الحساب إذا لم يُرجع breakdown بيانات ==========
+    // ========== جلب stats على مستوى الحساب — المصدر الأساسي للـ summary ==========
+    // هذا يضمن التطابق مع Snapchat Ads Manager (يشمل كل الحملات)
     let accountLevelStats: { spend: number; orders: number; sales: number } | null = null;
-    if (Object.keys(campaignStatsMap).length === 0) {
+    {
       const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${encodeURIComponent('spend,conversion_purchases,conversion_purchases_value')}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
         if (accRes.ok) {
           const accData = await accRes.json();
-          // محاولة استخراج من total_stats أو timeseries_stats
           const s = accData?.total_stats?.[0]?.total_stat?.stats
                  || accData?.total_stats?.[0]?.stats
                  || accData?.timeseries_stats?.[0]?.timeseries_stat?.timeseries?.[0]?.stats
@@ -398,8 +398,9 @@ export async function GET(
       { spend: 0, orders: 0, sales: 0 }
     );
 
-    // إذا لم تُرجع campaign-level stats أي بيانات، استخدم account-level stats
-    if (summary.spend === 0 && accountLevelStats) {
+    // استخدام account-level stats دائماً كمصدر أساسي (يطابق Snapchat Ads Manager)
+    // fallback: جمع الحملات إذا لم يُرجع account-level أي بيانات
+    if (accountLevelStats) {
       summary.spend  = Math.round(accountLevelStats.spend  * conversionRate * 100) / 100;
       summary.orders = accountLevelStats.orders;
       summary.sales  = Math.round(accountLevelStats.sales  * conversionRate * 100) / 100;
