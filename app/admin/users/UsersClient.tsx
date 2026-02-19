@@ -608,9 +608,7 @@ function UsersManagementContent() {
                     <span className="text-purple-500 text-xs">
                       {user.last_seen_at
                         ? timeAgo(user.last_seen_at)
-                        : user.last_login
-                        ? timeAgo(user.last_login)
-                        : 'لم يسجل دخول'}
+                        : 'لم يُسجَّل'}
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -747,9 +745,7 @@ function UsersManagementContent() {
                       <td className="p-4 text-purple-400 text-sm">
                         {user.last_seen_at
                           ? timeAgo(user.last_seen_at)
-                          : user.last_login
-                          ? timeAgo(user.last_login)
-                          : 'لم يسجل دخول'}
+                          : 'لم يُسجَّل'}
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
