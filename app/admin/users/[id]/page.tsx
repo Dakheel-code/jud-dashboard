@@ -33,11 +33,13 @@ interface UserData {
   username: string;
   name: string;
   email: string;
+  phone?: string;
   role: string;
   roles?: string[];
   is_active: boolean;
   created_at: string;
   last_login: string;
+  last_seen_at?: string;
 }
 
 interface TeamMemberKpi {
@@ -334,33 +336,80 @@ function UserDetailsContent() {
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+
+        {/* ═══ 1. HEADER ═══ */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shrink-0">
               {user.name.charAt(0)}
             </div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user.name}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-purple-400">@{user.username}</span>
+                <span className="text-purple-400 text-sm">@{user.username}</span>
+                {user.email && <span className="text-purple-500/60 text-sm hidden sm:inline">• {user.email}</span>}
                 {(user.roles || [user.role]).map((role) => (
-                  <span key={role} className={`px-3 py-1 rounded-full text-xs border ${ROLE_COLORS[role] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
+                  <span key={role} className={`px-2 py-0.5 rounded-full text-xs border ${ROLE_COLORS[role] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
                     {ROLE_NAMES[role] || role}
                   </span>
                 ))}
+                <span className={`flex items-center gap-1 text-xs ${user.last_seen_at && (Date.now() - new Date(user.last_seen_at).getTime()) < 120000 ? 'text-green-400' : 'text-gray-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${user.last_seen_at && (Date.now() - new Date(user.last_seen_at).getTime()) < 120000 ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`} />
+                  {user.last_seen_at && (Date.now() - new Date(user.last_seen_at).getTime()) < 120000 ? 'متصل الآن' : 'غير متصل'}
+                </span>
               </div>
             </div>
           </div>
           <Link
             href="/admin/users"
-            className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
+            className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all shrink-0"
             title="العودة"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </Link>
+        </div>
+
+        {/* ═══ 2. معلومات المستخدم ═══ */}
+        <div className="bg-purple-950/40 rounded-2xl p-5 border border-purple-500/20 mb-6">
+          <h2 className="text-sm font-semibold text-purple-300/70 uppercase tracking-wider mb-4">معلومات المستخدم</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">البريد الإلكتروني</p>
+              <p className="text-white text-sm truncate">{user.email || '-'}</p>
+            </div>
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">رقم الجوال</p>
+              <p className="text-white text-sm" dir="ltr">{user.phone || '-'}</p>
+            </div>
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">الحالة</p>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${user.is_active ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                {user.is_active ? 'نشط' : 'معطل'}
+              </span>
+            </div>
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">تاريخ الإنشاء</p>
+              <p className="text-white text-sm">{new Date(user.created_at).toLocaleDateString('ar-SA')}</p>
+            </div>
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">آخر دخول</p>
+              <p className="text-white text-sm">
+                {user.last_login
+                  ? new Date(user.last_login).toLocaleDateString('ar-SA') + ' ' + new Date(user.last_login).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+                  : 'لم يسجل دخول'}
+              </p>
+            </div>
+            <div>
+              <p className="text-purple-400/60 text-xs mb-1">آخر نشاط</p>
+              <p className="text-white text-sm">
+                {user.last_seen_at
+                  ? new Date(user.last_seen_at).toLocaleDateString('ar-SA') + ' ' + new Date(user.last_seen_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+                  : '-'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* KPI Cards */}
@@ -863,118 +912,88 @@ function UserDetailsContent() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">إجمالي المتاجر</h3>
-              <p className="text-2xl font-bold text-white">{stats.total_stores}</p>
-            </div>
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">متاجر مكتملة</h3>
-              <p className="text-2xl font-bold text-green-400">{stats.completed_stores}</p>
-            </div>
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">قيد التنفيذ</h3>
-              <p className="text-2xl font-bold text-yellow-400">{stats.in_progress_stores}</p>
-            </div>
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">متوسط الإنجاز</h3>
-              <p className="text-2xl font-bold text-blue-400">{stats.average_completion}%</p>
-            </div>
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">المهام المنجزة</h3>
-              <p className="text-2xl font-bold text-fuchsia-400">{stats.total_tasks_completed}</p>
-            </div>
-            <div className="bg-purple-950/40  rounded-2xl p-4 border border-purple-500/20">
-              <h3 className="text-xs font-medium text-purple-300/80 mb-1">إجمالي المهام</h3>
-              <p className="text-2xl font-bold text-purple-400">{stats.total_tasks}</p>
-            </div>
-          </div>
-        )}
+        {/* ═══ 8. إحصائيات المتاجر + النشاط ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
 
-        {/* Activity Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/10  rounded-2xl p-4 border border-cyan-500/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          {/* إحصائيات المتاجر */}
+          {stats && (
+            <div className="bg-purple-950/40 rounded-2xl p-5 border border-purple-500/20">
+              <h2 className="text-sm font-semibold text-purple-300/70 uppercase tracking-wider mb-4">إحصائيات المتاجر</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white">{stats.total_stores}</p>
+                  <p className="text-purple-400/60 text-xs mt-1">إجمالي المتاجر</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-400">{stats.completed_stores}</p>
+                  <p className="text-purple-400/60 text-xs mt-1">مكتملة</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-yellow-400">{stats.in_progress_stores}</p>
+                  <p className="text-purple-400/60 text-xs mt-1">قيد التنفيذ</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-400">{stats.average_completion}%</p>
+                  <p className="text-purple-400/60 text-xs mt-1">متوسط الإنجاز</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-fuchsia-400">{stats.total_tasks_completed}</p>
+                  <p className="text-purple-400/60 text-xs mt-1">مهام منجزة</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-400">{stats.total_tasks}</p>
+                  <p className="text-purple-400/60 text-xs mt-1">إجمالي المهام</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-cyan-400">{activityStats.browsing?.total_hours_30_days || 0}</p>
-                <p className="text-cyan-400/70 text-xs">ساعات التصفح (30 يوم)</p>
+            </div>
+          )}
+
+          {/* إحصائيات النشاط */}
+          <div className="bg-purple-950/40 rounded-2xl p-5 border border-purple-500/20">
+            <h2 className="text-sm font-semibold text-purple-300/70 uppercase tracking-wider mb-4">نشاط النظام (30 يوم)</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-3 bg-cyan-500/5 rounded-xl p-3 border border-cyan-500/20">
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-cyan-400">{activityStats.browsing?.total_hours_30_days || 0}</p>
+                  <p className="text-cyan-400/60 text-xs">ساعات التصفح</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-green-500/5 rounded-xl p-3 border border-green-500/20">
+                <div className="w-9 h-9 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-green-400">{activityStats.activity?.total_actions || 0}</p>
+                  <p className="text-green-400/60 text-xs">إجمالي العمليات</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-purple-500/5 rounded-xl p-3 border border-purple-500/20">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-purple-400">{activityStats.activity?.creates || 0}</p>
+                  <p className="text-purple-400/60 text-xs">عمليات الإضافة</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-orange-500/5 rounded-xl p-3 border border-orange-500/20">
+                <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-orange-400">{activityStats.activity?.updates || 0}</p>
+                  <p className="text-orange-400/60 text-xs">عمليات التعديل</p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/10  rounded-2xl p-4 border border-green-500/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-400">{activityStats.activity?.total_actions || 0}</p>
-                <p className="text-green-400/70 text-xs">إجمالي العمليات</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-purple-500/20 to-fuchsia-500/10  rounded-2xl p-4 border border-purple-500/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-purple-400">{activityStats.activity?.creates || 0}</p>
-                <p className="text-purple-400/70 text-xs">عمليات الإضافة</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gradient-to-br from-orange-500/20 to-yellow-500/10  rounded-2xl p-4 border border-orange-500/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-orange-400">{activityStats.activity?.updates || 0}</p>
-                <p className="text-orange-400/70 text-xs">عمليات التعديل</p>
-              </div>
-            </div>
-          </div>
+
         </div>
 
-        {/* User Info Card */}
-        <div className="bg-purple-950/40  rounded-2xl p-6 border border-purple-500/20 mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">معلومات المستخدم</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <p className="text-purple-400/60 text-sm">البريد الإلكتروني</p>
-              <p className="text-white">{user.email || '-'}</p>
-            </div>
-            <div>
-              <p className="text-purple-400/60 text-sm">الحالة</p>
-              <span className={`inline-block px-2 py-1 rounded text-xs ${user.is_active ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                {user.is_active ? 'نشط' : 'معطل'}
-              </span>
-            </div>
-            <div>
-              <p className="text-purple-400/60 text-sm">تاريخ الإنشاء</p>
-              <p className="text-white">{new Date(user.created_at).toLocaleDateString('en-US')}</p>
-            </div>
-            <div>
-              <p className="text-purple-400/60 text-sm">آخر دخول</p>
-              <p className="text-white">{user.last_login ? new Date(user.last_login).toLocaleDateString('en-US') : 'لم يسجل دخول'}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Assigned Stores */}
+        {/* ═══ 9. المتاجر المسندة ═══ */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="px-6 py-4 border-b border-purple-500/20">
             <h2 className="text-lg font-semibold text-white">المتاجر المسندة ({stores.length})</h2>
