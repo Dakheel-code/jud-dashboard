@@ -107,8 +107,8 @@ export async function fetchInsightsSummary(
   adAccountId: string,
   token: string,
   datePreset: string = 'last_7d'
-): Promise<{ spend: number; impressions: number; clicks: number; reach: number; ctr: number; cpc: number; cpm: number; conversions: number; currency: string } | null> {
-  const fields = 'spend,impressions,clicks,reach,ctr,cpc,cpm,conversions';
+): Promise<{ spend: number; impressions: number; clicks: number; reach: number; ctr: number; cpc: number; cpm: number; conversions: number; revenue: number; roas: number; currency: string } | null> {
+  const fields = 'spend,impressions,clicks,reach,ctr,cpc,cpm,actions,action_values,purchase_roas';
   const url = `${META_BASE}/${adAccountId}/insights?fields=${fields}&date_preset=${datePreset}&level=account&access_token=${token}`;
   const res = await fetch(url);
   const data = await res.json();
@@ -121,15 +121,27 @@ export async function fetchInsightsSummary(
   const accData = await accRes.json();
   const currency = accData.currency || 'SAR';
 
+  // استخراج الطلبات (purchases) من actions
+  const actions: any[] = row.actions || [];
+  const actionValues: any[] = row.action_values || [];
+  const purchaseAction = actions.find((a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+  const purchaseValue  = actionValues.find((a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+  const conversions = parseFloat(purchaseAction?.value || '0');
+  const revenue     = parseFloat(purchaseValue?.value  || '0');
+  const spend       = parseFloat(row.spend || '0');
+  const roas        = spend > 0 ? revenue / spend : 0;
+
   return {
-    spend:       parseFloat(row.spend       || '0'),
-    impressions: parseInt(row.impressions   || '0', 10),
-    clicks:      parseInt(row.clicks        || '0', 10),
-    reach:       parseInt(row.reach         || '0', 10),
-    ctr:         parseFloat(row.ctr         || '0'),
-    cpc:         parseFloat(row.cpc         || '0'),
-    cpm:         parseFloat(row.cpm         || '0'),
-    conversions: parseInt(row.conversions   || '0', 10),
+    spend,
+    impressions: parseInt(row.impressions || '0', 10),
+    clicks:      parseInt(row.clicks      || '0', 10),
+    reach:       parseInt(row.reach       || '0', 10),
+    ctr:         parseFloat(row.ctr       || '0'),
+    cpc:         parseFloat(row.cpc       || '0'),
+    cpm:         parseFloat(row.cpm       || '0'),
+    conversions,
+    revenue,
+    roas,
     currency,
   };
 }

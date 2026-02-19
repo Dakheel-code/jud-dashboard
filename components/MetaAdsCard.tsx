@@ -79,26 +79,24 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
 
   const fetchCachedInsights = useCallback(async (preset: string) => {
     try {
-      // أولاً: جرّب الكاش
-      const cached = await fetch(`/api/meta/insights?storeId=${storeId}&datePreset=${preset}`);
-      if (cached.ok) {
-        const d = await cached.json();
-        if (d.summary) { setInsights(d.summary); return; }
-      }
-      // ثانياً: جلب مباشر من Meta API
+      // جلب مباشر من Meta API دائماً
       const live = await fetch(`/api/meta/insights-live?storeId=${storeId}&datePreset=${preset}`);
-      if (live.ok) { const d = await live.json(); setInsights(d.summary || null); }
+      if (live.ok) { const d = await live.json(); setInsights(d.summary || null); return; }
+      // fallback: الكاش
+      const cached = await fetch(`/api/meta/insights?storeId=${storeId}&datePreset=${preset}`);
+      if (cached.ok) { const d = await cached.json(); setInsights(d.summary || null); }
     } catch { /* silent */ }
   }, [storeId]);
 
   useEffect(() => { fetchConnection(); }, [fetchConnection]);
 
+  // جلب البيانات تلقائياً عند فتح القسم أو تغيير الاتصال
   useEffect(() => {
-    if (!isCollapsed && connection?.ad_account_id && connection.status === 'active') {
+    if (connection?.ad_account_id && connection.status === 'active') {
       fetchCachedAds();
       fetchCachedInsights(datePreset);
     }
-  }, [isCollapsed, connection]);
+  }, [connection]); // يُشغَّل فور تحميل الاتصال بغض النظر عن isCollapsed
 
   const handlePreset = (p: string) => {
     setDatePreset(p);
@@ -273,10 +271,10 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
         {insights ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'الصرف',      value: `${fmt(Math.round(insights.spend))}`,      sub: insights.currency, color: 'from-red-900/40 to-red-800/20',    border: 'border-red-500/20',    text: 'text-red-300' },
-              { label: 'الظهور',     value: fmt(insights.impressions),                  sub: 'مرة',             color: 'from-blue-900/40 to-blue-800/20',   border: 'border-blue-500/20',   text: 'text-blue-300' },
-              { label: 'النقرات',    value: fmt(insights.clicks),                        sub: 'نقرة',            color: 'from-purple-900/40 to-purple-800/20',border: 'border-purple-500/20', text: 'text-purple-300' },
-              { label: 'التحويلات',  value: fmt(insights.conversions),                  sub: 'تحويل',           color: 'from-green-900/40 to-green-800/20',  border: 'border-green-500/20',  text: 'text-green-300' },
+              { label: 'الصرف',    value: `${fmt(Math.round(insights.spend))}`,                                          sub: insights.currency, color: 'from-red-900/40 to-red-800/20',     border: 'border-red-500/20',    text: 'text-red-300' },
+              { label: 'الطلبات',  value: fmt(Math.round(insights.conversions)),                                          sub: 'طلب',             color: 'from-green-900/40 to-green-800/20',  border: 'border-green-500/20',  text: 'text-green-300' },
+              { label: 'المبيعات', value: `${fmt(Math.round((insights as any).revenue ?? 0))}`,                          sub: insights.currency, color: 'from-blue-900/40 to-blue-800/20',    border: 'border-blue-500/20',   text: 'text-blue-300' },
+              { label: 'العائد',   value: `${((insights as any).roas ?? 0).toFixed(2)}x`,                                sub: 'ROAS',            color: 'from-purple-900/40 to-purple-800/20',border: 'border-purple-500/20', text: 'text-purple-300' },
             ].map(k => (
               <div key={k.label} className={`bg-gradient-to-br ${k.color} rounded-xl p-4 border ${k.border} text-center`}>
                 <p className={`text-xl font-black ${k.text}`}>{k.value}</p>
