@@ -19,9 +19,9 @@ END $$;
 -- يُدرج فقط المتاجر التي لها owner_phone ولا يوجد عميل بنفس الجوال
 INSERT INTO clients (name, phone, email, created_at, updated_at)
 SELECT DISTINCT ON (owner_phone)
-  owner_name,
+  COALESCE(NULLIF(TRIM(owner_name), ''), owner_phone),
   owner_phone,
-  owner_email,
+  NULLIF(TRIM(owner_email), ''),
   NOW(),
   NOW()
 FROM stores
