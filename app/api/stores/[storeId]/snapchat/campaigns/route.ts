@@ -216,15 +216,7 @@ export async function GET(
     const fields =
       'spend,impressions,swipes,conversion_purchases,conversion_purchases_value';
 
-    const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(
-      adAccountId
-    )}/stats?granularity=TOTAL&fields=${encodeURIComponent(
-      fields
-    )}&start_time=${encodeURIComponent(
-      normalizedStart
-    )}&end_time=${encodeURIComponent(
-      normalizedEnd
-    )}&breakdown=campaign`;
+    const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${fields}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
 
     const statsResponse = await fetch(statsUrl, { headers });
     const statsRawText = await statsResponse.text();
