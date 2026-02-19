@@ -1,0 +1,31 @@
+name: Meta Ads Scheduled Sync
+
+on:
+  schedule:
+    # كل 6 ساعات: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # تشغيل يدوي من GitHub Actions UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger Meta Sync
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/meta/scheduled-sync")
+          
+          echo "HTTP Status: $response"
+          
+          if [ "$response" != "200" ]; then
+            echo "Sync failed with status $response"
+            exit 1
+          fi
+          
+          echo "Meta sync completed successfully"
