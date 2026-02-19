@@ -133,6 +133,13 @@ function UsersManagementContent() {
   const [teamMemberFilter, setTeamMemberFilter] = useState<string>('all');
   const [loadingTeam, setLoadingTeam] = useState(false);
 
+  // modal إدارة الفرق
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [teamForm, setTeamForm] = useState({ name: '', description: '', memberIds: [] as string[] });
+  const [savingTeam, setSavingTeam] = useState(false);
+  const [allTeams, setAllTeams] = useState<(Team & { members: AdminUser[] })[]>([]);
+  const [loadingAllTeams, setLoadingAllTeams] = useState(false);
+
   useEffect(() => {
     fetchUsers();
     fetchMyTeam();
@@ -206,6 +213,67 @@ function UsersManagementContent() {
     } finally {
       setLoadingTeam(false);
     }
+  };
+
+  const fetchAllTeams = async () => {
+    setLoadingAllTeams(true);
+    try {
+      const res = await fetch('/api/admin/teams');
+      if (!res.ok) return;
+      const data = await res.json();
+      setAllTeams(data.teams || []);
+    } catch {
+    } finally {
+      setLoadingAllTeams(false);
+    }
+  };
+
+  const openTeamModal = () => {
+    setTeamForm({ name: '', description: '', memberIds: [] });
+    fetchAllTeams();
+    setShowTeamModal(true);
+  };
+
+  const saveTeam = async () => {
+    if (!teamForm.name.trim()) return;
+    setSavingTeam(true);
+    try {
+      const res = await fetch('/api/admin/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(teamForm),
+      });
+      if (res.ok) {
+        await fetchAllTeams();
+        await fetchMyTeam();
+        setTeamForm({ name: '', description: '', memberIds: [] });
+        setResultModalType('success');
+        setResultModalMessage('تم إنشاء الفريق بنجاح');
+        setShowResultModal(true);
+      } else {
+        const d = await res.json();
+        setResultModalType('error');
+        setResultModalMessage(d.error || 'فشل في إنشاء الفريق');
+        setShowResultModal(true);
+      }
+    } catch {
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ');
+      setShowResultModal(true);
+    } finally {
+      setSavingTeam(false);
+    }
+  };
+
+  const deleteTeam = async (teamId: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الفريق؟')) return;
+    try {
+      const res = await fetch(`/api/admin/teams?id=${teamId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchAllTeams();
+        await fetchMyTeam();
+      }
+    } catch {}
   };
 
   const openRewardModal = (user: AdminUser) => {
@@ -430,6 +498,15 @@ function UsersManagementContent() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={openTeamModal}
+              className="p-3 text-yellow-400 border border-yellow-500/30 hover:border-yellow-400/50 hover:bg-yellow-500/10 rounded-xl transition-all"
+              title="إدارة الفرق"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
             <button
               onClick={() => {
                 resetForm();
@@ -1149,6 +1226,116 @@ function UsersManagementContent() {
                   إلغاء
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal إدارة الفرق */}
+      {showTeamModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a0a2e] border border-yellow-500/30 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white">إدارة الفرق</h3>
+                <p className="text-yellow-400/70 text-sm mt-1">إنشاء وإدارة فرق العمل</p>
+              </div>
+              <button onClick={() => setShowTeamModal(false)} className="text-purple-400 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* إنشاء فريق جديد */}
+            <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 mb-6">
+              <h4 className="text-yellow-400 font-medium mb-4">إنشاء فريق جديد</h4>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="اسم الفريق *"
+                  value={teamForm.name}
+                  onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-yellow-400"
+                />
+                <input
+                  type="text"
+                  placeholder="وصف الفريق (اختياري)"
+                  value={teamForm.description}
+                  onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-yellow-400"
+                />
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">أعضاء الفريق</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                    {users.filter(u => u.is_active).map(u => (
+                      <label key={u.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-purple-900/30 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={teamForm.memberIds.includes(u.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTeamForm({ ...teamForm, memberIds: [...teamForm.memberIds, u.id] });
+                            } else {
+                              setTeamForm({ ...teamForm, memberIds: teamForm.memberIds.filter(id => id !== u.id) });
+                            }
+                          }}
+                          className="accent-yellow-400"
+                        />
+                        <span className="text-sm text-purple-200 truncate">{u.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={saveTeam}
+                  disabled={!teamForm.name.trim() || savingTeam}
+                  className="w-full py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-amber-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingTeam ? 'جاري الإنشاء...' : 'إنشاء الفريق'}
+                </button>
+              </div>
+            </div>
+
+            {/* قائمة الفرق الموجودة */}
+            <div>
+              <h4 className="text-purple-300 font-medium mb-3">الفرق الموجودة</h4>
+              {loadingAllTeams ? (
+                <div className="text-center py-6 text-purple-400">جاري التحميل...</div>
+              ) : allTeams.length === 0 ? (
+                <div className="text-center py-6 text-purple-500 text-sm">لا توجد فرق بعد</div>
+              ) : (
+                <div className="space-y-3">
+                  {allTeams.map(team => (
+                    <div key={team.id} className="bg-purple-950/40 border border-purple-500/20 rounded-xl p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-white font-medium">{team.name}</p>
+                          {team.description && <p className="text-purple-400 text-xs mt-1">{team.description}</p>}
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {(team.members || []).map(m => (
+                              <span key={m.id} className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">{m.name}</span>
+                            ))}
+                            {(team.members || []).length === 0 && (
+                              <span className="text-xs text-purple-500">لا يوجد أعضاء</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteTeam(team.id)}
+                          className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                          title="حذف الفريق"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
