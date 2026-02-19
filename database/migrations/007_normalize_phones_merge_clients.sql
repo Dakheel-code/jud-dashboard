@@ -24,8 +24,8 @@ BEGIN
   -- يبدأ بـ 966 → أضف +
   IF digits LIKE '966%' THEN RETURN '+' || digits; END IF;
 
-  -- يبدأ بـ 05 → +96605...
-  IF digits LIKE '05%' THEN RETURN '+966' || digits; END IF;
+  -- يبدأ بـ 05 → +9665... (نحذف الصفر الأول)
+  IF digits LIKE '05%' THEN RETURN '+966' || SUBSTRING(digits FROM 2); END IF;
 
   -- يبدأ بـ 5 → +9665...
   IF digits LIKE '5%' THEN RETURN '+966' || digits; END IF;

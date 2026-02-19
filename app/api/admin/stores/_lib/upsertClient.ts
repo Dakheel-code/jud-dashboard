@@ -45,8 +45,8 @@ export function cleanPhone(raw: string): string {
   // إذا يبدأ بـ 966 → أضف +
   if (digits.startsWith('966')) return '+' + digits;
 
-  // إذا يبدأ بـ 05 → +96605...
-  if (digits.startsWith('05')) return '+966' + digits;
+  // إذا يبدأ بـ 05 → +9665... (نحذف الصفر الأول)
+  if (digits.startsWith('05')) return '+966' + digits.slice(1);
 
   // إذا يبدأ بـ 5 → +9665...
   if (digits.startsWith('5')) return '+966' + digits;
