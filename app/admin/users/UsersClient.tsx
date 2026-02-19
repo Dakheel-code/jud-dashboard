@@ -221,8 +221,18 @@ function UsersManagementContent() {
         data = await response.json();
 
         if (response.ok && data.ok) {
-          // تحديث الـ state محلياً فوراً بدل refetch كامل
+          // تحديث الـ state محلياً فوراً
           setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data.user } : u));
+
+          // إذا كان المستخدم المُعدَّل هو المستخدم الحالي → حدِّث localStorage فوراً
+          const storedUser = localStorage.getItem('admin_user');
+          const currentUser = storedUser ? JSON.parse(storedUser) : null;
+          if (currentUser?.id === data.user.id) {
+            const updated = { ...currentUser, ...data.user };
+            localStorage.setItem('admin_user', JSON.stringify(updated));
+            window.dispatchEvent(new Event('user-updated'));
+          }
+
           setResultModalType('success');
           setResultModalMessage('تم تحديث المستخدم بنجاح');
           setShowResultModal(true);
