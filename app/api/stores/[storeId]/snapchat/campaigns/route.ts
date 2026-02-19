@@ -309,8 +309,9 @@ export async function GET(
       const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${encodeURIComponent('spend,conversion_purchases,conversion_purchases_value')}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
       try {
         const accRes = await fetch(accStatsUrl, { headers });
-        const accData = await accRes.json();
-        accRawDebug = accData; // حفظ الـ raw response للـ debug
+        const accText = await accRes.text();
+        try { accRawDebug = JSON.parse(accText); } catch { accRawDebug = accText; }
+        const accData = typeof accRawDebug === 'object' ? accRawDebug : {};
 
         if (accRes.ok) {
           // محاولة كل المسارات الممكنة
