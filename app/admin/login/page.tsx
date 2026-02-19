@@ -37,19 +37,30 @@ export default function AdminLoginPage() {
 
   const syncUserToLocalStorage = async () => {
     try {
-      const response = await fetch('/api/me');
+      // جلب البيانات من DB مباشرة (محدّثة دائماً) بدل /api/me التي تقرأ من session
+      const response = await fetch('/api/admin/profile/me');
       if (response.ok) {
         const data = await response.json();
         if (data.user) {
           localStorage.setItem('admin_user', JSON.stringify(data.user));
-          // تعيين الـ cookies
           document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
-          // تعيين admin_token للـ middleware
           document.cookie = `admin_token=${data.user.id}; path=/; max-age=${60 * 60 * 24 * 7}`;
+          window.dispatchEvent(new Event('user-updated'));
+          return;
+        }
+      }
+      // fallback: /api/me
+      const fallback = await fetch('/api/me');
+      if (fallback.ok) {
+        const data = await fallback.json();
+        if (data.user) {
+          localStorage.setItem('admin_user', JSON.stringify(data.user));
+          document.cookie = `admin_user=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}`;
+          document.cookie = `admin_token=${data.user.id}; path=/; max-age=${60 * 60 * 24 * 7}`;
+          window.dispatchEvent(new Event('user-updated'));
         }
       }
     } catch (err) {
-      console.error('Error syncing user to localStorage:', err);
     }
   };
 
