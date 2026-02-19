@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth-guard';
+import { getUserPermissions } from '@/lib/rbac';
 import crypto from 'crypto';
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } }
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  if (!key) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 function hashPassword(password: string): string {
@@ -139,30 +139,62 @@ export async function PATCH(
 
     const supabase = getAdminClient();
 
+    // 1) تحديث بيانات user الأساسية فقط (بدون roles/permissions)
     const updateData: any = { updated_at: new Date().toISOString() };
-
-    if (body.name       !== undefined) updateData.name       = body.name;
-    if (body.email      !== undefined) updateData.email      = body.email;
-    if (body.username   !== undefined) updateData.username   = body.username;
-    if (body.role       !== undefined) updateData.role       = body.role;
-    if (body.roles      !== undefined) { updateData.roles = body.roles; updateData.role = body.roles[0]; }
-    if (body.permissions !== undefined) updateData.permissions = body.permissions;
-    if (body.is_active  !== undefined) updateData.is_active  = body.is_active;
-    if (body.avatar     !== undefined) updateData.avatar     = body.avatar;
-    if (body.password)                 updateData.password_hash = hashPassword(body.password);
+    if (body.name      !== undefined) updateData.name      = body.name;
+    if (body.email     !== undefined) updateData.email     = body.email;
+    if (body.username  !== undefined) updateData.username  = body.username;
+    if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.avatar    !== undefined) updateData.avatar    = body.avatar;
+    if (body.password)               updateData.password_hash = hashPassword(body.password);
 
     const { data, error } = await supabase
       .from('admin_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, name, email, role, roles, permissions, avatar, is_active, created_at, last_login')
+      .select('id, username, name, email, avatar, is_active, created_at, last_login')
       .single();
 
     if (error) {
       return NextResponse.json({ ok: false, message: error.message, code: error.code }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, user: data });
+    // 2) تحديث RBAC roles إذا أُرسلت
+    const desiredRoles: string[] = body.roles || (body.role ? [body.role] : []);
+
+    if (desiredRoles.length > 0) {
+      await supabase.from('admin_user_roles').delete().eq('user_id', id);
+
+      const { data: roleRows, error: rolesErr } = await supabase
+        .from('admin_roles')
+        .select('id, key')
+        .in('key', desiredRoles);
+
+      if (rolesErr) {
+        return NextResponse.json({ ok: false, message: rolesErr.message }, { status: 500 });
+      }
+
+      const links = (roleRows || []).map((r: any) => ({ user_id: id, role_id: r.id }));
+      if (links.length > 0) {
+        const { error: linkErr } = await supabase.from('admin_user_roles').insert(links);
+        if (linkErr) {
+          return NextResponse.json({ ok: false, message: linkErr.message }, { status: 500 });
+        }
+      }
+    }
+
+    // 3) إرجاع RBAC الحقيقي
+    const rbac = await getUserPermissions(id);
+
+    return NextResponse.json({
+      ok: true,
+      user: {
+        ...data,
+        role:        rbac.roles[0] || 'employee',
+        roles:       rbac.roles,
+        permissions: rbac.permissions,
+      },
+    });
   } catch (e: any) {
     return NextResponse.json({ ok: false, message: e?.message ?? 'Unknown error' }, { status: 500 });
   }
