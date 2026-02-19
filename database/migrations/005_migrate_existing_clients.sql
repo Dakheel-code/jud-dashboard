@@ -9,8 +9,11 @@
 
 -- ── 0. تأكد من وجود UNIQUE على phone في clients ───────────────
 -- (يمنع التكرار عند التشغيل المتعدد)
-ALTER TABLE clients
-  ADD CONSTRAINT IF NOT EXISTS clients_phone_unique UNIQUE (phone);
+DO $$ BEGIN
+  ALTER TABLE clients ADD CONSTRAINT clients_phone_unique UNIQUE (phone);
+EXCEPTION WHEN duplicate_table THEN NULL;
+           WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── 1. إدراج العملاء الجدد من المتاجر ────────────────────────
 -- يُدرج فقط المتاجر التي لها owner_phone ولا يوجد عميل بنفس الجوال
