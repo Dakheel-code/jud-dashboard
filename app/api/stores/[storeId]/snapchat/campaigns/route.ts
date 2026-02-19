@@ -451,7 +451,9 @@ export async function GET(
       response.warning = `Data finalized until ${finalizedDataEndTime}. Recent hours may be incomplete.`;
     }
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
   } catch (error: any) {
     return NextResponse.json(
       {
