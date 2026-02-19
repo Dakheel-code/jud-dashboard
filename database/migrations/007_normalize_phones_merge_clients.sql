@@ -40,12 +40,15 @@ UPDATE stores
 SET owner_phone = normalize_sa_phone(owner_phone)
 WHERE owner_phone IS NOT NULL AND owner_phone <> '';
 
--- ── 2. توحيد phone في جدول clients ───────────────────────────
+-- ── 2. إزالة UNIQUE constraint مؤقتاً لتجنب التعارض ─────────
+ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_phone_unique;
+
+-- ── 3. توحيد phone في جدول clients ───────────────────────────
 UPDATE clients
 SET phone = normalize_sa_phone(phone)
 WHERE phone IS NOT NULL AND phone <> '';
 
--- ── 3. دمج العملاء المكررين (نفس الجوال بعد التوحيد) ─────────
+-- ── 4. دمج العملاء المكررين (نفس الجوال بعد التوحيد) ─────────
 -- نحتفظ بأقدم عميل ونحوّل المتاجر المرتبطة بالأحدث إليه
 DO $$
 DECLARE
@@ -94,7 +97,11 @@ BEGIN
   RAISE NOTICE 'عدد العملاء المكررين الذين تم دمجهم: %', merged_count;
 END $$;
 
--- ── 4. إصلاح أسماء العملاء من stores (إذا كانت مكسورة) ───────
+-- ── 5. إعادة UNIQUE constraint بعد الدمج ────────────────────
+ALTER TABLE clients DROP CONSTRAINT IF EXISTS clients_phone_unique;
+ALTER TABLE clients ADD CONSTRAINT clients_phone_unique UNIQUE (phone);
+
+-- ── 6. إصلاح أسماء العملاء من stores (إذا كانت مكسورة) ───────
 UPDATE clients c
 SET
   name       = COALESCE(NULLIF(TRIM(s.owner_name), ''), c.name),
