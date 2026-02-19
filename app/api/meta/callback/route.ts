@@ -9,6 +9,7 @@ import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getMetaUser,
+  META_REDIRECT_URI,
 } from '@/lib/meta/client';
 import { encryptToken } from '@/lib/meta/encryption';
 
@@ -19,7 +20,8 @@ function getSupabase() {
   );
 }
 
-const REDIRECT_BASE = process.env.NEXTAUTH_URL || 'https://jud-dashboard.netlify.app';
+// REDIRECT_BASE للتوجيه بعد الـ callback فقط — لا علاقة له بـ META_REDIRECT_URI
+const REDIRECT_BASE = 'https://jud-dashboard.netlify.app';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -56,24 +58,25 @@ export async function GET(request: NextRequest) {
 
   const storeId = stateRow.store_id;
 
-  // حذف state بعد الاستخدام (one-time use)
-  await supabase.from('meta_oauth_states').delete().eq('state', state);
-
   try {
     // 1) استبدال code بـ short-lived token
-    const { access_token: shortToken } = await exchangeCodeForToken(code);
+    //    redirect_uri يجب أن يطابق Meta Dashboard حرفياً
+    const { access_token: shortToken } = await exchangeCodeForToken(code, META_REDIRECT_URI);
 
-    // 2) تحويل إلى long-lived token (صالح ~60 يوم)
+    // 2) حذف state بعد نجاح التبادل فقط (one-time use)
+    await supabase.from('meta_oauth_states').delete().eq('state', state);
+
+    // 3) تحويل إلى long-lived token (صالح ~60 يوم)
     const { access_token: longToken, expires_in } = await exchangeForLongLivedToken(shortToken);
 
-    // 3) جلب معلومات المستخدم
+    // 4) جلب معلومات المستخدم
     const metaUser = await getMetaUser(longToken);
 
-    // 4) تشفير التوكن قبل الحفظ
+    // 5) تشفير التوكن قبل الحفظ
     const encryptedToken = encryptToken(longToken);
     const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString();
 
-    // 5) حفظ الاتصال في DB (upsert بناءً على store_id)
+    // 6) حفظ الاتصال في DB (upsert بناءً على store_id)
     const { error: upsertErr } = await supabase
       .from('store_meta_connections')
       .upsert({
@@ -88,12 +91,13 @@ export async function GET(request: NextRequest) {
 
     if (upsertErr) throw new Error(upsertErr.message);
 
-    // توجيه لصفحة اختيار الحساب الإعلاني
+    // توجيه لصفحة المتجر مع إشارة نجاح الربط
     return NextResponse.redirect(
-      `${REDIRECT_BASE}/admin/store/${storeId}/integrations?meta_step=select_account&meta_connected=1`
+      `${REDIRECT_BASE}/admin/store/${storeId}?meta_connected=1`
     );
   } catch (err: any) {
-    console.error('Meta callback error:', err.message);
+    // طباعة الخطأ كاملاً في Netlify Logs لتشخيص المشكلة
+    console.error('Meta callback error:', err);
     return NextResponse.redirect(
       `${REDIRECT_BASE}/admin/stores?meta_error=token_exchange_failed`
     );

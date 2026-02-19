@@ -7,7 +7,9 @@ export const META_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 
 export const META_APP_ID       = process.env.META_APP_ID!;
 export const META_APP_SECRET   = process.env.META_APP_SECRET!;
-export const META_REDIRECT_URI = process.env.META_REDIRECT_URI!;
+export const META_REDIRECT_URI =
+  process.env.META_REDIRECT_URI ||
+  'https://jud-dashboard.netlify.app/api/meta/callback';
 
 export const META_SCOPES = ['ads_read', 'ads_management', 'business_management'].join(',');
 
@@ -23,17 +25,22 @@ export function buildOAuthUrl(state: string): string {
   return `https://www.facebook.com/dialog/oauth?${params.toString()}`;
 }
 
-/** استبدال code بـ short-lived token */
-export async function exchangeCodeForToken(code: string): Promise<{ access_token: string; token_type: string }> {
+/** استبدال code بـ short-lived token — redirect_uri يجب أن يطابق Meta Dashboard حرفياً */
+export async function exchangeCodeForToken(
+  code: string,
+  redirectUri: string = META_REDIRECT_URI
+): Promise<{ access_token: string; token_type: string }> {
   const params = new URLSearchParams({
     client_id:     META_APP_ID,
     client_secret: META_APP_SECRET,
-    redirect_uri:  META_REDIRECT_URI,
+    redirect_uri:  redirectUri,
     code,
   });
-  const res = await fetch(`${META_BASE}/oauth/access_token?${params.toString()}`);
+  const res  = await fetch(`${META_BASE}/oauth/access_token?${params.toString()}`);
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
+  if (!res.ok || data.error) {
+    throw new Error(`token_exchange_failed: ${JSON.stringify(data)}`);
+  }
   return data;
 }
 
