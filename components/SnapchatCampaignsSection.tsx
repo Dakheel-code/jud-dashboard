@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; onSummaryLoaded?: (s: any) => void; externalPreset?: string }>(
@@ -87,6 +88,66 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapLoading, setSnapLoading]   = useState(false);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
+
+  // ─── Meta Ad Account Modal ───────────────────────────
+  const searchParams = useSearchParams();
+  const [metaModal, setMetaModal]           = useState(false);
+  const [metaAccounts, setMetaAccounts]     = useState<{ id: string; name: string; currency: string }[]>([]);
+  const [metaAccLoading, setMetaAccLoading] = useState(false);
+  const [metaSelected, setMetaSelected]     = useState('');
+  const [metaSaving, setMetaSaving]         = useState(false);
+  const [metaConn, setMetaConn]             = useState<{ status: string; ad_account_id?: string; ad_account_name?: string; meta_user_name?: string } | null>(null);
+
+  const fetchMetaConn = useCallback(async () => {
+    if (!storeId) return;
+    try {
+      const res = await fetch(`/api/meta/connection?storeId=${storeId}`);
+      if (res.ok) { const d = await res.json(); setMetaConn(d.connection || null); }
+    } catch { /* silent */ }
+  }, [storeId]);
+
+  const loadMetaAccounts = async () => {
+    setMetaAccLoading(true);
+    try {
+      const res = await fetch(`/api/meta/adaccounts?storeId=${storeId}`);
+      const d = await res.json(); setMetaAccounts(d.accounts || []);
+    } catch { setMetaAccounts([]); }
+    finally { setMetaAccLoading(false); }
+  };
+
+  const saveMetaAccount = async () => {
+    if (!metaSelected) return;
+    const acc = metaAccounts.find(a => a.id === metaSelected);
+    setMetaSaving(true);
+    try {
+      const res = await fetch('/api/meta/select-adaccount', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId, ad_account_id: acc?.id, ad_account_name: acc?.name }),
+      });
+      if (res.ok) {
+        setMetaModal(false);
+        setMetaAccounts([]);
+        setMetaSelected('');
+        await fetchMetaConn();
+        // مسح param من URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('meta_connected');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } finally { setMetaSaving(false); }
+  };
+
+  // فتح Modal تلقائياً عند meta_connected=1
+  useEffect(() => {
+    fetchMetaConn();
+  }, [fetchMetaConn]);
+
+  useEffect(() => {
+    if (searchParams?.get('meta_connected') === '1' && storeId) {
+      setMetaModal(true);
+      loadMetaAccounts();
+    }
+  }, [searchParams, storeId]);
 
   // جلب بيانات Snapchat مع إلغاء الطلب السابق
   const fetchSnap = useCallback(async (preset: string) => {
@@ -403,6 +464,79 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             );
           })()}
 
+        </div>
+      )}
+
+      {/* ─── Modal اختيار الحساب الإعلاني لـ Meta ─── */}
+      {metaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setMetaModal(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[#1a0a2e] border border-indigo-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-indigo-500/10"
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-bold">اختيار الحساب الإعلاني</h3>
+                  {metaConn?.meta_user_name && (
+                    <p className="text-xs text-green-400/80 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                      {metaConn.meta_user_name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setMetaModal(false)}
+                className="w-8 h-8 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center text-purple-400 transition-all">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            {metaAccLoading ? (
+              <div className="flex items-center justify-center py-8 gap-3">
+                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-purple-300/60">جاري تحميل الحسابات...</span>
+              </div>
+            ) : metaAccounts.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-purple-300/60 mb-4">اضغط لتحميل حساباتك الإعلانية</p>
+                <button onClick={loadMetaAccounts}
+                  className="px-5 py-2.5 bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-sm rounded-xl hover:bg-indigo-600/50 transition-all">
+                  تحميل الحسابات
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-purple-400/60 mb-2">اختر الحساب الإعلاني لهذا المتجر:</p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {metaAccounts.map(acc => (
+                    <button key={acc.id} onClick={() => setMetaSelected(acc.id)}
+                      className={`w-full text-right px-4 py-3 rounded-xl border transition-all ${
+                        metaSelected === acc.id
+                          ? 'bg-indigo-600/30 border-indigo-500/60 text-white'
+                          : 'bg-purple-900/20 border-purple-500/10 text-purple-300/70 hover:border-indigo-500/30 hover:bg-indigo-500/10'
+                      }`}>
+                      <p className="text-sm font-semibold">{acc.name}</p>
+                      <p className="text-xs text-purple-400/50 mt-0.5">{acc.id} · {acc.currency}</p>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={saveMetaAccount} disabled={!metaSelected || metaSaving}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all mt-2">
+                  {metaSaving ? 'جاري الحفظ...' : 'تأكيد الاختيار'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
