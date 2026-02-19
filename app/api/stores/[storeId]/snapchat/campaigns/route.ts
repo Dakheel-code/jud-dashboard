@@ -443,10 +443,12 @@ export async function GET(
       date_range: { start: normalizedStart, end: normalizedEnd },
       account_spend_usd: accountSpend,
       campaign_stats_map_count: Object.keys(campaignStatsMap).length,
+      campaign_stats_map_sample: Object.entries(campaignStatsMap).slice(0, 2),
+      campaigns_with_stats_sample: campaignsWithStats.slice(0, 2),
       stats_url: statsUrl,
       stats_http_status: statsResponse.status,
       stats_raw: typeof statsRawDebug === 'object'
-        ? { request_status: statsRawDebug?.request_status, error: statsRawDebug?.debug_message, total_stats_count: statsRawDebug?.total_stats?.length }
+        ? { request_status: statsRawDebug?.request_status, error: statsRawDebug?.debug_message, total_stats_count: statsRawDebug?.total_stats?.length, first_campaign_row: statsRawDebug?.total_stats?.[0]?.total_stat?.breakdown_stats?.campaign?.[0] }
         : String(statsRawDebug).slice(0, 300),
     };
 
