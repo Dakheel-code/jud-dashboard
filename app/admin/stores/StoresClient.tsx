@@ -321,13 +321,6 @@ function StoresPageContent() {
             <h3 className="text-sm text-red-300/80 mb-1">المتاجر المنتهية</h3>
             <p className="text-2xl font-bold text-red-400">{stores.filter(s => s.status === 'expired').length}</p>
           </button>
-          <button 
-            onClick={() => setStatusFilter('completed')}
-            className={`bg-purple-950/40 rounded-2xl p-4 border transition-all text-right ${statusFilter === 'completed' ? 'border-fuchsia-400 ring-2 ring-fuchsia-500/30' : 'border-fuchsia-500/20 hover:border-fuchsia-400/50'}`}
-          >
-            <h3 className="text-sm text-fuchsia-300/80 mb-1">المتاجر المكتملة</h3>
-            <p className="text-2xl font-bold text-fuchsia-400">{stores.filter(s => s.completion_percentage === 100).length}</p>
-          </button>
         </div>
 
         {/* Filters */}
@@ -396,7 +389,6 @@ function StoresPageContent() {
                 </svg>
                 استيراد مجمّع
               </Link>
-              <StoreImportExport onImportSuccess={fetchData} />
               <button
                 onClick={async () => {
                   setBackfilling(true);
