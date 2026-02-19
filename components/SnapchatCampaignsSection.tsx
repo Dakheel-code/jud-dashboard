@@ -88,6 +88,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapLoading, setSnapLoading]   = useState(false);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
+  const directIntRef = useRef(directIntegrations);
+  useEffect(() => { directIntRef.current = directIntegrations; }, [directIntegrations]);
 
   // ─── Meta Ad Account Modal ───────────────────────────
   const searchParams = useSearchParams();
@@ -150,13 +152,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     }
   }, [searchParams, storeId]);
 
-  // جلب بيانات Snapchat مع إلغاء الطلب السابق
+  // جلب بيانات Snapchat — يستخدم ref لـ directIntegrations لمنع إعادة الإنشاء
   const fetchSnap = useCallback(async (preset: string) => {
     if (!storeId) return;
-    const snapInt = directIntegrations?.snapchat;
+    const snapInt = directIntRef.current?.snapchat;
     if (!snapInt || snapInt.status !== 'connected' || !snapInt.ad_account_id) return;
 
-    // إلغاء الطلب السابق
     snapAbortRef.current?.abort();
     const controller = new AbortController();
     snapAbortRef.current = controller;
@@ -164,6 +165,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     setSnapLoading(true);
     try {
       const res = await fetch(`/api/stores/${storeId}/snapchat/campaigns?range=${preset}`, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       const d = await res.json();
       const s = {
         spend:  d.summary?.spend  || 0,
@@ -178,12 +180,11 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     } finally {
       if (!controller.signal.aborted) setSnapLoading(false);
     }
-  }, [storeId, directIntegrations, onDataLoaded]);
+  }, [storeId]);
 
-  // عند تغيير الفترة: مسح البيانات القديمة فوراً ثم جلب الجديدة
+  // عند تغيير الفترة: مسح Snapchat فقط (ليس Meta)
   useEffect(() => {
     setSnapData(null);
-    setMetaData(null);
     fetchSnap(datePreset);
   }, [datePreset, fetchSnap]);
 
