@@ -20,7 +20,7 @@ interface MetaInsights {
   spend: number; impressions: number; clicks: number; reach: number;
   ctr: number; cpc: number; cpm: number; conversions: number; currency: string;
 }
-interface Props { storeId: string; }
+interface Props { storeId: string; embedded?: boolean; }
 
 const DATE_PRESETS = [
   { label: 'اليوم',   value: 'today' },
@@ -46,7 +46,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function fmt(n: number) { return n?.toLocaleString('ar-SA') ?? '0'; }
 
-export default function MetaAdsCard({ storeId }: Props) {
+export default function MetaAdsCard({ storeId, embedded = false }: Props) {
   const [connection, setConnection]           = useState<MetaConnection | null>(null);
   const [loadingConn, setLoadingConn]         = useState(true);
   const [isCollapsed, setIsCollapsed]         = useState(true);
@@ -334,6 +334,10 @@ export default function MetaAdsCard({ storeId }: Props) {
       </div>
     );
   };
+
+  if (embedded) {
+    return <div className="bg-transparent">{renderBody()}</div>;
+  }
 
   return (
     <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden mb-6">

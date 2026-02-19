@@ -1596,9 +1596,6 @@ function StoreDetailsContent() {
           }}
         />
 
-        {/* Meta Ads */}
-        {storeId && <MetaAdsCard storeId={storeId} />}
-
         {/* قسم الحملات الإعلانية القديم - مخفي */}
         <div className="hidden bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
           {/* Header - قابل للنقر */}
@@ -1963,6 +1960,20 @@ function StoreDetailsContent() {
                               >
                                 ربط Snapchat
                               </button>
+                            ) : platform.key === 'meta' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedPlatforms(prev => {
+                                    const newSet = new Set(prev);
+                                    newSet.add('meta');
+                                    return newSet;
+                                  });
+                                }}
+                                className="px-4 py-1.5 rounded-lg text-xs bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                              >
+                                ربط Meta
+                              </button>
                             ) : (
                               <button
                                 onClick={(e) => {
@@ -1978,8 +1989,15 @@ function StoreDetailsContent() {
                         </div>
                       </div>
                       
+                      {/* Meta: MetaAdsCard inline عند التوسع (مرتبط أو غير مرتبط) */}
+                      {platform.key === 'meta' && isExpanded && storeId && (
+                        <div className="border-t border-blue-500/10">
+                          <MetaAdsCard storeId={storeId} embedded />
+                        </div>
+                      )}
+
                       {/* تفاصيل الحملات */}
-                      {isConnected && isExpanded && (
+                      {isConnected && isExpanded && platform.key !== 'meta' && (
                         <div className="border-t border-purple-500/10 p-4 bg-purple-900/10">
                           {campaigns.length > 0 ? (() => {
                             // تجميع الحملات حسب اسم الحملة مع الإعلانات
