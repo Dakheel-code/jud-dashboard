@@ -22,9 +22,37 @@ export interface UpsertClientResult {
   action:    'created' | 'linked' | 'skipped';
 }
 
-/** تنظيف رقم الجوال — يبقي الأرقام و + فقط */
+/**
+ * تنظيف وتوحيد رقم الجوال السعودي
+ * الصيغة الموحّدة: +966XXXXXXXXX (12 رقم بعد +)
+ *
+ * يدعم:
+ *  05XXXXXXXX   → +96605XXXXXXXX  (خطأ شائع، يُبقى كما هو بعد إضافة +966)
+ *  5XXXXXXXX    → +9665XXXXXXXX
+ *  009665XXXXXXXX → +9665XXXXXXXX
+ *  +9665XXXXXXXX  → +9665XXXXXXXX (صحيح مسبقاً)
+ *  9665XXXXXXXX   → +9665XXXXXXXX
+ */
 export function cleanPhone(raw: string): string {
-  return raw.replace(/[^0-9+]/g, '').trim();
+  // إزالة كل شيء عدا الأرقام
+  let digits = raw.replace(/[^0-9]/g, '').trim();
+
+  if (!digits) return '';
+
+  // إزالة 00 من البداية (009665... → 9665...)
+  if (digits.startsWith('00')) digits = digits.slice(2);
+
+  // إذا يبدأ بـ 966 → أضف +
+  if (digits.startsWith('966')) return '+' + digits;
+
+  // إذا يبدأ بـ 05 → +96605...
+  if (digits.startsWith('05')) return '+966' + digits;
+
+  // إذا يبدأ بـ 5 → +9665...
+  if (digits.startsWith('5')) return '+966' + digits;
+
+  // غير ذلك → أضف + فقط
+  return '+' + digits;
 }
 
 export async function upsertClient(
