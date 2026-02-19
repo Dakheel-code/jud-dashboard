@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback, memo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -41,6 +41,9 @@ function StoresPageContent() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(30);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ ready: number; failed: number; remaining: number } | null>(null);
 
   // تبديل حالة البطاقة (مطوية/مفتوحة)
   const toggleCard = (storeId: string) => {
@@ -57,7 +60,6 @@ function StoresPageContent() {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // فلترة المتاجر — useMemo لتجنب إعادة الحساب في كل render
   const filteredStores = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
     return stores.filter(store => {
@@ -75,6 +77,18 @@ function StoresPageContent() {
       return matchesStatus && matchesPriority && matchesSearch;
     });
   }, [stores, statusFilter, priorityFilter, debouncedSearch]);
+
+  // IntersectionObserver — تحميل تلقائي عند الـ scroll
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) setVisibleCount(prev => prev + 30); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredStores.length]);
 
   // دالة لعرض لون الأولوية
   const getPriorityBadge = (priority?: string) => {
@@ -383,6 +397,34 @@ function StoresPageContent() {
                 استيراد مجمّع
               </Link>
               <StoreImportExport onImportSuccess={fetchData} />
+              <button
+                onClick={async () => {
+                  setBackfilling(true);
+                  setBackfillResult(null);
+                  try {
+                    const res = await fetch('/api/admin/stores/logo/backfill', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ batchSize: 20, onlyMissing: true, concurrency: 3 }),
+                    });
+                    const data = await res.json();
+                    setBackfillResult({ ready: data.ready ?? 0, failed: data.failed ?? 0, remaining: data.remaining ?? 0 });
+                    if (data.ready > 0) fetchData();
+                  } catch { } finally { setBackfilling(false); }
+                }}
+                disabled={backfilling}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 hover:border-blue-500/70 rounded-xl text-blue-300 hover:text-white transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                title={backfillResult ? `✓${backfillResult.ready} ✗${backfillResult.failed} متبقي:${backfillResult.remaining}` : 'توليد شعارات المتاجر'}
+              >
+                {backfilling ? (
+                  <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+                {backfilling ? 'جاري التوليد...' : 'توليد الشعارات'}
+              </button>
             </div>
           </div>
         </div>
@@ -409,7 +451,7 @@ function StoresPageContent() {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Store Logo */}
                     <div className="w-10 h-10 rounded-full bg-purple-900/50 border-2 border-purple-500/30 overflow-hidden flex-shrink-0">
-                      <StoreFavicon storeUrl={store.store_url} alt={store.store_name} size={40} className="w-full h-full object-cover" />
+                      <StoreFavicon storeUrl={store.store_url} logoUrl={(store as any).logo_url} alt={store.store_name} size={40} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-semibold text-white truncate">{store.store_name}</h3>
@@ -609,14 +651,13 @@ function StoresPageContent() {
           ))}
         </div>
 
+        {/* Sentinel للـ IntersectionObserver */}
         {filteredStores.length > visibleCount && (
-          <div className="flex justify-center mt-6">
-            <button
-              onClick={() => setVisibleCount(prev => prev + 30)}
-              className="px-8 py-3 bg-purple-900/40 border border-purple-500/30 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-xl transition-all font-medium"
-            >
-              عرض المزيد ({filteredStores.length - visibleCount} متجر متبقي)
-            </button>
+          <div ref={loadMoreRef} className="flex justify-center mt-6 py-4">
+            <div className="flex items-center gap-2 text-purple-400/60 text-sm">
+              <div className="w-4 h-4 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+              جاري التحميل...
+            </div>
           </div>
         )}
 

@@ -3,46 +3,77 @@
 import { memo, useState } from 'react';
 
 interface StoreFaviconProps {
-  storeUrl: string;
-  alt?: string;
-  size?: number;
+  storeUrl:   string;
+  logoUrl?:   string | null;  // logo_url من DB — المصدر الوحيد المسموح
+  alt?:       string;
+  size?:      number;
   className?: string;
 }
 
-function buildFaviconUrl(domain: string, sz: number) {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=${sz}`;
+/** Placeholder — حرف أول من اسم المتجر أو أيقونة */
+function Placeholder({ size, className, label }: { size: number; className: string; label?: string }) {
+  const initial = label?.trim()?.[0]?.toUpperCase() || '?';
+  return (
+    <div
+      className={`flex items-center justify-center bg-purple-900/40 rounded-lg flex-shrink-0 ${className}`}
+      style={{ width: size, height: size, minWidth: size }}
+      title={label}
+    >
+      <span className="text-purple-400/80 font-bold select-none" style={{ fontSize: size * 0.4 }}>
+        {initial}
+      </span>
+    </div>
+  );
 }
 
-function cleanDomain(url: string) {
-  return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
+/** Skeleton — يظهر أثناء تحميل الصورة لمنع layout shift */
+function Skeleton({ size, className }: { size: number; className: string }) {
+  return (
+    <div
+      className={`bg-purple-900/30 rounded-lg flex-shrink-0 animate-pulse ${className}`}
+      style={{ width: size, height: size, minWidth: size }}
+    />
+  );
 }
 
-const StoreFavicon = memo(function StoreFavicon({ storeUrl, alt, size = 40, className = '' }: StoreFaviconProps) {
-  const faviconSize = size > 32 ? 64 : 32;
-  const domain = cleanDomain(storeUrl);
-  const [fallbackStage, setFallbackStage] = useState(0);
+const StoreFavicon = memo(function StoreFavicon({
+  storeUrl,
+  logoUrl,
+  alt,
+  size = 40,
+  className = '',
+}: StoreFaviconProps) {
+  const [loaded,   setLoaded]   = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-  const sources = [
-    buildFaviconUrl(domain, faviconSize),
-    `https://${domain}/favicon.ico`,
-    `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-    '/logo.png',
-  ];
+  // لا يوجد logo_url أو فشل التحميل → placeholder
+  if (!logoUrl || imgError) {
+    return <Placeholder size={size} className={className} label={alt || storeUrl} />;
+  }
 
   return (
-    <img
-      src={sources[fallbackStage]}
-      alt={alt || storeUrl}
-      width={size}
-      height={size}
-      className={className}
-      loading="lazy"
-      onError={() => {
-        if (fallbackStage < sources.length - 1) {
-          setFallbackStage(s => s + 1);
-        }
-      }}
-    />
+    // حاوية بحجم ثابت تمنع layout shift
+    <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size, minWidth: size }}>
+      {/* Skeleton يظهر حتى تكتمل الصورة */}
+      {!loaded && <Skeleton size={size} className="absolute inset-0" />}
+      <img
+        src={logoUrl}
+        alt={alt || storeUrl}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setImgError(true)}
+        style={{
+          width:      size,
+          height:     size,
+          objectFit:  'cover',
+          opacity:    loaded ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+        }}
+      />
+    </div>
   );
 });
 

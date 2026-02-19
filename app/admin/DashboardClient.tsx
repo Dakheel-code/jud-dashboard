@@ -80,7 +80,6 @@ function AdminPageContent() {
   const [loading, setLoading] = useState(true);
   const [deletingStore, setDeletingStore] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [storeMetadata, setStoreMetadata] = useState<Record<string, { name: string; logo: string | null }>>({});
   
   // Dashboard Summary State
   const [dashboardData, setDashboardData] = useState<DashboardSummary | null>(null);
@@ -190,23 +189,6 @@ function AdminPageContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // جلب بيانات المتجر (الاسم والشعار)
-  const fetchStoreMetadata = async (storeUrl: string) => {
-    try {
-      const response = await fetch(`/api/store/metadata?url=${encodeURIComponent(storeUrl)}`);
-      const data = await response.json();
-      return {
-        name: data.name || storeUrl.split('.')[0],
-        logo: data.logo || data.favicon || null
-      };
-    } catch {
-      return {
-        name: storeUrl.split('.')[0],
-        logo: null
-      };
-    }
-  };
-
   // جلب البيانات بدون إظهار حالة التحميل (للتحديث التلقائي)
   const fetchDataSilent = useCallback(async () => {
     try {
@@ -222,17 +204,9 @@ function AdminPageContent() {
       setStores(storesData.stores || []);
       setLastUpdate(new Date());
 
-      // جلب بيانات المتاجر الجديدة
-      const newStores = storesData.stores || [];
-      for (const store of newStores) {
-        if (!storeMetadata[store.store_url]) {
-          const metadata = await fetchStoreMetadata(store.store_url);
-          setStoreMetadata(prev => ({ ...prev, [store.store_url]: metadata }));
-        }
-      }
     } catch (err) {
     }
-  }, [storeMetadata]);
+  }, []);
 
   const openDeleteModal = (storeId: string, storeUrl: string) => {
     setStoreToDelete({ id: storeId, url: storeUrl });
@@ -286,16 +260,6 @@ function AdminPageContent() {
       setStores(storesData.stores || []);
       setLoading(false);
 
-      // جلب بيانات المتاجر (الاسم والشعار) بشكل متوازي بدلاً من تسلسلي
-      const newStores = storesData.stores || [];
-      const metadataResults = await Promise.all(
-        newStores.map((store: any) => fetchStoreMetadata(store.store_url))
-      );
-      const metadataMap: Record<string, { name: string; logo: string | null }> = {};
-      newStores.forEach((store: any, i: number) => {
-        metadataMap[store.store_url] = metadataResults[i];
-      });
-      setStoreMetadata(prev => ({ ...prev, ...metadataMap }));
     } catch (err) {
       setLoading(false);
     }
