@@ -91,6 +91,12 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
     }
 
+    // تحديث last_login في admin_users (لحالة الاتصال الفوري)
+    await supabase
+      .from('admin_users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', userId);
+
     // تحديث أو إنشاء سجل الجلسة اليومية
     const today = new Date().toISOString().split('T')[0];
     

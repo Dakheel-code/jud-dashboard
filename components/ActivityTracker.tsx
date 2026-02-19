@@ -13,20 +13,18 @@ export default function ActivityTracker({ userId }: ActivityTrackerProps) {
   useEffect(() => {
     if (!userId) return;
 
-    // تسجيل بداية الجلسة
+    // تسجيل بداية الجلسة + إرسال heartbeat فوري عند الدخول
     startTimeRef.current = Date.now();
     lastHeartbeatRef.current = Date.now();
+    sendHeartbeat(0); // فوري عند الدخول لتحديث last_login مباشرة
 
-    // إرسال heartbeat كل 60 ثانية
+    // إرسال heartbeat كل 30 ثانية
     const heartbeatInterval = setInterval(() => {
       const now = Date.now();
       const sessionDuration = Math.floor((now - lastHeartbeatRef.current) / 1000);
-      
-      if (sessionDuration >= 30) { // فقط إذا مر 30 ثانية على الأقل
-        sendHeartbeat(sessionDuration);
-        lastHeartbeatRef.current = now;
-      }
-    }, 60000); // كل دقيقة
+      sendHeartbeat(sessionDuration);
+      lastHeartbeatRef.current = now;
+    }, 30000); // كل 30 ثانية
 
     // إرسال heartbeat عند مغادرة الصفحة
     const handleBeforeUnload = () => {
