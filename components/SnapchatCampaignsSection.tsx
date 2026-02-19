@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false });
+const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; onSummaryLoaded?: (s: any) => void }>(() => import('@/components/MetaAdsCard'), { ssr: false });
 
 interface SnapchatCampaignsSectionProps {
   storeId: string | null;
@@ -287,6 +287,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
 
   const connectionState = getConnectionState();
 
+  // بيانات Meta للإجمالي
+  const [metaSummary, setMetaSummary] = useState<{ spend: number; orders: number; sales: number; roas: number } | null>(null);
+
   // حالة طي/فتح كل منصة
   const [platformCollapsed, setPlatformCollapsed] = useState<Record<string, boolean>>({
     snapchat: true,
@@ -314,7 +317,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             </svg>
           </div>
           <h2 className="text-xl font-bold text-white">الحملات الإعلانية</h2>
-          <span className="text-sm text-purple-400">({status.connected ? 1 : 0}/4)</span>
+          <span className="text-sm text-purple-400">({[status.connected, !!metaSummary].filter(Boolean).length}/4)</span>
         </div>
         <svg className={`w-5 h-5 text-purple-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -326,30 +329,36 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
         <div className="p-4 pt-0 space-y-3">
           
           {/* الأرقام الإجمالية لكل المنصات */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
-              <p className="text-xs text-orange-400 mb-1">الصرف الإجمالي</p>
-              <p className="text-2xl font-bold text-white">{(data?.summary?.spend || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
-              <p className="text-xs text-orange-400/70">ر.س</p>
-            </div>
-            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
-              <p className="text-xs text-blue-400 mb-1">المبيعات الإجمالية</p>
-              <p className="text-2xl font-bold text-white">{(data?.summary?.sales || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
-              <p className="text-xs text-blue-400/70">ر.س</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
-              <p className="text-xs text-green-400 mb-1">الطلبات الإجمالية</p>
-              <p className="text-2xl font-bold text-white">{(data?.summary?.orders || 0).toLocaleString('en-US')}</p>
-              <p className="text-xs text-green-400/70">طلب</p>
-            </div>
-            <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
-              <p className="text-xs text-purple-400 mb-1">العائد (ROAS)</p>
-              <p className={`text-2xl font-bold ${(data?.summary?.roas || 0) < 1 ? 'text-red-400' : 'text-white'}`}>
-                {(data?.summary?.roas || 0).toFixed(2)}x
-              </p>
-              <p className="text-xs text-purple-400/70">العائد على الإنفاق</p>
-            </div>
-          </div>
+          {(() => {
+            const totalSpend  = (data?.summary?.spend  || 0) + (metaSummary?.spend  || 0);
+            const totalSales  = (data?.summary?.sales  || 0) + (metaSummary?.sales  || 0);
+            const totalOrders = (data?.summary?.orders || 0) + (metaSummary?.orders || 0);
+            const totalRoas   = totalSpend > 0 ? totalSales / totalSpend : 0;
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
+                  <p className="text-xs text-orange-400 mb-1">الصرف الإجمالي</p>
+                  <p className="text-2xl font-bold text-white">{totalSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-xs text-orange-400/70">ر.س</p>
+                </div>
+                <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
+                  <p className="text-xs text-blue-400 mb-1">المبيعات الإجمالية</p>
+                  <p className="text-2xl font-bold text-white">{totalSales.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-xs text-blue-400/70">ر.س</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
+                  <p className="text-xs text-green-400 mb-1">الطلبات الإجمالية</p>
+                  <p className="text-2xl font-bold text-white">{totalOrders.toLocaleString('en-US')}</p>
+                  <p className="text-xs text-green-400/70">طلب</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
+                  <p className="text-xs text-purple-400 mb-1">العائد (ROAS)</p>
+                  <p className={`text-2xl font-bold ${totalRoas < 1 ? 'text-red-400' : 'text-white'}`}>{totalRoas.toFixed(2)}x</p>
+                  <p className="text-xs text-purple-400/70">العائد على الإنفاق</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Snapchat Platform Card */}
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl overflow-hidden">
@@ -358,6 +367,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
               className="w-full p-4 flex items-center justify-between hover:bg-yellow-500/5 transition-all"
             >
               <div className="flex items-center gap-3">
+                {status.connected && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center">
                   <svg className="w-6 h-6 text-yellow-400" viewBox="0 0 512 512" fill="currentColor">
               <path d="M496.926,366.6c-3.373-9.176-9.8-14.086-17.112-18.153-1.376-.806-2.641-1.451-3.72-1.947-2.182-1.128-4.414-2.22-6.634-3.373-22.8-12.09-40.609-27.341-52.959-45.42a102.889,102.889,0,0,1-9.089-16.269c-1.054-2.766-.992-4.377-.065-5.954a11.249,11.249,0,0,1,3.088-2.818c2.766-1.8,5.669-3.373,8.2-4.7,4.7-2.5,8.5-4.5,10.9-5.954,7.287-4.477,12.5-9.4,15.5-14.629a24.166,24.166,0,0,0,1.863-22.031c-4.328-12.266-17.9-19.263-28.263-19.263a35.007,35.007,0,0,0-9.834,1.376c-.124.037-.236.074-.347.111,0-1.451.024-2.915.024-4.377,0-22.92-2.508-46.152-10.9-67.615C378.538,91.727,341.063,56.7,286.741,50.6a118.907,118.907,0,0,0-12.293-.621h-36.9a118.907,118.907,0,0,0-12.293.621c-54.31,6.1-91.785,41.127-110.839,84.168-8.4,21.463-10.9,44.7-10.9,67.615,0,1.462.012,2.926.024,4.377-.111-.037-.223-.074-.347-.111a35.007,35.007,0,0,0-9.834-1.376c-10.362,0-23.935,7-28.263,19.263a24.166,24.166,0,0,0,1.863,22.031c3,5.233,8.213,10.152,15.5,14.629,2.4,1.451,6.2,3.46,10.9,5.954,2.52,1.327,5.418,2.9,8.181,4.7a11.3,11.3,0,0,1,3.088,2.818c.927,1.576.989,3.187-.065,5.954a102.889,102.889,0,0,1-9.089,16.269c-12.35,18.079-30.161,33.33-52.959,45.42-2.22,1.153-4.452,2.245-6.634,3.373-1.079.5-2.344,1.141-3.72,1.947-7.312,4.067-13.739,8.977-17.112,18.153-3.6,9.834-1.044,20.882,7.6,32.838a71.2,71.2,0,0,0,33.787,19.016c4.278.2,8.7-.161,13.168-.533,3.9-.322,7.9-.657,11.778-.657a53.666,53.666,0,0,1,9.725.806c.682,1.054,1.376,2.182,2.108,3.4,4.7,7.823,11.168,18.54,24.077,29.2,13.8,11.4,32.018,21.041,57.271,28.489a12.478,12.478,0,0,1,3.633,1.54c3.088,4.278,8.083,7.947,15.259,11.242,8.362,3.844,18.8,6.746,31.1,8.635a245.762,245.762,0,0,0,37.238,2.817c12.8,0,25.371-.918,37.238-2.817,12.3-1.889,22.738-4.791,31.1-8.635,7.176-3.3,12.171-6.964,15.259-11.242a12.478,12.478,0,0,1,3.633-1.54c25.253-7.448,43.469-17.087,57.271-28.489,12.909-10.659,19.375-21.376,24.077-29.2.732-1.215,1.426-2.344,2.108-3.4a53.666,53.666,0,0,1,9.725-.806c3.881,0,7.874.335,11.778.657,4.464.372,8.89.732,13.168.533a71.2,71.2,0,0,0,33.787-19.016C497.97,387.482,500.526,376.434,496.926,366.6Z"/>
@@ -792,6 +802,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
               <svg className={`w-5 h-5 text-indigo-400 transition-transform ${platformCollapsed.meta ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
+              {metaSummary && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-bold text-white">META ADS</h3>
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
@@ -803,7 +814,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             </button>
             {!platformCollapsed.meta && storeId && (
               <div className="border-t border-indigo-500/10">
-                <MetaAdsCard storeId={storeId} embedded />
+                <MetaAdsCard storeId={storeId} embedded onSummaryLoaded={(s) => {
+                  if (s) setMetaSummary({ spend: s.spend, orders: s.conversions, sales: s.revenue ?? 0, roas: s.roas ?? 0 });
+                }} />
               </div>
             )}
           </div>

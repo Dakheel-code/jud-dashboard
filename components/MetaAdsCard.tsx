@@ -20,7 +20,8 @@ interface MetaInsights {
   spend: number; impressions: number; clicks: number; reach: number;
   ctr: number; cpc: number; cpm: number; conversions: number; currency: string;
 }
-interface Props { storeId: string; embedded?: boolean; }
+interface SummaryOut { spend: number; conversions: number; revenue: number; roas: number; currency: string; }
+interface Props { storeId: string; embedded?: boolean; onSummaryLoaded?: (s: SummaryOut | null) => void; }
 
 const DATE_PRESETS = [
   { label: 'اليوم',   value: 'today' },
@@ -46,7 +47,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 function fmt(n: number) { return n?.toLocaleString('ar-SA') ?? '0'; }
 
-export default function MetaAdsCard({ storeId, embedded = false }: Props) {
+export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded }: Props) {
   const [connection, setConnection]           = useState<MetaConnection | null>(null);
   const [loadingConn, setLoadingConn]         = useState(true);
   const [isCollapsed, setIsCollapsed]         = useState(true);
@@ -79,14 +80,18 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
 
   const fetchCachedInsights = useCallback(async (preset: string) => {
     try {
-      // جلب مباشر من Meta API دائماً
       const live = await fetch(`/api/meta/insights-live?storeId=${storeId}&datePreset=${preset}`);
-      if (live.ok) { const d = await live.json(); setInsights(d.summary || null); return; }
-      // fallback: الكاش
+      if (live.ok) {
+        const d = await live.json();
+        const s = d.summary || null;
+        setInsights(s);
+        onSummaryLoaded?.(s ? { spend: s.spend, conversions: s.conversions, revenue: s.revenue ?? 0, roas: s.roas ?? 0, currency: s.currency } : null);
+        return;
+      }
       const cached = await fetch(`/api/meta/insights?storeId=${storeId}&datePreset=${preset}`);
       if (cached.ok) { const d = await cached.json(); setInsights(d.summary || null); }
     } catch { /* silent */ }
-  }, [storeId]);
+  }, [storeId, onSummaryLoaded]);
 
   useEffect(() => { fetchConnection(); }, [fetchConnection]);
 
