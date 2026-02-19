@@ -131,6 +131,25 @@ CREATE TRIGGER trg_meta_insights_updated_at
 
 
 -- ─────────────────────────────────────────────────────
+-- 1.4 meta_oauth_states
+--     حفظ state مؤقتاً أثناء OAuth flow (CSRF protection)
+--     يُحذف تلقائياً بعد الاستخدام أو انتهاء الصلاحية
+-- ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS meta_oauth_states (
+  state       text PRIMARY KEY,
+  store_id    uuid NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  expires_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_meta_oauth_states_store_id
+  ON meta_oauth_states(store_id);
+
+CREATE INDEX IF NOT EXISTS idx_meta_oauth_states_expires
+  ON meta_oauth_states(expires_at);
+
+
+-- ─────────────────────────────────────────────────────
 -- RLS (Row Level Security) — تفعيل الحماية
 -- ─────────────────────────────────────────────────────
 ALTER TABLE store_meta_connections ENABLE ROW LEVEL SECURITY;
@@ -148,4 +167,10 @@ CREATE POLICY "service_role_full_access_meta_ads"
 
 CREATE POLICY "service_role_full_access_meta_insights"
   ON meta_insights_cache FOR ALL
+  TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE meta_oauth_states ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "service_role_full_access_meta_oauth_states"
+  ON meta_oauth_states FOR ALL
   TO service_role USING (true) WITH CHECK (true);
