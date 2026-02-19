@@ -37,27 +37,37 @@ function toSnapEndTime(date: Date): string {
 }
 
 /**
- * حساب تاريخ البداية والنهاية حسب الفترة (بتوقيت UTC)
+ * حساب تاريخ البداية والنهاية حسب الفترة
+ * بتوقيت السعودية AST (UTC+3) — مطابقة Snapchat Ads Manager
+ * "Last 7 days" = من 7 أيام قبل أمس إلى أمس (لا يشمل اليوم)
  */
 function getDateRange(range: string): { start: Date; end: Date } {
-  const now = new Date();
-  // اليوم الحالي بتوقيت UTC
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const AST_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC+3
+  const nowUTC = Date.now();
+  const nowAST = nowUTC + AST_OFFSET_MS;
+
+  // اليوم الحالي بتوقيت السعودية (منتصف الليل UTC+3)
+  const astDate = new Date(nowAST);
+  const todayAST = new Date(Date.UTC(
+    astDate.getUTCFullYear(),
+    astDate.getUTCMonth(),
+    astDate.getUTCDate()
+  ));
 
   if (range === 'today') {
-    return { start: todayUTC, end: todayUTC };
+    return { start: todayAST, end: todayAST };
   }
 
   if (range === 'yesterday') {
-    const yesterday = new Date(todayUTC);
+    const yesterday = new Date(todayAST);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     return { start: yesterday, end: yesterday };
   }
 
+  // last 7/30/90 days = لا يشمل اليوم الحالي (مثل Snapchat Ads Manager)
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
-  // end = أمس (آخر يوم مكتمل)
-  const end = new Date(todayUTC);
-  end.setUTCDate(end.getUTCDate() - 1);
+  const end = new Date(todayAST);
+  end.setUTCDate(end.getUTCDate() - 1); // أمس
 
   const start = new Date(end);
   start.setUTCDate(start.getUTCDate() - days + 1);
