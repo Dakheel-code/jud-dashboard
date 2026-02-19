@@ -153,21 +153,6 @@ export default function Modal({
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes modal-enter {
-          from {
-            opacity: 0;
-            transform: scale(0.95) translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-        .animate-modal-enter {
-          animation: modal-enter 0.2s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
