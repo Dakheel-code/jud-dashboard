@@ -135,7 +135,7 @@ function UsersManagementContent() {
 
   // modal إدارة الفرق
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [teamForm, setTeamForm] = useState({ name: '', description: '', memberIds: [] as string[] });
+  const [teamForm, setTeamForm] = useState({ name: '', description: '', leaderId: '', memberIds: [] as string[] });
   const [savingTeam, setSavingTeam] = useState(false);
   const [allTeams, setAllTeams] = useState<(Team & { members: AdminUser[] })[]>([]);
   const [loadingAllTeams, setLoadingAllTeams] = useState(false);
@@ -229,7 +229,7 @@ function UsersManagementContent() {
   };
 
   const openTeamModal = () => {
-    setTeamForm({ name: '', description: '', memberIds: [] });
+    setTeamForm({ name: '', description: '', leaderId: '', memberIds: [] });
     fetchAllTeams();
     setShowTeamModal(true);
   };
@@ -246,7 +246,7 @@ function UsersManagementContent() {
       if (res.ok) {
         await fetchAllTeams();
         await fetchMyTeam();
-        setTeamForm({ name: '', description: '', memberIds: [] });
+        setTeamForm({ name: '', description: '', leaderId: '', memberIds: [] });
         setResultModalType('success');
         setResultModalMessage('تم إنشاء الفريق بنجاح');
         setShowResultModal(true);
@@ -1266,6 +1266,19 @@ function UsersManagementContent() {
                   onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
                   className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white placeholder-purple-400/50 focus:outline-none focus:border-yellow-400"
                 />
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">مدير الفريق *</label>
+                  <select
+                    value={teamForm.leaderId}
+                    onChange={(e) => setTeamForm({ ...teamForm, leaderId: e.target.value })}
+                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-yellow-400 [&>option]:bg-[#1a0a2e]"
+                  >
+                    <option value="">اختر مدير الفريق...</option>
+                    {users.filter(u => u.is_active).map(u => (
+                      <option key={u.id} value={u.id}>{u.name} — {u.role}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm text-purple-300 mb-2">أعضاء الفريق</label>
                   <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">

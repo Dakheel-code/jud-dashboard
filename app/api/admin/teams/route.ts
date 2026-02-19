@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   if (!auth.authenticated) return auth.error!;
 
   try {
-    const { name, description, memberIds } = await request.json();
+    const { name, description, leaderId, memberIds } = await request.json();
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "اسم الفريق مطلوب" }, { status: 400 });
@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // إنشاء الفريق مع المستخدم الحالي كمدير
+    // إنشاء الفريق — المدير من الـ form أو المستخدم الحالي كـ fallback
     const { data: team, error: teamError } = await supabase
       .from("teams")
       .insert({
         name: name.trim(),
         description: description?.trim() || null,
-        leader_id: auth.user!.id,
+        leader_id: leaderId || auth.user!.id,
       })
       .select()
       .single();
