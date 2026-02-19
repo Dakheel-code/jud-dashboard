@@ -309,7 +309,6 @@ export async function GET(
       }
 
       if (Object.keys(campaignStatsMap).length === 0 && statsData.total_stats) {
-        // بعض الأحيان يرجع إجمالي بدون breakdown
         statsData.total_stats.forEach((item: any) => {
           const totalStat = item.total_stat;
           if (totalStat?.finalized_data_end_time) {
@@ -317,6 +316,30 @@ export async function GET(
           }
         });
       }
+    }
+
+    // ========== Fallback: جلب stats على مستوى الحساب إذا لم يُرجع breakdown بيانات ==========
+    let accountLevelStats: { spend: number; orders: number; sales: number } | null = null;
+    if (Object.keys(campaignStatsMap).length === 0) {
+      const accStatsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${encodeURIComponent('spend,conversion_purchases,conversion_purchases_value')}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}`;
+      try {
+        const accRes = await fetch(accStatsUrl, { headers });
+        if (accRes.ok) {
+          const accData = await accRes.json();
+          // محاولة استخراج من total_stats أو timeseries_stats
+          const s = accData?.total_stats?.[0]?.total_stat?.stats
+                 || accData?.total_stats?.[0]?.stats
+                 || accData?.timeseries_stats?.[0]?.timeseries_stat?.timeseries?.[0]?.stats
+                 || null;
+          if (s) {
+            accountLevelStats = {
+              spend:  (s.spend || 0) / 1_000_000,
+              orders: s.conversion_purchases || 0,
+              sales:  (s.conversion_purchases_value || 0) / 1_000_000,
+            };
+          }
+        }
+      } catch { /* silent */ }
     }
 
     // ========== الخطوة 3: دمج الحملات مع الإحصائيات ==========
@@ -375,8 +398,15 @@ export async function GET(
       { spend: 0, orders: 0, sales: 0 }
     );
 
-    summary.spend = Math.round(summary.spend * 100) / 100;
-    summary.sales = Math.round(summary.sales * 100) / 100;
+    // إذا لم تُرجع campaign-level stats أي بيانات، استخدم account-level stats
+    if (summary.spend === 0 && accountLevelStats) {
+      summary.spend  = Math.round(accountLevelStats.spend  * conversionRate * 100) / 100;
+      summary.orders = accountLevelStats.orders;
+      summary.sales  = Math.round(accountLevelStats.sales  * conversionRate * 100) / 100;
+    } else {
+      summary.spend = Math.round(summary.spend * 100) / 100;
+      summary.sales = Math.round(summary.sales * 100) / 100;
+    }
 
     const summaryRoas =
       summary.spend > 0 ? Math.round((summary.sales / summary.spend) * 100) / 100 : 0;
