@@ -22,6 +22,20 @@ interface AdminUser {
   created_at: string;
   avatar?: string;
   provider?: string;
+  team_id?: string;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  leader_id: string | null;
+}
+
+interface TeamMember {
+  member_id: string;
+  team_id: string;
+  leader_id: string;
 }
 
 const ROLES = [
@@ -112,8 +126,16 @@ function UsersManagementContent() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // نظام الفرق
+  const [myTeam, setMyTeam] = useState<Team | null>(null);
+  const [teamMembers, setTeamMembers] = useState<AdminUser[]>([]);
+  const [teamView, setTeamView] = useState<'all' | 'my-team'>('all');
+  const [teamMemberFilter, setTeamMemberFilter] = useState<string>('all');
+  const [loadingTeam, setLoadingTeam] = useState(false);
+
   useEffect(() => {
     fetchUsers();
+    fetchMyTeam();
     
     // تحديث تلقائي كل 60 ثانية (heartbeat يُحدّث last_seen_at كل 60 ثانية)
     const interval = setInterval(() => {
@@ -128,7 +150,8 @@ function UsersManagementContent() {
   // فلترة المستخدمين — useMemo لتجنب إعادة الحساب في كل render
   const filteredUsers = useMemo(() => {
     const q = debouncedSearch.toLowerCase();
-    return users.filter(user => {
+    const baseList = teamView === 'my-team' ? teamMembers : users;
+    return baseList.filter(user => {
       const matchesSearch = !q || 
         user.name.toLowerCase().includes(q) ||
         user.username.toLowerCase().includes(q) ||
@@ -137,13 +160,15 @@ function UsersManagementContent() {
       const matchesRole = roleFilter === 'all' || 
         (user.roles || [user.role]).includes(roleFilter);
     
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && user.is_active) ||
-      (statusFilter === 'inactive' && !user.is_active);
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'active' && user.is_active) ||
+        (statusFilter === 'inactive' && !user.is_active);
+
+      const matchesMember = teamMemberFilter === 'all' || user.id === teamMemberFilter;
     
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesRole && matchesStatus && matchesMember;
     });
-  }, [users, debouncedSearch, roleFilter, statusFilter]);
+  }, [users, teamMembers, teamView, debouncedSearch, roleFilter, statusFilter, teamMemberFilter]);
 
   // إحصائيات — useMemo
   const stats = useMemo(() => ({
@@ -164,6 +189,22 @@ function UsersManagementContent() {
     } catch (err) {
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyTeam = async () => {
+    setLoadingTeam(true);
+    try {
+      const res = await fetch('/api/admin/teams/my');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.team) {
+        setMyTeam(data.team);
+        setTeamMembers(data.members || []);
+      }
+    } catch {
+    } finally {
+      setLoadingTeam(false);
     }
   };
 
@@ -470,6 +511,36 @@ function UsersManagementContent() {
           </div>
         </div>
 
+        {/* Toggle الفرق — يظهر فقط إذا المستخدم مدير فريق */}
+        {myTeam && (
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={() => { setTeamView('all'); setTeamMemberFilter('all'); }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                teamView === 'all'
+                  ? 'bg-purple-600 text-white border border-purple-500'
+                  : 'bg-purple-950/40 text-purple-400 border border-purple-500/30 hover:bg-purple-500/10'
+              }`}
+            >
+              جميع المستخدمين
+            </button>
+            <button
+              onClick={() => { setTeamView('my-team'); setTeamMemberFilter('all'); }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                teamView === 'my-team'
+                  ? 'bg-yellow-600/80 text-white border border-yellow-500'
+                  : 'bg-purple-950/40 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/10'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              فريقي — {myTeam.name}
+              <span className="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-0.5 rounded-full">{teamMembers.length}</span>
+            </button>
+          </div>
+        )}
+
         {/* فلترة وبحث */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -516,6 +587,22 @@ function UsersManagementContent() {
               </select>
             </div>
 
+            {/* فلتر أعضاء الفريق — يظهر فقط في عرض الفريق */}
+            {teamView === 'my-team' && teamMembers.length > 0 && (
+              <div className="w-full lg:w-52">
+                <select
+                  value={teamMemberFilter}
+                  onChange={(e) => setTeamMemberFilter(e.target.value)}
+                  className="w-full px-4 py-3 bg-yellow-900/20 border border-yellow-500/30 rounded-xl text-white focus:outline-none focus:border-yellow-400 [&>option]:bg-[#1a0a2e]"
+                >
+                  <option value="all">جميع الأعضاء</option>
+                  {teamMembers.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* زر إعادة التعيين */}
             {(searchQuery || roleFilter !== 'all' || statusFilter !== 'all') && (
               <button
@@ -523,6 +610,7 @@ function UsersManagementContent() {
                   setSearchQuery('');
                   setRoleFilter('all');
                   setStatusFilter('all');
+                  setTeamMemberFilter('all');
                 }}
                 className="px-4 py-3 text-purple-400 border border-purple-500/30 hover:bg-purple-500/10 rounded-xl transition-all flex items-center gap-2"
               >
