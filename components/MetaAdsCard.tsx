@@ -339,25 +339,44 @@ export default function MetaAdsCard({ storeId, embedded = false }: Props) {
     return <div className="bg-transparent">{renderBody()}</div>;
   }
 
+  const isNotConnected = !connection || connection.status === 'revoked' || connection.status === 'error';
+
   return (
     <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
-      {/* Header */}
+      {/* Header — نفس نمط Snapchat/Google */}
       <button onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all">
-        <div className="flex items-center gap-3">
-          <svg className="w-5 h-5 text-purple-400 transition-transform shrink-0" style={{ transform: isCollapsed ? '' : 'rotate(180deg)' }}
+        className="w-full px-4 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all">
+
+        {/* يسار: سهم + نقطة الحالة */}
+        <div className="flex items-center gap-2">
+          <svg className={`w-5 h-5 text-purple-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-          {connection?.status === 'active' && <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
+          {connection?.status === 'active' && (
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          )}
+          {/* زر ربط بجانب السهم إذا غير مرتبط */}
+          {isNotConnected && !loadingConn && (
+            <a
+              href={`/api/meta/connect?storeId=${storeId}`}
+              onClick={e => e.stopPropagation()}
+              className="px-3 py-1 text-xs bg-blue-600/30 border border-blue-500/40 text-blue-300 rounded-lg hover:bg-blue-600/50 transition-all"
+            >
+              ربط
+            </a>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 mr-auto">
+        {/* يمين: عنوان + أيقونة */}
+        <div className="flex items-center gap-3">
           <div className="text-right">
-            <h2 className="text-lg font-black text-white tracking-wide">META ADS</h2>
-            <p className="text-xs text-purple-300/60">{subtitle}</p>
+            <h2 className="text-base font-black text-white tracking-widest">META ADS</h2>
+            {connection?.ad_account_name && (
+              <p className="text-xs text-purple-300/60">{connection.ad_account_name}</p>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
             <MetaIcon className="w-5 h-5 text-white" />
           </div>
         </div>
