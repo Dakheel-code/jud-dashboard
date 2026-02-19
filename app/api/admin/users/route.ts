@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('admin_users')
-      .select('id, username, name, email, is_active, avatar, created_at, updated_at, last_login')
+      .select('id, username, name, email, is_active, avatar, created_at, updated_at, last_login, last_seen_at')
       .order('name', { ascending: true });
 
     // فلترة المستخدمين النشطين فقط

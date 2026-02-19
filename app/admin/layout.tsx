@@ -6,6 +6,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import AdminBottomNav from '@/components/AdminBottomNav';
 import AdminAuth from '@/components/AdminAuth';
 import { useBranding } from '@/contexts/BrandingContext';
+import PresenceHeartbeat from './PresenceHeartbeat';
 
 export default function AdminLayout({
   children,
@@ -33,6 +34,7 @@ export default function AdminLayout({
 
   return (
     <AdminAuth>
+      <PresenceHeartbeat />
       <div className="min-h-screen bg-[#0a0118] flex">
         {/* Sidebar */}
         <AdminSidebar 

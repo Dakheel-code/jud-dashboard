@@ -18,6 +18,7 @@ interface AdminUser {
   permissions: string[];
   is_active: boolean;
   last_login?: string;
+  last_seen_at?: string;
   created_at: string;
   avatar?: string;
   provider?: string;
@@ -114,10 +115,10 @@ function UsersManagementContent() {
   useEffect(() => {
     fetchUsers();
     
-    // تحديث تلقائي كل 10 ثواني لعرض حالة الاتصال بشكل لحظي
+    // تحديث تلقائي كل 60 ثانية (heartbeat يُحدّث last_seen_at كل 60 ثانية)
     const interval = setInterval(() => {
       fetchUsers();
-    }, 10000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);
@@ -605,7 +606,9 @@ function UsersManagementContent() {
                       {user.is_active ? 'نشط' : 'معطل'}
                     </button>
                     <span className="text-purple-500 text-xs">
-                      {user.last_login
+                      {user.last_seen_at
+                        ? timeAgo(user.last_seen_at)
+                        : user.last_login
                         ? timeAgo(user.last_login)
                         : 'لم يسجل دخول'}
                     </span>
@@ -733,14 +736,18 @@ function UsersManagementContent() {
                         </button>
                       </td>
                       <td className="p-4">
-                        {user.last_login && (Date.now() - new Date(user.last_login).getTime()) < 5 * 60 * 1000 ? (
-                          <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل الآن"></span>
-                        ) : (
-                          <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>
-                        )}
+                        {(() => {
+                          const ONLINE_MS = 2 * 60 * 1000;
+                          const isOnline = !!user.last_seen_at && Date.now() - new Date(user.last_seen_at).getTime() <= ONLINE_MS;
+                          return isOnline
+                            ? <span className="inline-block w-3 h-3 bg-green-400 rounded-full animate-pulse" title="متصل الآن"></span>
+                            : <span className="inline-block w-3 h-3 bg-red-500 rounded-full" title="غير متصل"></span>;
+                        })()}
                       </td>
                       <td className="p-4 text-purple-400 text-sm">
-                        {user.last_login
+                        {user.last_seen_at
+                          ? timeAgo(user.last_seen_at)
+                          : user.last_login
                           ? timeAgo(user.last_login)
                           : 'لم يسجل دخول'}
                       </td>
