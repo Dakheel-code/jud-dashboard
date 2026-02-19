@@ -9,14 +9,15 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  return createClient(url, key);
 }
 
 export async function GET() {
@@ -49,10 +50,10 @@ export async function GET() {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    // جلب البيانات من DB مباشرة
+    // جلب البيانات الأساسية من DB
     const { data: user, error } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, phone, avatar, role, roles, permissions, is_active')
+      .select('id, username, name, email, phone, avatar, is_active')
       .eq('id', userId)
       .single();
 
@@ -60,7 +61,17 @@ export async function GET() {
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    // جلب role/roles/permissions من RBAC (مصدر الحقيقة)
+    const rbac = await getUserPermissions(userId);
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        role:        rbac.roles[0] || 'employee',
+        roles:       rbac.roles,
+        permissions: rbac.permissions,
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'خطأ في الخادم' }, { status: 500 });
   }
