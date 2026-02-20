@@ -331,7 +331,15 @@ export async function GET(
       };
     });
 
+    // campaigns_with_stats: فلترة صارمة — spend>0 أو impressions>0 أو swipes>0
+    const campaignsWithData = campaignsWithStats.filter(
+      (c) => (c.spend || 0) > 0 || (c.impressions || 0) > 0 || (c.swipes || 0) > 0
+    );
+
     // ترتيب حسب الصرف
+    campaignsWithData.sort((a, b) => (b.spend || 0) - (a.spend || 0));
+
+    // campaigns_all: كل الحملات مرتبة (spend أولاً)
     campaignsWithStats.sort((a, b) => (b.spend || 0) - (a.spend || 0));
 
     // ========== الخطوة 4: حساب Summary ==========
@@ -370,11 +378,13 @@ export async function GET(
     const responseTime = Date.now() - startTime;
 
     // بناء الاستجابة
+    const showAll = searchParams.get('show_all') === 'true';
+
     const response: any = {
       success: true,
-      currency: displayCurrency, // دائماً SAR
-      original_currency: accountCurrency, // العملة الأصلية من الحساب
-      conversion_rate: conversionRate, // معامل التحويل المستخدم
+      currency: displayCurrency,
+      original_currency: accountCurrency,
+      conversion_rate: conversionRate,
       time: {
         start: normalizedStart,
         end: normalizedEnd,
@@ -387,7 +397,13 @@ export async function GET(
         sales: summary.sales,
         roas: summaryRoas,
       },
-      campaigns: campaignsWithStats,
+      campaigns_with_stats: campaignsWithData,
+      ...(showAll ? { campaigns_all: campaignsWithStats } : {}),
+      coverage: {
+        stats_rows: Object.keys(campaignStatsMap).length,
+        returned_with_stats: campaignsWithData.length,
+        returned_all: campaignsWithStats.length,
+      },
       response_time_ms: responseTime,
     };
 

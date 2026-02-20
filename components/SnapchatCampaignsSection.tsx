@@ -86,6 +86,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapData, setSnapData]         = useState<{ spend: number; sales: number; orders: number; roas: number } | null>(null);
   const [metaData, setMetaData]         = useState<{ spend: number; sales: number; orders: number; roas: number } | null>(null);
   const [snapLoading, setSnapLoading]   = useState(false);
+  const [snapCampaigns, setSnapCampaigns] = useState<any[]>([]);
+  const [snapWarning, setSnapWarning]     = useState<string | null>(null);
+  const [snapTime, setSnapTime]           = useState<any | null>(null);
+  const [snapCoverage, setSnapCoverage]   = useState<{ stats_rows: number; returned_with_stats: number; returned_all: number } | null>(null);
+  const [snapShowAll, setSnapShowAll]     = useState(false);
+  const [snapAllCampaigns, setSnapAllCampaigns] = useState<any[]>([]);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
   const directIntRef = useRef(directIntegrations);
@@ -174,9 +180,21 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
         roas:   d.summary?.roas   || 0,
       };
       setSnapData(s);
+      setSnapCampaigns(d.campaigns_with_stats ?? []);
+      setSnapAllCampaigns(d.campaigns_all ?? d.campaigns_with_stats ?? []);
+      setSnapWarning(d.warning ?? null);
+      setSnapTime(d.time ?? null);
+      setSnapCoverage(d.coverage ?? null);
       if (d.success) onDataLoaded?.(s);
     } catch (e: any) {
-      if (e?.name !== 'AbortError') setSnapData({ spend: 0, sales: 0, orders: 0, roas: 0 });
+      if (e?.name !== 'AbortError') {
+        setSnapData({ spend: 0, sales: 0, orders: 0, roas: 0 });
+        setSnapCampaigns([]);
+        setSnapAllCampaigns([]);
+        setSnapWarning(null);
+        setSnapTime(null);
+        setSnapCoverage(null);
+      }
     } finally {
       if (!controller.signal.aborted) setSnapLoading(false);
     }
@@ -185,6 +203,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   // عند تغيير الفترة: مسح Snapchat فقط (ليس Meta)
   useEffect(() => {
     setSnapData(null);
+    setSnapCampaigns([]);
+    setSnapAllCampaigns([]);
+    setSnapWarning(null);
+    setSnapTime(null);
+    setSnapCoverage(null);
+    setSnapShowAll(false);
     fetchSnap(datePreset);
   }, [datePreset, fetchSnap]);
 
@@ -275,6 +299,24 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             ))}
           </div>
 
+          {/* ─── تحذير اكتمال البيانات ───────────────────── */}
+          {snapConnected && (snapWarning || snapTime?.finalized_end) && (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-yellow-500/8 border border-yellow-500/20 text-sm">
+              <span className="text-yellow-400 text-base shrink-0 mt-0.5">⚠️</span>
+              <div className="text-right">
+                <span className="text-yellow-300 font-semibold">البيانات مكتملة حتى: </span>
+                <span className="text-yellow-200/80">
+                  {snapTime?.finalized_end
+                    ? new Date(snapTime.finalized_end).toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh', dateStyle: 'medium', timeStyle: 'short' })
+                    : snapWarning}
+                </span>
+                {snapTime?.finalized_end && (
+                  <p className="text-yellow-400/60 text-xs mt-0.5">قد تكون ساعات اليوم الأخيرة غير مكتملة.</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ─── فلتر الأيام + فلتر المنصات ─────────────── */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* فلتر الأيام */}
@@ -359,7 +401,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
 
                     {/* الصرف */}
                     <div className="text-center">
-                      {row.loading && row.spend === 0 ? (
+                      {row.loading ? (
                         <div className="w-4 h-4 border border-purple-400 border-t-transparent rounded-full animate-spin mx-auto" />
                       ) : row.connected ? (
                         <p className="text-sm font-bold text-orange-300">{fmtNum(row.spend)}</p>
@@ -450,6 +492,99 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
               );
             })()}
           </div>
+
+          {/* ─── جدول حملات Snapchat ─────────────────────── */}
+          {snapConnected && (snapCampaigns.length > 0 || snapLoading) && (
+            <div className="rounded-xl border border-yellow-500/15 overflow-hidden">
+              {/* رأس الجدول */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-yellow-500/10 border-b border-yellow-500/15">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400"><SnapIcon /></span>
+                  <span className="text-sm font-bold text-yellow-300">حملات Snapchat</span>
+                  {snapCoverage && (
+                    <span className="text-xs text-yellow-400/50">
+                      ({snapCoverage.returned_with_stats} حملة نشطة / {snapCoverage.returned_all} إجمالي)
+                    </span>
+                  )}
+                </div>
+                {/* Toggle إظهار الكل */}
+                {snapCoverage && snapCoverage.returned_all > snapCoverage.returned_with_stats && (
+                  <button
+                    onClick={() => setSnapShowAll(v => !v)}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border transition-all ${
+                      snapShowAll
+                        ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+                        : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-yellow-500/30 hover:text-yellow-400/70'
+                    }`}
+                  >
+                    <span>{snapShowAll ? '✓' : '○'}</span>
+                    إظهار الحملات بدون بيانات ({snapCoverage.returned_all - snapCoverage.returned_with_stats})
+                  </button>
+                )}
+              </div>
+
+              {/* تحذير اكتمال البيانات */}
+              {snapWarning && (
+                <div className="px-4 py-2 bg-yellow-500/5 border-b border-yellow-500/10 text-xs text-yellow-400/70 flex items-center gap-1.5">
+                  <span>⚠</span> {snapWarning}
+                </div>
+              )}
+
+              {/* أعمدة الجدول */}
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-0 bg-purple-900/20 px-4 py-2 text-xs text-purple-400/50 font-semibold border-b border-purple-500/10">
+                <span className="text-right">الحملة</span>
+                <span className="text-center">الصرف</span>
+                <span className="text-center">الطلبات</span>
+                <span className="text-center">المبيعات</span>
+                <span className="text-center">ROAS</span>
+              </div>
+
+              {/* صفوف الحملات */}
+              {snapLoading && snapCampaigns.length === 0 ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-purple-400/50">
+                  <div className="w-4 h-4 border border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  جاري التحميل...
+                </div>
+              ) : (
+                (snapShowAll ? snapAllCampaigns : snapCampaigns).map((c, i, arr) => {
+                  const hasData = (c.spend || 0) > 0 || (c.impressions || 0) > 0 || (c.swipes || 0) > 0;
+                  return (
+                    <div
+                      key={c.campaign_id}
+                      className={`grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-0 px-4 py-2.5 items-center text-sm ${
+                        i < arr.length - 1 ? 'border-b border-purple-500/8' : ''
+                      } ${hasData ? 'hover:bg-yellow-500/5' : 'opacity-40'}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.status === 'ACTIVE' ? 'bg-green-400' : 'bg-gray-600'}`} />
+                        <span className="text-white/80 text-xs truncate">{c.campaign_name}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className={`text-xs font-bold ${hasData ? 'text-orange-300' : 'text-gray-600'}`}>
+                          {hasData ? fmtNum(c.spend) : '—'}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className={`text-xs font-bold ${hasData ? 'text-green-300' : 'text-gray-600'}`}>
+                          {hasData ? fmtNum(c.orders) : '—'}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className={`text-xs font-bold ${hasData ? 'text-blue-300' : 'text-gray-600'}`}>
+                          {hasData ? fmtNum(c.sales) : '—'}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className={`text-xs font-bold ${!hasData ? 'text-gray-600' : c.roas < 1 ? 'text-red-400' : 'text-purple-300'}`}>
+                          {hasData ? `${c.roas.toFixed(2)}x` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
 
           {/* MetaAdsCard مخفي لجلب البيانات تلقائياً مع مزامنة الفترة */}
           {storeId && (() => {
