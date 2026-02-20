@@ -418,7 +418,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
   const isEmpty = filteredFolders.length === 0 && filteredFiles.length === 0;
 
   return (
-    <div className="mt-6 mb-6" dir="rtl">
+    <div className="mt-6 mb-6">
       {/* Section Header */}
       <div className="bg-[#1a0a2e] rounded-2xl border border-purple-500/20 overflow-hidden">
         {/* Top Bar */}
@@ -426,9 +426,23 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
           {/* Header Row */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+            className="w-full px-5 py-4 flex items-center hover:bg-purple-500/5 transition-all"
           >
+            {/* زر الطي - يسار */}
+            <svg
+              className={`w-5 h-5 text-purple-400 transition-transform duration-300 flex-shrink-0 ${isCollapsed ? '' : 'rotate-180'}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            {/* فراغ مرن */}
+            <div className="flex-1" />
+            {/* أيقونة + عنوان - يمين */}
             <div className="flex items-center gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-white text-right">التصاميم</h2>
+                <p className="text-xs text-purple-400 text-right">إدارة ملفات التصاميم عبر Google Drive</p>
+              </div>
               <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round"
@@ -436,17 +450,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
                   />
                 </svg>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">التصاميم</h2>
-                <p className="text-xs text-purple-400">إدارة ملفات التصاميم عبر Google Drive</p>
-              </div>
             </div>
-            <svg
-              className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
           </button>
 
           {/* Tools Row - only when expanded */}
