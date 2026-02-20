@@ -352,8 +352,9 @@ export async function validateConnection(
   connection: GoogleAdsConnection
 ): Promise<boolean> {
   try {
-    const info = await getCustomerInfo(connection);
-    return info !== null;
+    // نحاول الحصول على access token فقط — إذا نجح فالـ credentials صحيحة
+    await getAccessToken(connection.client_id, connection.client_secret, connection.refresh_token);
+    return true;
   } catch {
     return false;
   }
