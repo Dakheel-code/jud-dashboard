@@ -223,6 +223,23 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const directIntRef = useRef(directIntegrations);
   useEffect(() => { directIntRef.current = directIntegrations; }, [directIntegrations]);
 
+  // ─── Google Ads Connection State ──────────────────────
+  const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
+  const [googleAdsAccountName, setGoogleAdsAccountName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!storeId) return;
+    fetch(`/api/google-ads/status?store_id=${storeId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.connected) {
+          setGoogleAdsConnected(true);
+          setGoogleAdsAccountName(d.connections?.[0]?.customer_name || d.connections?.[0]?.customer_id);
+        }
+      })
+      .catch(() => {});
+  }, [storeId]);
+
   // ─── Meta Ad Account Modal ───────────────────────────
   const searchParams = useSearchParams();
   const [metaModal, setMetaModal]           = useState(false);
@@ -347,7 +364,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   // المنصات المتصلة
   const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
   const metaConnected = !!metaConn?.ad_account_id && (metaConn?.status === 'active' || metaConn?.status === 'connected');
-  const connectedCount = [snapConnected, metaConnected].filter(Boolean).length;
+  const connectedCount = [snapConnected, metaConnected, googleAdsConnected].filter(Boolean).length;
 
   // بناء صفوف الجدول
   const rows: PlatformRow[] = ALL_PLATFORMS.map(key => {
@@ -367,6 +384,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       spend: metaData?.spend || 0, sales: metaData?.sales || 0,
       orders: metaData?.orders || 0, roas: metaData?.roas || 0,
       loading: false,
+    };
+    if (key === 'google') return {
+      key, name: cfg.name, icon: cfg.icon,
+      connected: googleAdsConnected,
+      accountName: googleAdsAccountName,
+      spend: 0, sales: 0, orders: 0, roas: 0, loading: false,
     };
     return { key, name: cfg.name, icon: cfg.icon, connected: false, spend: 0, sales: 0, orders: 0, roas: 0, loading: false };
   });
