@@ -9,6 +9,7 @@ import { TasksByCategory } from '@/types';
 const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false });
 const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
 const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false });
+const GoogleAdsConnectButton = dynamic<{ storeId: string }>(() => import('@/components/GoogleAdsConnectButton'), { ssr: false });
 
 interface StoreFullData {
   id: string;
@@ -1749,6 +1750,11 @@ function StoreDetailsContent() {
               {/* المنصات - الربط المباشر */}
               <div className="space-y-3 relative">
                 <h3 className="text-sm font-medium text-purple-300">ربط المنصات الإعلانية</h3>
+                
+                {/* Google Ads Connect Button */}
+                {storeId && (
+                  <GoogleAdsConnectButton storeId={storeId} />
+                )}
                 
                 {/* مؤشر التحميل على كامل المنصات */}
                 {loadingCampaigns && (
