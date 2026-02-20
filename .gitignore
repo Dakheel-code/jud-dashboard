@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Google Service Account (sensitive)
+lib/google-service-account.json
