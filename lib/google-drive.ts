@@ -40,15 +40,26 @@ export interface DriveListResponse {
 
 // Initialize Google Drive client using Service Account
 function getDriveClient() {
-  const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  // Handle both escaped \n (from env files) and literal newlines (from Netlify)
-  const privateKey = rawKey.includes('\\n')
-    ? rawKey.replace(/\\n/g, '\n')
-    : rawKey;
+  let credentials: any;
 
-  const auth = new google.auth.JWT({
-    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
-    key: privateKey,
+  // Option 1: Full JSON as base64 (most reliable for Netlify)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    const json = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_JSON, 'base64').toString('utf8');
+    credentials = JSON.parse(json);
+  } else {
+    // Option 2: Individual env vars
+    const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
+    const privateKey = rawKey.replace(/\\n/g, '\n');
+    credentials = {
+      type: 'service_account',
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
+      private_key: privateKey,
+      project_id: process.env.GOOGLE_PROJECT_ID || 'jud-drive',
+    };
+  }
+
+  const auth = new google.auth.GoogleAuth({
+    credentials,
     scopes: ['https://www.googleapis.com/auth/drive'],
   });
 
