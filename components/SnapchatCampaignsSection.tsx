@@ -416,15 +416,15 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
           </svg>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right">
-            <h2 className="text-lg font-bold text-white">الحملات الإعلانية</h2>
-            <p className="text-xs text-purple-400/60">{connectedCount}/4 منصة متصلة</p>
-          </div>
           <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">الحملات الإعلانية</h2>
+            <p className="text-xs text-purple-400/60">{connectedCount}/4 منصة متصلة</p>
           </div>
         </div>
       </button>
