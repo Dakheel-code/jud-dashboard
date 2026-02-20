@@ -42,7 +42,8 @@ interface CampaignsData {
     roas: number;
     cpa: number;
   };
-  campaigns: Campaign[];
+  campaigns_with_stats: Campaign[];
+  campaigns?: Campaign[];
 }
 
 function CampaignsContent() {
@@ -228,9 +229,9 @@ function CampaignsContent() {
     s.store_url.toLowerCase().includes(storeSearch.toLowerCase())
   );
 
-  const filteredCampaigns = campaignsData?.campaigns.filter(c =>
+  const filteredCampaigns = (campaignsData?.campaigns_with_stats ?? campaignsData?.campaigns ?? []).filter(c =>
     c.campaign_name.toLowerCase().includes(campaignSearch.toLowerCase())
-  ) || [];
+  );
 
   return (
     <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
