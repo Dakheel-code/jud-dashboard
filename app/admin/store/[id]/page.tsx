@@ -1584,6 +1584,9 @@ function StoreDetailsContent() {
           )}
         </div>
 
+        {/* قسم التصاميم */}
+        {storeId && <DesignsSection storeId={storeId} />}
+
         {/* قسم الحملات الإعلانية - الجديد */}
         <SnapchatCampaignsSection 
           storeId={storeId} 
@@ -2632,9 +2635,6 @@ function StoreDetailsContent() {
           </div>
         </div>
       )}
-
-      {/* قسم التصاميم */}
-      {storeId && <DesignsSection storeId={storeId} />}
 
     </div>
   );

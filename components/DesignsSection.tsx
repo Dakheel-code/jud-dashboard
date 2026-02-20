@@ -684,7 +684,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         {/* File Area */}
         <div
           ref={containerRef}
-          className={`p-6 min-h-[300px] transition-all ${
+          className={`p-4 min-h-[120px] transition-all ${
             dragOver
               ? 'bg-purple-900/30 border-2 border-dashed border-purple-400 rounded-xl m-3'
               : ''
@@ -695,15 +695,15 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         >
           {/* Loading state */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-12 h-12 border-4 border-purple-900 border-t-purple-500 rounded-full animate-spin" />
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-10 h-10 border-4 border-purple-900 border-t-purple-500 rounded-full animate-spin" />
               <p className="mt-4 text-sm text-purple-400">جاري تحميل الملفات...</p>
             </div>
           ) : dragOver ? (
             /* Drag over state */
-            <div className="flex flex-col items-center justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-8">
               <svg
-                className="w-16 h-16 text-blue-400 animate-bounce"
+                className="w-12 h-12 text-blue-400 animate-bounce"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -721,10 +721,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             </div>
           ) : isEmpty && !searchQuery ? (
             /* Empty state */
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-20 h-20 bg-purple-900/40 rounded-2xl flex items-center justify-center mb-4">
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="w-14 h-14 bg-purple-900/40 rounded-2xl flex items-center justify-center mb-3">
                 <svg
-                  className="w-10 h-10 text-gray-300"
+                  className="w-7 h-7 text-gray-300"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -744,9 +744,9 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             </div>
           ) : isEmpty && searchQuery ? (
             /* No search results */
-            <div className="flex flex-col items-center justify-center py-20">
+            <div className="flex flex-col items-center justify-center py-8">
               <svg
-                className="w-16 h-16 text-gray-200"
+                className="w-12 h-12 text-gray-200"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
