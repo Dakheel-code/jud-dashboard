@@ -41,7 +41,7 @@ function GoogleAdsInlineButton({ storeId }: { storeId: string }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'فشل في الربط'); }
-      else { setSuccess(true); setTimeout(() => setShowModal(false), 1500); }
+      else { setSuccess(true); setTimeout(() => { setShowModal(false); window.location.reload(); }, 1500); }
     } catch { setError('خطأ في الاتصال'); }
     finally { setSubmitting(false); }
   };
