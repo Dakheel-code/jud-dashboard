@@ -413,12 +413,12 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
   return (
     <div className="mt-8" dir="rtl">
       {/* Section Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-[#1a0a2e] rounded-2xl border border-purple-500/20 overflow-hidden">
         {/* Top Bar */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-l from-blue-50 to-white">
+        <div className="px-6 py-4 border-b border-purple-500/20 bg-purple-500/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -434,8 +434,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">التصاميم</h2>
-                <p className="text-xs text-gray-500">
+                <h2 className="text-lg font-bold text-white">التصاميم</h2>
+                <p className="text-xs text-purple-400">
                   إدارة ملفات التصاميم عبر Google Drive
                 </p>
               </div>
@@ -450,10 +450,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   placeholder="بحث..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-44 pl-3 pr-9 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-gray-50 transition-all"
+                  className="w-44 pl-3 pr-9 py-2 text-sm border border-purple-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-purple-900/30 text-purple-200 placeholder-purple-500 transition-all"
                 />
                 <svg
-                  className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2"
+                  className="w-4 h-4 text-purple-500 absolute right-3 top-1/2 -translate-y-1/2"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -468,13 +468,13 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               </div>
 
               {/* View mode toggle */}
-              <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <div className="flex bg-purple-900/40 rounded-lg p-0.5">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'grid'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
+                      ? 'bg-purple-600/50 text-purple-200 shadow-sm'
+                      : 'text-purple-500 hover:text-purple-300'
                   }`}
                   title="عرض شبكي"
                 >
@@ -486,8 +486,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   onClick={() => setViewMode('list')}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === 'list'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
+                      ? 'bg-purple-600/50 text-purple-200 shadow-sm'
+                      : 'text-purple-500 hover:text-purple-300'
                   }`}
                   title="عرض قائمة"
                 >
@@ -504,7 +504,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               {/* New folder button */}
               <button
                 onClick={() => setShowNewFolderDialog(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-purple-300 bg-purple-900/40 border border-purple-500/30 rounded-lg hover:bg-purple-800/40 hover:border-purple-400/50 transition-all"
               >
                 <svg
                   className="w-4 h-4"
@@ -526,7 +526,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-all shadow-sm shadow-blue-500/20 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-500 transition-all shadow-sm shadow-purple-500/20 disabled:opacity-50"
               >
                 {uploading ? (
                   <>
@@ -588,11 +588,11 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         </div>
 
         {/* Breadcrumb */}
-        <div className="px-6 py-2.5 border-b border-gray-50 bg-gray-50/50">
+        <div className="px-6 py-2.5 border-b border-purple-500/10 bg-purple-500/5">
           <div className="flex items-center gap-1 text-sm">
             <button
               onClick={goToRoot}
-              className="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-1 text-purple-400 hover:text-purple-200 transition-colors"
             >
               <svg
                 className="w-4 h-4"
@@ -627,10 +627,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 </svg>
                 <button
                   onClick={() => navigateBreadcrumb(item, index + 1)}
-                  className={`hover:text-blue-600 transition-colors ${
+                  className={`hover:text-purple-200 transition-colors ${
                     index === breadcrumb.length - 2
-                      ? 'text-gray-900 font-medium'
-                      : 'text-gray-500'
+                      ? 'text-white font-medium'
+                      : 'text-purple-400'
                   }`}
                 >
                   {item.name}
@@ -642,7 +642,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
 
         {/* Error message */}
         {error && (
-          <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 flex items-center gap-2">
+          <div className="mx-6 mt-4 px-4 py-3 bg-red-900/20 border border-red-500/30 rounded-xl text-sm text-red-400 flex items-center gap-2">
             <svg
               className="w-5 h-5 shrink-0"
               fill="none"
@@ -659,7 +659,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             {error}
             <button
               onClick={() => setError(null)}
-              className="mr-auto text-red-400 hover:text-red-600"
+              className="mr-auto text-red-500 hover:text-red-300"
             >
               ✕
             </button>
@@ -669,13 +669,13 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         {/* Upload progress */}
         {uploading && (
           <div className="mx-6 mt-4">
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-purple-900/50 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                className="h-full bg-purple-500 rounded-full transition-all duration-300 ease-out"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1 text-center">
+            <p className="text-xs text-purple-400 mt-1 text-center">
               جاري رفع الملفات... {uploadProgress}%
             </p>
           </div>
@@ -684,9 +684,9 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         {/* File Area */}
         <div
           ref={containerRef}
-          className={`p-6 min-h-[400px] transition-all ${
+          className={`p-6 min-h-[300px] transition-all ${
             dragOver
-              ? 'bg-blue-50/50 border-2 border-dashed border-blue-300 rounded-xl m-3'
+              ? 'bg-purple-900/30 border-2 border-dashed border-purple-400 rounded-xl m-3'
               : ''
           }`}
           onDragOver={handleDragOver}
@@ -696,8 +696,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
           {/* Loading state */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-12 h-12 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
-              <p className="mt-4 text-sm text-gray-500">جاري تحميل الملفات...</p>
+              <div className="w-12 h-12 border-4 border-purple-900 border-t-purple-500 rounded-full animate-spin" />
+              <p className="mt-4 text-sm text-purple-400">جاري تحميل الملفات...</p>
             </div>
           ) : dragOver ? (
             /* Drag over state */
@@ -715,14 +715,14 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              <p className="mt-4 text-lg font-medium text-blue-600">
+              <p className="mt-4 text-lg font-medium text-purple-400">
                 أفلت الملفات هنا للرفع
               </p>
             </div>
           ) : isEmpty && !searchQuery ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+              <div className="w-20 h-20 bg-purple-900/40 rounded-2xl flex items-center justify-center mb-4">
                 <svg
                   className="w-10 h-10 text-gray-300"
                   fill="none"
@@ -737,8 +737,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 font-medium">لا توجد ملفات</p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-purple-300 font-medium">لا توجد ملفات</p>
+              <p className="text-purple-500 text-sm mt-1">
                 اسحب وأفلت الملفات هنا أو اضغط على &quot;رفع ملف&quot;
               </p>
             </div>
@@ -758,8 +758,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
-              <p className="text-gray-500 font-medium mt-4">لا توجد نتائج</p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-purple-300 font-medium mt-4">لا توجد نتائج</p>
+              <p className="text-purple-500 text-sm mt-1">
                 لم يتم العثور على ملفات تطابق &quot;{searchQuery}&quot;
               </p>
             </div>
@@ -770,7 +770,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               {filteredFolders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="group relative bg-white border border-gray-100 rounded-xl p-4 cursor-pointer hover:border-blue-200 hover:shadow-md hover:shadow-blue-500/5 transition-all"
+                  className="group relative bg-purple-900/20 border border-purple-500/20 rounded-xl p-4 cursor-pointer hover:border-purple-400/50 hover:bg-purple-900/40 transition-all"
                   onDoubleClick={() => navigateToFolder(folder.id)}
                   onClick={() => navigateToFolder(folder.id)}
                   onContextMenu={(e) => handleContextMenu(e, folder, 'folder')}
@@ -785,10 +785,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                         <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                       </svg>
                     </div>
-                    <p className="text-sm font-medium text-gray-700 truncate w-full">
+                    <p className="text-sm font-medium text-purple-200 truncate w-full">
                       {folder.name}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-purple-500 mt-0.5">
                       {formatDate(folder.modifiedTime)}
                     </p>
                   </div>
@@ -800,7 +800,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                         e.stopPropagation();
                         handleContextMenu(e, folder, 'folder');
                       }}
-                      className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                      className="p-1 rounded-md hover:bg-purple-700/40 text-purple-500 hover:text-purple-300"
                     >
                       <svg
                         className="w-4 h-4"
@@ -820,7 +820,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 return (
                   <div
                     key={file.id}
-                    className="group relative bg-white border border-gray-100 rounded-xl p-4 cursor-pointer hover:border-blue-200 hover:shadow-md hover:shadow-blue-500/5 transition-all"
+                    className="group relative bg-purple-900/20 border border-purple-500/20 rounded-xl p-4 cursor-pointer hover:border-purple-400/50 hover:bg-purple-900/40 transition-all"
                     onClick={() => {
                       if (file.webViewLink) {
                         window.open(file.webViewLink, '_blank');
@@ -830,7 +830,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   >
                     <div className="flex flex-col items-center text-center">
                       {/* Thumbnail or icon */}
-                      <div className="w-14 h-14 flex items-center justify-center mb-2 rounded-lg bg-gray-50">
+                      <div className="w-14 h-14 flex items-center justify-center mb-2 rounded-lg bg-purple-900/40">
                         {file.thumbnailLink ? (
                           <img
                             src={file.thumbnailLink}
@@ -841,10 +841,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                           <span className="text-3xl">{icon}</span>
                         )}
                       </div>
-                      <p className="text-sm font-medium text-gray-700 truncate w-full">
+                      <p className="text-sm font-medium text-purple-200 truncate w-full">
                         {file.name}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-purple-500 mt-0.5">
                         {formatFileSize(file.size)}
                       </p>
                     </div>
@@ -856,7 +856,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                           e.stopPropagation();
                           handleContextMenu(e, file, 'file');
                         }}
-                        className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                        className="p-1 rounded-md hover:bg-purple-700/40 text-purple-500 hover:text-purple-300"
                       >
                         <svg
                           className="w-4 h-4"
@@ -875,7 +875,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             /* List view */
             <div className="overflow-hidden">
               {/* Table header */}
-              <div className="grid grid-cols-12 gap-4 px-4 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wider border-b border-gray-100">
+              <div className="grid grid-cols-12 gap-4 px-4 py-2.5 text-xs font-medium text-purple-500 uppercase tracking-wider border-b border-purple-500/20">
                 <div className="col-span-6">الاسم</div>
                 <div className="col-span-2">الحجم</div>
                 <div className="col-span-2">تاريخ التعديل</div>
@@ -886,7 +886,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               {filteredFolders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center hover:bg-gray-50 cursor-pointer rounded-lg transition-colors group"
+                  className="grid grid-cols-12 gap-4 px-4 py-3 items-center hover:bg-purple-900/30 cursor-pointer rounded-lg transition-colors group"
                   onClick={() => navigateToFolder(folder.id)}
                   onContextMenu={(e) => handleContextMenu(e, folder, 'folder')}
                 >
@@ -898,22 +898,22 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                     >
                       <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                     </svg>
-                    <span className="text-sm font-medium text-gray-700 truncate">
+                    <span className="text-sm font-medium text-purple-200 truncate">
                       {folder.name}
                     </span>
                   </div>
-                  <div className="col-span-2 text-sm text-gray-400">—</div>
-                  <div className="col-span-2 text-sm text-gray-400">
+                  <div className="col-span-2 text-sm text-purple-500">—</div>
+                  <div className="col-span-2 text-sm text-purple-500">
                     {formatDate(folder.modifiedTime)}
                   </div>
                   <div className="col-span-2 flex items-center justify-between">
-                    <span className="text-sm text-gray-400">مجلد</span>
+                    <span className="text-sm text-purple-500">مجلد</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleContextMenu(e, folder, 'folder');
                       }}
-                      className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-all"
+                      className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-purple-700/40 text-purple-500 hover:text-purple-300 transition-all"
                     >
                       <svg
                         className="w-4 h-4"
@@ -933,7 +933,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 return (
                   <div
                     key={file.id}
-                    className="grid grid-cols-12 gap-4 px-4 py-3 items-center hover:bg-gray-50 cursor-pointer rounded-lg transition-colors group"
+                    className="grid grid-cols-12 gap-4 px-4 py-3 items-center hover:bg-purple-900/30 cursor-pointer rounded-lg transition-colors group"
                     onClick={() => {
                       if (file.webViewLink) {
                         window.open(file.webViewLink, '_blank');
@@ -943,18 +943,18 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   >
                     <div className="col-span-6 flex items-center gap-3">
                       <span className="text-xl shrink-0">{icon}</span>
-                      <span className="text-sm text-gray-700 truncate">
+                      <span className="text-sm text-purple-200 truncate">
                         {file.name}
                       </span>
                     </div>
-                    <div className="col-span-2 text-sm text-gray-400">
+                    <div className="col-span-2 text-sm text-purple-500">
                       {formatFileSize(file.size)}
                     </div>
-                    <div className="col-span-2 text-sm text-gray-400">
+                    <div className="col-span-2 text-sm text-purple-500">
                       {formatDate(file.modifiedTime)}
                     </div>
                     <div className="col-span-2 flex items-center justify-between">
-                      <span className="text-sm text-gray-400 truncate">
+                      <span className="text-sm text-purple-500 truncate">
                         {file.mimeType.split('/').pop()?.substring(0, 10)}
                       </span>
                       <button
@@ -962,7 +962,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                           e.stopPropagation();
                           handleContextMenu(e, file, 'file');
                         }}
-                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-all"
+                        className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-purple-700/40 text-purple-500 hover:text-purple-300 transition-all"
                       >
                         <svg
                           className="w-4 h-4"
@@ -982,11 +982,11 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
 
         {/* Footer - file count */}
         {!loading && (
-          <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between">
-            <span className="text-xs text-gray-400">
+          <div className="px-6 py-3 border-t border-purple-500/10 bg-purple-500/5 flex items-center justify-between">
+            <span className="text-xs text-purple-500">
               {folders.length} مجلد · {files.length} ملف
             </span>
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+            <span className="text-xs text-purple-500 flex items-center gap-1">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
               </svg>
@@ -999,7 +999,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
       {/* ===== Context Menu ===== */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 min-w-[180px] animate-in fade-in zoom-in-95"
+          className="fixed z-50 bg-[#1a0a2e] rounded-xl shadow-xl border border-purple-500/30 py-1.5 min-w-[180px]"
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
@@ -1008,7 +1008,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         >
           {/* Open */}
           <button
-            className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 text-right"
+            className="w-full px-4 py-2 text-sm text-purple-200 hover:bg-purple-800/50 flex items-center gap-2.5 text-right"
             onClick={() => {
               if (contextMenu.type === 'folder') {
                 navigateToFolder(contextMenu.item.id);
@@ -1022,7 +1022,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             }}
           >
             <svg
-              className="w-4 h-4 text-gray-400"
+              className="w-4 h-4 text-purple-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -1039,7 +1039,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
 
           {/* Rename */}
           <button
-            className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 text-right"
+            className="w-full px-4 py-2 text-sm text-purple-200 hover:bg-purple-800/50 flex items-center gap-2.5 text-right"
             onClick={() => {
               setRenameDialog({
                 id: contextMenu.item.id,
@@ -1050,7 +1050,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             }}
           >
             <svg
-              className="w-4 h-4 text-gray-400"
+              className="w-4 h-4 text-purple-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -1069,7 +1069,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
           {contextMenu.type === 'file' &&
             (contextMenu.item as DriveFile).webContentLink && (
               <button
-                className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 text-right"
+                className="w-full px-4 py-2 text-sm text-purple-200 hover:bg-purple-800/50 flex items-center gap-2.5 text-right"
                 onClick={() => {
                   const file = contextMenu.item as DriveFile;
                   if (file.webContentLink) {
@@ -1079,7 +1079,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 }}
               >
                 <svg
-                  className="w-4 h-4 text-gray-400"
+                  className="w-4 h-4 text-purple-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1095,11 +1095,11 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
               </button>
             )}
 
-          <div className="my-1 border-t border-gray-100" />
+          <div className="my-1 border-t border-purple-500/20" />
 
           {/* Delete */}
           <button
-            className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 text-right"
+            className="w-full px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2.5 text-right"
             onClick={() => {
               setDeleteConfirm({
                 id: contextMenu.item.id,
@@ -1129,12 +1129,12 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
       {/* ===== New Folder Dialog ===== */}
       {showNewFolderDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">مجلد جديد</h3>
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-5 border-b border-purple-500/20">
+              <h3 className="text-lg font-bold text-white">مجلد جديد</h3>
             </div>
             <div className="px-6 py-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-purple-300 mb-2">
                 اسم المجلد
               </label>
               <input
@@ -1142,7 +1142,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="أدخل اسم المجلد..."
-                className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                className="w-full px-4 py-3 text-sm border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-purple-900/30 text-purple-200 placeholder-purple-600 transition-all"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateFolder();
@@ -1150,20 +1150,20 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 }}
               />
             </div>
-            <div className="px-6 py-4 border-t border-gray-50 flex items-center gap-3 justify-end bg-gray-50/50">
+            <div className="px-6 py-4 border-t border-purple-500/20 flex items-center gap-3 justify-end">
               <button
                 onClick={() => {
                   setShowNewFolderDialog(false);
                   setNewFolderName('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-purple-400 hover:text-purple-200 transition-colors"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="px-5 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                className="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               >
                 إنشاء
               </button>
@@ -1175,19 +1175,19 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
       {/* ===== Rename Dialog ===== */}
       {renameDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">إعادة تسمية</h3>
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-5 border-b border-purple-500/20">
+              <h3 className="text-lg font-bold text-white">إعادة تسمية</h3>
             </div>
             <div className="px-6 py-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-purple-300 mb-2">
                 الاسم الجديد
               </label>
               <input
                 type="text"
                 value={renameValue}
                 onChange={(e) => setRenameValue(e.target.value)}
-                className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                className="w-full px-4 py-3 text-sm border border-purple-500/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 bg-purple-900/30 text-purple-200 transition-all"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleRename();
@@ -1195,20 +1195,20 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                 }}
               />
             </div>
-            <div className="px-6 py-4 border-t border-gray-50 flex items-center gap-3 justify-end bg-gray-50/50">
+            <div className="px-6 py-4 border-t border-purple-500/20 flex items-center gap-3 justify-end">
               <button
                 onClick={() => {
                   setRenameDialog(null);
                   setRenameValue('');
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-purple-400 hover:text-purple-200 transition-colors"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleRename}
                 disabled={!renameValue.trim()}
-                className="px-5 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                className="px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               >
                 حفظ
               </button>
@@ -1220,13 +1220,13 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
       {/* ===== Delete Confirmation ===== */}
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">تأكيد الحذف</h3>
+          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-5 border-b border-purple-500/20">
+              <h3 className="text-lg font-bold text-white">تأكيد الحذف</h3>
             </div>
             <div className="px-6 py-5">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-full bg-red-900/40 flex items-center justify-center shrink-0">
                   <svg
                     className="w-5 h-5 text-red-600"
                     fill="none"
@@ -1242,20 +1242,20 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-purple-200">
                     هل أنت متأكد من حذف{' '}
-                    <span className="font-bold">&quot;{deleteConfirm.name}&quot;</span>؟
+                    <span className="font-bold text-white">&quot;{deleteConfirm.name}&quot;</span>؟
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-purple-500 mt-1">
                     سيتم حذف هذا العنصر نهائياً من Google Drive ولا يمكن استعادته.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-50 flex items-center gap-3 justify-end bg-gray-50/50">
+            <div className="px-6 py-4 border-t border-purple-500/20 flex items-center gap-3 justify-end">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-purple-400 hover:text-purple-200 transition-colors"
               >
                 إلغاء
               </button>
