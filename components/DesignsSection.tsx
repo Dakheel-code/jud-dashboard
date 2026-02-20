@@ -172,6 +172,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
     currentName: string;
   } | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     id: string;
     name: string;
@@ -411,7 +412,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
   const isEmpty = filteredFolders.length === 0 && filteredFiles.length === 0;
 
   return (
-    <div className="mt-8" dir="rtl">
+    <div className="mt-6 mb-6" dir="rtl">
       {/* Section Header */}
       <div className="bg-[#1a0a2e] rounded-2xl border border-purple-500/20 overflow-hidden">
         {/* Top Bar */}
@@ -443,6 +444,22 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+              {/* Collapse toggle */}
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-2 rounded-lg text-purple-400 hover:text-purple-200 hover:bg-purple-800/40 transition-all"
+                title={isCollapsed ? 'توسيع' : 'طي'}
+              >
+                <svg
+                  className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               {/* Search */}
               <div className="relative">
                 <input
@@ -586,6 +603,9 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             </div>
           </div>
         </div>
+
+        {/* Collapsible content */}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-h-0' : 'max-h-[2000px]'}`}>
 
         {/* Breadcrumb */}
         <div className="px-6 py-2.5 border-b border-purple-500/10 bg-purple-500/5">
@@ -994,6 +1014,7 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
             </span>
           </div>
         )}
+        </div>{/* end collapsible */}
       </div>
 
       {/* ===== Context Menu ===== */}
