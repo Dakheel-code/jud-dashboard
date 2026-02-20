@@ -400,6 +400,15 @@ export async function GET(
       account_spend_usd: accountSpend,
       campaign_stats_map_count: Object.keys(campaignStatsMap).length,
       stats_http_status: statsHttpStatus,
+      diag: {
+        request_status: statsData?.request_status,
+        error_code: statsData?.error_code,
+        debug_message: statsData?.debug_message,
+        rows_length: campaignRows0.length,
+        first_row_summary: campaignRows0[0]
+          ? { id: campaignRows0[0]?.id, spend: campaignRows0[0]?.stats?.spend, orders: campaignRows0[0]?.stats?.conversion_purchases }
+          : null,
+      },
     };
 
     // تحذير إذا البيانات غير مكتملة
