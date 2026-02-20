@@ -63,9 +63,10 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'folder_name is required' }, { status: 400 });
         }
 
+        const store_name_json = body.store_name || undefined;
         let parentFolderId = folder_id;
         if (!parentFolderId) {
-          parentFolderId = await getStoreDriveFolder(store_id);
+          parentFolderId = await getStoreDriveFolder(store_id, store_name_json);
         }
 
         const folder = await createDriveFolder(parentFolderId, folder_name);
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const storeId = formData.get('store_id') as string;
     const folderId = formData.get('folder_id') as string | null;
+    const storeNameForm = formData.get('store_name') as string | null;
 
     if (!file || !storeId) {
       return NextResponse.json(
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     let targetFolderId = folderId;
     if (!targetFolderId) {
-      targetFolderId = await getStoreDriveFolder(storeId);
+      targetFolderId = await getStoreDriveFolder(storeId, storeNameForm || undefined);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());

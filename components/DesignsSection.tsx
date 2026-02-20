@@ -259,6 +259,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
         const formData = new FormData();
         formData.append('file', file);
         formData.append('store_id', storeId);
+        if (storeName) formData.append('store_name', storeName);
         if (currentFolderId) {
           formData.append('folder_id', currentFolderId);
         }
@@ -297,6 +298,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           store_id: storeId,
+          store_name: storeName,
           folder_id: currentFolderId,
           folder_name: newFolderName.trim(),
           action: 'create_folder',
