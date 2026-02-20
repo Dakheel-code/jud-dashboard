@@ -537,7 +537,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                         {row.connected ? (
                           <div className="flex items-center gap-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                            <p className="text-xs text-green-400/80 truncate max-w-[100px]">{row.accountName || 'متصل'}</p>
+                            <p className="text-xs text-green-400/80 truncate max-w-[100px]">متصل</p>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1">
@@ -553,7 +553,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                       {row.loading ? (
                         <div className="w-4 h-4 border border-purple-400 border-t-transparent rounded-full animate-spin mx-auto" />
                       ) : row.connected ? (
-                        <p className="text-sm font-bold text-orange-300">{fmtNum(row.spend)}</p>
+                        <p className="text-sm font-normal text-orange-300">{fmtNum(row.spend)}</p>
                       ) : (
                         <p className="text-sm text-gray-600">—</p>
                       )}
@@ -562,21 +562,21 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                     {/* المبيعات */}
                     <div className="text-center">
                       {row.connected ? (
-                        <p className="text-sm font-bold text-blue-300">{fmtNum(row.sales)}</p>
+                        <p className="text-sm font-normal text-blue-300">{fmtNum(row.sales)}</p>
                       ) : <p className="text-sm text-gray-600">—</p>}
                     </div>
 
                     {/* الطلبات */}
                     <div className="text-center">
                       {row.connected ? (
-                        <p className="text-sm font-bold text-green-300">{fmtNum(row.orders)}</p>
+                        <p className="text-sm font-normal text-green-300">{fmtNum(row.orders)}</p>
                       ) : <p className="text-sm text-gray-600">—</p>}
                     </div>
 
                     {/* العائد */}
                     <div className="text-center">
                       {row.connected ? (
-                        <p className={`text-sm font-bold ${row.roas < 1 ? 'text-red-400' : 'text-purple-300'}`}>
+                        <p className={`text-sm font-normal ${row.roas < 1 ? 'text-red-400' : 'text-purple-300'}`}>
                           {row.roas.toFixed(2)}x
                         </p>
                       ) : (

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jud Dashboard - Google Ads API Design Documentation</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 40px; color: #333; line-height: 1.6; }
+  h1 { color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; }
+  h2 { color: #333; margin-top: 30px; }
+  .section { background: #f8f9fa; border-left: 4px solid #1a73e8; padding: 15px 20px; margin: 20px 0; border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  th { background: #1a73e8; color: white; padding: 10px; text-align: left; }
+  td { padding: 8px 10px; border-bottom: 1px solid #ddd; }
+  tr:nth-child(even) { background: #f2f2f2; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+  .badge-blue { background: #e8f0fe; color: #1a73e8; }
+  .badge-green { background: #e6f4ea; color: #137333; }
+</style>
+</head>
+<body>
+
+<h1>Jud Dashboard — Google Ads API Design Documentation</h1>
+
+<div class="section">
+  <strong>Company:</strong> Jud Agency<br>
+  <strong>Website:</strong> https://jud.sa<br>
+  <strong>Dashboard:</strong> https://jud-dashboard.netlify.app<br>
+  <strong>Contact:</strong> Dakheel@jud.sa<br>
+  <strong>Date:</strong> February 2026
+</div>
+
+<h2>1. Overview</h2>
+<p>
+  Jud Dashboard is an internal management platform built for <strong>Jud Agency</strong>, a digital marketing agency in Saudi Arabia.
+  The platform allows account managers to monitor and manage Google Ads campaigns for multiple clients from a single unified dashboard.
+</p>
+
+<h2>2. Purpose of Google Ads API Usage</h2>
+<div class="section">
+  We use the Google Ads API to:
+  <ul>
+    <li>Fetch campaign performance data (impressions, clicks, cost, conversions)</li>
+    <li>Retrieve campaign reports for specific date ranges</li>
+    <li>Display real-time metrics to account managers</li>
+    <li>Monitor ROAS (Return on Ad Spend) across client accounts</li>
+    <li>Manage multiple client accounts under one MCC account</li>
+  </ul>
+</div>
+
+<h2>3. API Endpoints Used</h2>
+<table>
+  <tr><th>Endpoint</th><th>Purpose</th></tr>
+  <tr><td>GoogleAdsService.Search (GAQL)</td><td>Fetch campaigns and performance metrics</td></tr>
+  <tr><td>customers:listAccessibleCustomers</td><td>List accessible client accounts</td></tr>
+  <tr><td>customers/{id}/googleAds:search</td><td>Query campaign reports by date range</td></tr>
+</table>
+
+<h2>4. Data Flow</h2>
+<div class="section">
+  <strong>Step 1:</strong> Account manager connects a client's Google Ads account via OAuth2 credentials<br>
+  <strong>Step 2:</strong> Dashboard fetches campaign data using GAQL queries<br>
+  <strong>Step 3:</strong> Data is cached in Supabase database to minimize API calls<br>
+  <strong>Step 4:</strong> Account managers view metrics in the campaigns dashboard
+</div>
+
+<h2>5. Dashboard Features</h2>
+<table>
+  <tr><th>Feature</th><th>Description</th><th>Status</th></tr>
+  <tr><td>Campaign List</td><td>View all active/paused campaigns</td><td><span class="badge badge-green">Live</span></td></tr>
+  <tr><td>Performance Reports</td><td>Cost, clicks, impressions, ROAS by date range</td><td><span class="badge badge-green">Live</span></td></tr>
+  <tr><td>Multi-Account Support</td><td>Manage multiple client accounts via MCC</td><td><span class="badge badge-green">Live</span></td></tr>
+  <tr><td>Data Caching</td><td>Cache API responses to reduce quota usage</td><td><span class="badge badge-green">Live</span></td></tr>
+  <tr><td>Secure Credential Storage</td><td>Encrypted storage of OAuth tokens in database</td><td><span class="badge badge-green">Live</span></td></tr>
+</table>
+
+<h2>6. Access Control</h2>
+<p>
+  The dashboard is accessible to <strong>internal users only</strong> (Jud Agency employees and account managers).
+  Each user authenticates via Google OAuth before accessing the platform.
+  Client data is isolated per store/account and only visible to authorized managers.
+</p>
+
+<h2>7. Technical Stack</h2>
+<table>
+  <tr><th>Component</th><th>Technology</th></tr>
+  <tr><td>Frontend</td><td>Next.js 14, React, TailwindCSS</td></tr>
+  <tr><td>Backend</td><td>Next.js API Routes (serverless)</td></tr>
+  <tr><td>Database</td><td>Supabase (PostgreSQL)</td></tr>
+  <tr><td>Hosting</td><td>Netlify</td></tr>
+  <tr><td>Auth</td><td>OAuth 2.0 with refresh tokens</td></tr>
+</table>
+
+<h2>8. API Usage Compliance</h2>
+<div class="section">
+  <ul>
+    <li>We do not resell or redistribute Google Ads data</li>
+    <li>Data is used solely for internal campaign management purposes</li>
+    <li>We comply with Google Ads API Terms of Service</li>
+    <li>API calls are rate-limited and cached to minimize quota usage</li>
+    <li>No automated bidding or campaign creation without human approval</li>
+  </ul>
+</div>
+
+</body>
+</html>
