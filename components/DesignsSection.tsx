@@ -218,9 +218,14 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
 
   // Close context menu when clicking outside
   useEffect(() => {
-    const handleClick = () => setContextMenu(null);
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-context-menu]')) {
+        setContextMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   // Navigate to folder
@@ -422,15 +427,8 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+            dir="rtl"
           >
-            <div className="flex items-center gap-2">
-              <svg
-                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -444,6 +442,12 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
                 <p className="text-xs text-purple-400">إدارة ملفات التصاميم عبر Google Drive</p>
               </div>
             </div>
+            <svg
+              className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
 
           {/* Tools Row - only when expanded */}
@@ -1009,6 +1013,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
       {/* ===== Context Menu ===== */}
       {contextMenu && (
         <div
+          data-context-menu
           className="fixed z-50 bg-[#1a0a2e] rounded-xl shadow-xl border border-purple-500/30 py-1.5 min-w-[180px]"
           style={{
             top: Math.min(contextMenu.y, window.innerHeight - 220),
