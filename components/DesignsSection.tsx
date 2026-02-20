@@ -803,7 +803,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
                   </div>
 
                   {/* Hover actions */}
-                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -859,7 +859,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
                     </div>
 
                     {/* Hover actions */}
-                    <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1011,8 +1011,8 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
         <div
           className="fixed z-50 bg-[#1a0a2e] rounded-xl shadow-xl border border-purple-500/30 py-1.5 min-w-[180px]"
           style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
+            top: Math.min(contextMenu.y, window.innerHeight - 220),
+            left: Math.min(contextMenu.x, window.innerWidth - 200),
           }}
           onClick={(e) => e.stopPropagation()}
         >
