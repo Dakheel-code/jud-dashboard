@@ -449,7 +449,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                             ربط
                           </a>
                         ) : row.key === 'google' && storeId ? (
-                          <a href={`/admin/store/${storeId}?section=integrations`}
+                          <a href={`/admin/store/${storeId}`}
                             onClick={e => e.stopPropagation()}
                             className="text-xs px-2 py-0.5 bg-green-500/20 border border-green-500/30 text-green-300 rounded-lg hover:bg-green-500/40 transition-all">
                             ربط
