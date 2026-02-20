@@ -40,9 +40,15 @@ export interface DriveListResponse {
 
 // Initialize Google Drive client using Service Account
 function getDriveClient() {
+  const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
+  // Handle both escaped \n (from env files) and literal newlines (from Netlify)
+  const privateKey = rawKey.includes('\\n')
+    ? rawKey.replace(/\\n/g, '\n')
+    : rawKey;
+
   const credentials = {
     client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
-    private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    private_key: privateKey,
     project_id: process.env.GOOGLE_PROJECT_ID || '',
   };
 
