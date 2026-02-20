@@ -426,22 +426,21 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
           {/* Header Row */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full px-5 py-4 flex items-center hover:bg-purple-500/5 transition-all"
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+            style={{ direction: 'ltr' }}
           >
-            {/* زر الطي - يسار */}
+            {/* زر الطي - يسار فعلي */}
             <svg
               className={`w-5 h-5 text-purple-400 transition-transform duration-300 flex-shrink-0 ${isCollapsed ? '' : 'rotate-180'}`}
               fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
-            {/* فراغ مرن */}
-            <div className="flex-1" />
-            {/* أيقونة + عنوان - يمين */}
+            {/* أيقونة + عنوان - يمين فعلي */}
             <div className="flex items-center gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-white text-right">التصاميم</h2>
-                <p className="text-xs text-purple-400 text-right">إدارة ملفات التصاميم عبر Google Drive</p>
+              <div style={{ direction: 'rtl' }}>
+                <h2 className="text-lg font-bold text-white">التصاميم</h2>
+                <p className="text-xs text-purple-400">إدارة ملفات التصاميم عبر Google Drive</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
