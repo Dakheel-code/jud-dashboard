@@ -9,6 +9,10 @@ const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; externalPrese
   () => import('@/components/MetaAdsCard'), { ssr: false }
 );
 
+const TikTokCampaigns = dynamic<{ storeId: string }>(
+  () => import('@/components/TikTokCampaigns'), { ssr: false }
+);
+
 interface Store {
   id: string;
   store_name: string;
@@ -71,7 +75,7 @@ function CampaignsContent() {
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
 
-  const [activePlatform, setActivePlatform] = useState<'snapchat' | 'meta'>('snapchat');
+  const [activePlatform, setActivePlatform] = useState<'snapchat' | 'meta' | 'tiktok'>('snapchat');
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
@@ -353,6 +357,17 @@ function CampaignsContent() {
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
               Meta Ads
+            </button>
+            <button
+              onClick={() => setActivePlatform('tiktok')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                activePlatform === 'tiktok'
+                  ? 'bg-white/15 border-white/30 text-white'
+                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-white/20'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.73a8.19 8.19 0 004.76 1.52v-3.4a4.85 4.85 0 01-1-.16z"/></svg>
+              TikTok
             </button>
           </div>
         )}
@@ -675,11 +690,15 @@ function CampaignsContent() {
               )
             )}
 
+            {/* TikTok Tab */}
+            {activePlatform === 'tiktok' && selectedStoreId && (
+              <TikTokCampaigns storeId={selectedStoreId} />
+            )}
+
             {/* Coming Soon Platforms */}
             {activePlatform === 'snapchat' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                 {[
-                  { name: 'TikTok Ads', icon: '🎵' },
                   { name: 'Google Ads', icon: '🔍' },
                 ].map(platform => (
                   <div key={platform.name} className="bg-gray-500/10 border border-gray-500/30 rounded-2xl p-6 text-center opacity-50">
