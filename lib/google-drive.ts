@@ -104,13 +104,25 @@ export async function getStoreDriveFolder(storeId: string, storeName?: string): 
 // List files and folders in a specific Drive folder
 export async function listDriveFiles(folderId: string): Promise<DriveListResponse> {
   const drive = getDriveClient();
+  const mainFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+  const isSharedDrive = folderId === mainFolderId;
 
-  // Get current folder info
-  const folderInfo = await drive.files.get({
-    fileId: folderId,
-    fields: 'id, name, parents',
-    supportsAllDrives: true,
-  });
+  // For Shared Drive root, use drives.get instead of files.get
+  let folderName = 'التصاميم';
+  let folderParents: string[] | undefined;
+  if (!isSharedDrive) {
+    try {
+      const folderInfo = await drive.files.get({
+        fileId: folderId,
+        fields: 'id, name, parents',
+        supportsAllDrives: true,
+      });
+      folderName = folderInfo.data.name || 'التصاميم';
+      folderParents = folderInfo.data.parents || undefined;
+    } catch {
+      folderName = 'التصاميم';
+    }
+  }
 
   // List all items in the folder
   const response = await drive.files.list({
@@ -119,6 +131,8 @@ export async function listDriveFiles(folderId: string): Promise<DriveListRespons
     orderBy: 'folder,name',
     pageSize: 1000,
     supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    ...(isSharedDrive ? { driveId: folderId, corpora: 'drive' } : {}),
   });
 
   const allFiles = response.data.files || [];
@@ -157,8 +171,8 @@ export async function listDriveFiles(folderId: string): Promise<DriveListRespons
     files,
     folders,
     currentFolder: {
-      id: folderInfo.data.id!,
-      name: folderInfo.data.name!,
+      id: folderId,
+      name: folderName,
     },
     breadcrumb,
   };
