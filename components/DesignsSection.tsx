@@ -209,7 +209,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
         setLoading(false);
       }
     },
-    [storeId]
+    [storeId, storeName]
   );
 
   useEffect(() => {
