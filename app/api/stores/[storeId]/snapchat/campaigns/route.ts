@@ -233,6 +233,18 @@ export async function GET(
     let statsData: any = {};
     try { statsData = JSON.parse(statsRawText); } catch { /* ignore */ }
 
+    // ===== DIAGNOSTIC LOGGING =====
+    const campaignRows0 = statsData?.total_stats?.[0]?.total_stat?.breakdown_stats?.campaign || [];
+    console.log('[SNAP_DIAG] status:', statsResponse.status);
+    console.log('[SNAP_DIAG] request_status:', statsData?.request_status);
+    console.log('[SNAP_DIAG] error_code:', statsData?.error_code);
+    console.log('[SNAP_DIAG] request_id:', statsData?.request_id);
+    console.log('[SNAP_DIAG] params:', { start_time: normalizedStart, end_time: normalizedEnd, granularity: 'TOTAL', breakdown: 'campaign' });
+    console.log('[SNAP_DIAG] rows.length:', campaignRows0.length);
+    console.log('[SNAP_DIAG] first_row:', JSON.stringify(campaignRows0[0] || null));
+    console.log('[SNAP_DIAG] debug_message:', statsData?.debug_message);
+    // ===== END DIAGNOSTIC =====
+
     const campaignStatsMap: Record<string, any> = {};
     let finalizedDataEndTime: string | null = null;
     const statsHttpStatus = statsResponse.status;
