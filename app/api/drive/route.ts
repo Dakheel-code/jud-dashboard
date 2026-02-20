@@ -32,8 +32,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Drive list error:', error);
+    const msg = error.message || 'Failed to list files';
+    const detail = error.errors?.[0]?.message || error.code || '';
     return NextResponse.json(
-      { error: error.message || 'Failed to list files' },
+      { error: msg, detail },
       { status: 500 }
     );
   }

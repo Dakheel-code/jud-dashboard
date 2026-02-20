@@ -195,11 +195,10 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
         }
 
         const response = await fetch(`/api/drive?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('فشل في جلب الملفات');
-        }
-
         const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || data.error || 'فشل في جلب الملفات');
+        }
         setFiles(data.files || []);
         setFolders(data.folders || []);
         setBreadcrumb(data.breadcrumb || []);
