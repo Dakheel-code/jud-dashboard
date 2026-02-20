@@ -32,11 +32,13 @@ export async function GET(request: NextRequest) {
     const result = await listDriveFiles(targetFolderId);
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Drive list error:', error);
+    console.error('Drive list error full:', JSON.stringify(error, null, 2));
+    console.error('Drive list error message:', error.message);
+    console.error('Drive list error stack:', error.stack);
     const msg = error.message || 'Failed to list files';
-    const detail = error.errors?.[0]?.message || error.code || '';
+    const detail = error.errors?.[0]?.message || error.errors?.[0]?.reason || error.code || String(error);
     return NextResponse.json(
-      { error: msg, detail },
+      { error: msg, detail, errors: error.errors },
       { status: 500 }
     );
   }
