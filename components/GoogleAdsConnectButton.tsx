@@ -43,13 +43,16 @@ export default function GoogleAdsConnectButton({ storeId }: Props) {
   const [success, setSuccess]             = useState(false);
 
   const [form, setForm] = useState({
-    customer_id:     '',
-    client_id:       (process.env.NEXT_PUBLIC_GOOGLE_ADS_CLIENT_ID      ?? ''),
-    client_secret:   (process.env.NEXT_PUBLIC_GOOGLE_ADS_CLIENT_SECRET   ?? ''),
-    developer_token: (process.env.NEXT_PUBLIC_GOOGLE_ADS_DEVELOPER_TOKEN ?? ''),
-    refresh_token:   (process.env.NEXT_PUBLIC_GOOGLE_ADS_REFRESH_TOKEN   ?? ''),
-    manager_id:      (process.env.NEXT_PUBLIC_GOOGLE_ADS_MANAGER_ID      ?? ''),
+    customer_id: '', client_id: '', client_secret: '',
+    developer_token: '', refresh_token: '', manager_id: '',
   });
+
+  useEffect(() => {
+    fetch('/api/google-ads/default-creds')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setForm(p => ({ ...p, ...d })); })
+      .catch(() => {});
+  }, []);
 
   const fetchStatus = async () => {
     setLoading(true);

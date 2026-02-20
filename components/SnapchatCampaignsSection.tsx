@@ -18,13 +18,16 @@ function GoogleAdsInlineButton({ storeId }: { storeId: string }) {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
   const [form, setForm] = React.useState({
-    customer_id: '',
-    client_id:       (process.env.NEXT_PUBLIC_GOOGLE_ADS_CLIENT_ID      ?? ''),
-    client_secret:   (process.env.NEXT_PUBLIC_GOOGLE_ADS_CLIENT_SECRET   ?? ''),
-    developer_token: (process.env.NEXT_PUBLIC_GOOGLE_ADS_DEVELOPER_TOKEN ?? ''),
-    refresh_token:   (process.env.NEXT_PUBLIC_GOOGLE_ADS_REFRESH_TOKEN   ?? ''),
-    manager_id:      (process.env.NEXT_PUBLIC_GOOGLE_ADS_MANAGER_ID      ?? ''),
+    customer_id: '', client_id: '', client_secret: '',
+    developer_token: '', refresh_token: '', manager_id: '',
   });
+
+  React.useEffect(() => {
+    fetch('/api/google-ads/default-creds')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setForm(p => ({ ...p, ...d })); })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +46,16 @@ function GoogleAdsInlineButton({ storeId }: { storeId: string }) {
     finally { setSubmitting(false); }
   };
 
+  const hasEnvCreds = !!(form.client_id && form.client_secret && form.developer_token && form.refresh_token);
+
   const FIELDS = [
-    { key: 'customer_id',     label: 'Customer ID',     type: 'text',     required: true },
-    { key: 'client_id',       label: 'Client ID',       type: 'text',     required: true },
-    { key: 'client_secret',   label: 'Client Secret',   type: 'password', required: true },
-    { key: 'developer_token', label: 'Developer Token', type: 'password', required: true },
-    { key: 'refresh_token',   label: 'Refresh Token',   type: 'password', required: true },
-    { key: 'manager_id',      label: 'Manager ID (اختياري)', type: 'text', required: false },
-  ];
+    { key: 'customer_id',     label: 'Customer ID',     type: 'text',     required: true,  alwaysShow: true },
+    { key: 'client_id',       label: 'Client ID',       type: 'text',     required: true,  alwaysShow: false },
+    { key: 'client_secret',   label: 'Client Secret',   type: 'password', required: true,  alwaysShow: false },
+    { key: 'developer_token', label: 'Developer Token', type: 'password', required: true,  alwaysShow: false },
+    { key: 'refresh_token',   label: 'Refresh Token',   type: 'password', required: true,  alwaysShow: false },
+    { key: 'manager_id',      label: 'Manager ID (اختياري)', type: 'text', required: false, alwaysShow: false },
+  ].filter(f => f.alwaysShow || !hasEnvCreds);
 
   return (
     <>
