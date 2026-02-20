@@ -442,6 +442,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                             className="text-xs px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 rounded-lg hover:bg-yellow-500/40 transition-all">
                             ربط
                           </button>
+                        ) : row.key === 'tiktok' && storeId ? (
+                          <a href={`/api/tiktok/auth?store_id=${storeId}`}
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs px-2 py-0.5 bg-white/10 border border-white/20 text-white/70 rounded-lg hover:bg-white/20 transition-all">
+                            ربط
+                          </a>
                         ) : (
                           <span className="text-xs text-gray-600">قريباً</span>
                         )
