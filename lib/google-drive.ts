@@ -46,14 +46,9 @@ function getDriveClient() {
     ? rawKey.replace(/\\n/g, '\n')
     : rawKey;
 
-  const credentials = {
-    client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
-    private_key: privateKey,
-    project_id: process.env.GOOGLE_PROJECT_ID || '',
-  };
-
-  const auth = new google.auth.GoogleAuth({
-    credentials,
+  const auth = new google.auth.JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
+    key: privateKey,
     scopes: ['https://www.googleapis.com/auth/drive'],
   });
 
