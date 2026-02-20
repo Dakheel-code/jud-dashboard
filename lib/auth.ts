@@ -207,7 +207,7 @@ export const authOptions: NextAuthOptions = {
             role_id: employeeRole.id,
           });
         } else {
-          // تحديث آخر تسجيل دخول فقط
+          // تحديث آخر تسجيل دخول فقط (لا نمنع الدخول إذا فشل التحديث)
           const { error: updateError } = await supabase
             .from('admin_users')
             .update({ 
@@ -217,8 +217,8 @@ export const authOptions: NextAuthOptions = {
             .ilike('email', emailLower);
 
           if (updateError) {
-            console.error('FAILED TO UPDATE LAST LOGIN:', updateError);
-            return false;
+            console.error('FAILED TO UPDATE LAST LOGIN (non-blocking):', updateError);
+            // لا نمنع الدخول بسبب فشل تحديث last_login
           }
 
           // RBAC: أضف employee فقط إذا ما عنده أي roles
