@@ -426,17 +426,17 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
           {/* Header Row */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full px-5 py-4 flex flex-row-reverse items-center justify-between hover:bg-purple-500/5 transition-all"
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
           >
-            <div className="flex flex-row-reverse items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round"
                     d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
                   />
                 </svg>
               </div>
-              <div className="text-right">
+              <div>
                 <h2 className="text-lg font-bold text-white">التصاميم</h2>
                 <p className="text-xs text-purple-400">إدارة ملفات التصاميم عبر Google Drive</p>
               </div>
