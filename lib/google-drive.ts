@@ -62,12 +62,18 @@ export async function getStoreDriveFolder(storeId: string, storeName?: string): 
   const drive = getDriveClient();
   const mainFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
 
-  // Search by storeId first (legacy folders named by UUID)
-  const searchById = await drive.files.list({
-    q: `'${mainFolderId}' in parents and name = '${storeId}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-    fields: 'files(id, name)',
+  const sharedDriveParams = {
     supportsAllDrives: true,
     includeItemsFromAllDrives: true,
+    corpora: 'drive' as const,
+    driveId: mainFolderId,
+  };
+
+  // Search by storeId first
+  const searchById = await drive.files.list({
+    ...sharedDriveParams,
+    q: `'${mainFolderId}' in parents and name = '${storeId}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: 'files(id, name)',
   });
   if (searchById.data.files && searchById.data.files.length > 0) {
     return searchById.data.files[0].id!;
@@ -76,10 +82,9 @@ export async function getStoreDriveFolder(storeId: string, storeName?: string): 
   // Search by storeName if provided
   if (storeName) {
     const searchByName = await drive.files.list({
+      ...sharedDriveParams,
       q: `'${mainFolderId}' in parents and name = '${storeName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name)',
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
     });
     if (searchByName.data.files && searchByName.data.files.length > 0) {
       return searchByName.data.files[0].id!;
@@ -89,13 +94,13 @@ export async function getStoreDriveFolder(storeId: string, storeName?: string): 
   // Create store folder named after the store
   const folderName = storeName || storeId;
   const createResponse = await drive.files.create({
+    supportsAllDrives: true,
     requestBody: {
       name: folderName,
       mimeType: 'application/vnd.google-apps.folder',
       parents: [mainFolderId],
     },
     fields: 'id',
-    supportsAllDrives: true,
   });
 
   return createResponse.data.id!;
