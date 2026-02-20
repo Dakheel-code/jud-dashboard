@@ -222,97 +222,43 @@ export async function GET(
       });
     }
 
-    // ========== الخطوة 2: جلب Stats على مستوى Campaign ==========
+    // ========== الخطوة 2: جلب Stats لكل Campaign منفردة (يدعم attribution window) ==========
     const fields =
       'spend,impressions,swipes,conversion_purchases,conversion_purchases_value';
 
-    const statsUrl = `${SNAPCHAT_API_URL}/adaccounts/${encodeURIComponent(adAccountId)}/stats?granularity=TOTAL&fields=${fields}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&breakdown=campaign`;
-
-    const statsResponse = await fetch(statsUrl, { headers });
-    const statsRawText = await statsResponse.text();
-    let statsData: any = {};
-    let statsRawDebug: any = null;
-    try { statsData = JSON.parse(statsRawText); statsRawDebug = statsData; } catch { statsRawDebug = statsRawText; }
-
-    // معالجة الإحصائيات
     const campaignStatsMap: Record<string, any> = {};
     let finalizedDataEndTime: string | null = null;
+    let statsHttpStatus = 0;
 
-    if (statsResponse.ok) {
-      /**
-       * ✅ الشكل الحقيقي اللي رجع عندك:
-       * statsData.total_stats[0].total_stat.breakdown_stats.campaign = [{ id, stats: {...} }]
-       */
-      const campaignRows =
-        statsData?.total_stats?.[0]?.total_stat?.breakdown_stats?.campaign || [];
+    // جلب stats لكل campaign عبر /campaigns/{id}/stats مع 28DAY attribution
+    await Promise.all(
+      campaignIds.map(async (campaignId: string) => {
+        try {
+          const url = `${SNAPCHAT_API_URL}/campaigns/${encodeURIComponent(campaignId)}/stats?granularity=TOTAL&fields=${fields}&start_time=${encodeURIComponent(normalizedStart)}&end_time=${encodeURIComponent(normalizedEnd)}&swipe_up_attribution_window=28DAY&view_attribution_window=1DAY`;
+          const res = await fetch(url, { headers });
+          statsHttpStatus = res.status;
+          if (!res.ok) return;
+          const data = await res.json();
 
-      if (campaignRows.length > 0) {
-        campaignRows.forEach((row: any) => {
-          const campaignId = row?.id;
-          const s = row?.stats || {};
-          if (!campaignId) return;
-
-          campaignStatsMap[campaignId] = {
-            spend: (s.spend || 0) / 1_000_000,
-            impressions: s.impressions || 0,
-            swipes: s.swipes || 0,
-            orders: s.conversion_purchases || 0,
-            sales: (s.conversion_purchases_value || 0) / 1_000_000,
-          };
-        });
-
-        finalizedDataEndTime =
-          statsData?.total_stats?.[0]?.total_stat?.finalized_data_end_time ||
-          null;
-      }
-
-      /**
-       * ✅ fallback إضافي (لو Snapchat رجّع شكل مختلف)
-       * - timeseries_stats
-       * - total_stats بدون breakdown (حسب بعض الحالات)
-       */
-      if (Object.keys(campaignStatsMap).length === 0 && statsData.timeseries_stats) {
-        statsData.timeseries_stats.forEach((item: any) => {
-          const timeseriesStat = item.timeseries_stat;
-          const campaignId = timeseriesStat?.id;
-          const timeseries = timeseriesStat?.timeseries || [];
-
-          if (campaignId && timeseries.length > 0) {
-            let totalStats = {
-              spend: 0,
-              impressions: 0,
-              swipes: 0,
-              orders: 0,
-              sales: 0,
+          // الشكل: total_stats[0].total_stat.stats
+          const s = data?.total_stats?.[0]?.total_stat?.stats || {};
+          if (s.spend != null || s.conversion_purchases != null) {
+            campaignStatsMap[campaignId] = {
+              spend: (s.spend || 0) / 1_000_000,
+              impressions: s.impressions || 0,
+              swipes: s.swipes || 0,
+              orders: s.conversion_purchases || 0,
+              sales: (s.conversion_purchases_value || 0) / 1_000_000,
             };
-
-            timeseries.forEach((t: any) => {
-              const s = t.stats || {};
-              totalStats.spend += (s.spend || 0) / 1_000_000;
-              totalStats.impressions += s.impressions || 0;
-              totalStats.swipes += s.swipes || 0;
-              totalStats.orders += s.conversion_purchases || 0;
-              totalStats.sales += (s.conversion_purchases_value || 0) / 1_000_000;
-            });
-
-            campaignStatsMap[campaignId] = totalStats;
+            if (!finalizedDataEndTime && data?.total_stats?.[0]?.total_stat?.finalized_data_end_time) {
+              finalizedDataEndTime = data.total_stats[0].total_stat.finalized_data_end_time;
+            }
           }
-
-          if (timeseriesStat?.finalized_data_end_time) {
-            finalizedDataEndTime = timeseriesStat.finalized_data_end_time;
-          }
-        });
-      }
-
-      if (Object.keys(campaignStatsMap).length === 0 && statsData.total_stats) {
-        statsData.total_stats.forEach((item: any) => {
-          const totalStat = item.total_stat;
-          if (totalStat?.finalized_data_end_time) {
-            finalizedDataEndTime = totalStat.finalized_data_end_time;
-          }
-        });
-      }
-    }
+        } catch {
+          // تجاهل أخطاء الحملات الفردية
+        }
+      })
+    );
 
     // ========== جلب spend على مستوى الحساب — Snapchat يدعم spend فقط على هذا المستوى ==========
     let accountSpend: number | null = null;
