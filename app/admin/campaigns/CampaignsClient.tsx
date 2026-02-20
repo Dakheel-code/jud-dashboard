@@ -3,6 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useBranding } from '@/contexts/BrandingContext';
+import dynamic from 'next/dynamic';
+
+const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; externalPreset?: string; onSummaryLoaded?: (s: any) => void }>(
+  () => import('@/components/MetaAdsCard'), { ssr: false }
+);
 
 interface Store {
   id: string;
@@ -68,6 +73,7 @@ function CampaignsContent() {
 
   const [activePlatform, setActivePlatform] = useState<'snapchat' | 'meta'>('snapchat');
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
+  const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
   const [visibleCampaigns, setVisibleCampaigns] = useState(5);
   
@@ -100,8 +106,22 @@ function CampaignsContent() {
     if (selectedStoreId) {
       fetchSnapchatStatus();
       fetchCampaigns();
+      fetchMetaStatus();
     }
   }, [selectedStoreId, range]);
+
+  const fetchMetaStatus = async () => {
+    if (!selectedStoreId) return;
+    try {
+      const res = await fetch(`/api/meta/connection?storeId=${selectedStoreId}`);
+      if (res.ok) {
+        const d = await res.json();
+        setMetaConnected(!!(d.connection?.ad_account_id));
+      } else {
+        setMetaConnected(false);
+      }
+    } catch { setMetaConnected(false); }
+  };
 
   const fetchStores = async () => {
     try {
@@ -626,20 +646,33 @@ function CampaignsContent() {
 
             {/* Meta Ads Tab */}
             {activePlatform === 'meta' && (
-              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-indigo-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+              metaConnected === null ? (
+                <div className="flex items-center justify-center py-12 gap-3">
+                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-purple-400/60">جاري التحقق...</span>
                 </div>
-                <h3 className="text-white font-bold text-lg mb-2">Meta Ads</h3>
-                <p className="text-indigo-300/70 text-sm mb-6">اربط حساب Meta Ads لعرض حملاتك هنا</p>
-                <a
-                  href={`/api/meta/connect?storeId=${selectedStoreId}`}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
-                  ربط Meta Ads
-                </a>
-              </div>
+              ) : metaConnected ? (
+                <MetaAdsCard
+                  storeId={selectedStoreId!}
+                  embedded
+                  externalPreset={range === '7d' ? 'last_7d' : range === '30d' ? 'last_30d' : range === '90d' ? 'last_90d' : range}
+                />
+              ) : (
+                <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-8 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-indigo-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+                  </div>
+                  <h3 className="text-white font-bold text-lg mb-2">Meta Ads</h3>
+                  <p className="text-indigo-300/70 text-sm mb-6">لم يتم ربط Meta Ads لهذا المتجر بعد</p>
+                  <a
+                    href={`/api/meta/connect?storeId=${selectedStoreId}`}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+                    ربط Meta Ads
+                  </a>
+                </div>
+              )
             )}
 
             {/* Coming Soon Platforms */}
