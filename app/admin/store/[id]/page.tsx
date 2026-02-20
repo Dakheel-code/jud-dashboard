@@ -10,7 +10,7 @@ const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCamp
 const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
 const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false });
 const GoogleAdsConnectButton = dynamic<{ storeId: string }>(() => import('@/components/GoogleAdsConnectButton'), { ssr: false });
-const DesignsSection = dynamic<{ storeId: string }>(() => import('@/components/DesignsSection'), { ssr: false });
+const DesignsSection = dynamic<{ storeId: string; storeName?: string }>(() => import('@/components/DesignsSection'), { ssr: false });
 
 interface StoreFullData {
   id: string;
@@ -1585,7 +1585,7 @@ function StoreDetailsContent() {
         </div>
 
         {/* قسم التصاميم */}
-        {storeId && <DesignsSection storeId={storeId} />}
+        {storeId && <DesignsSection storeId={storeId} storeName={storeData?.store_name || storeData?.store_url} />}
 
         {/* قسم الحملات الإعلانية - الجديد */}
         <SnapchatCampaignsSection 

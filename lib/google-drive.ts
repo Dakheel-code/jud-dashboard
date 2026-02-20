@@ -62,19 +62,32 @@ export async function getStoreDriveFolder(storeId: string, storeName?: string): 
   const drive = getDriveClient();
   const mainFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
 
-  // Search for existing store folder
-  const searchResponse = await drive.files.list({
+  // Search by storeId first (legacy folders named by UUID)
+  const searchById = await drive.files.list({
     q: `'${mainFolderId}' in parents and name = '${storeId}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id, name)',
     supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
-
-  if (searchResponse.data.files && searchResponse.data.files.length > 0) {
-    return searchResponse.data.files[0].id!;
+  if (searchById.data.files && searchById.data.files.length > 0) {
+    return searchById.data.files[0].id!;
   }
 
-  // Create store folder if it doesn't exist
-  const folderName = storeName ? `${storeName} - ${storeId}` : storeId;
+  // Search by storeName if provided
+  if (storeName) {
+    const searchByName = await drive.files.list({
+      q: `'${mainFolderId}' in parents and name = '${storeName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    });
+    if (searchByName.data.files && searchByName.data.files.length > 0) {
+      return searchByName.data.files[0].id!;
+    }
+  }
+
+  // Create store folder named after the store
+  const folderName = storeName || storeId;
   const createResponse = await drive.files.create({
     requestBody: {
       name: folderName,

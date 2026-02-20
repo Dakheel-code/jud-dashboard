@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const storeId = searchParams.get('store_id');
     const folderId = searchParams.get('folder_id');
+    const storeName = searchParams.get('store_name') || undefined;
 
     if (!storeId) {
       return NextResponse.json({ error: 'store_id is required' }, { status: 400 });
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     // If no specific folder, get the store's root folder
     let targetFolderId = folderId;
     if (!targetFolderId) {
-      targetFolderId = await getStoreDriveFolder(storeId);
+      targetFolderId = await getStoreDriveFolder(storeId, storeName);
     }
 
     const result = await listDriveFiles(targetFolderId);

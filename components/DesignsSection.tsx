@@ -145,10 +145,11 @@ function getFileIcon(mimeType: string): { icon: string; color: string } {
 // ===== Component Props =====
 interface DesignsSectionProps {
   storeId: string;
+  storeName?: string;
 }
 
 // ===== Main Component =====
-export default function DesignsSection({ storeId }: DesignsSectionProps) {
+export default function DesignsSection({ storeId, storeName }: DesignsSectionProps) {
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [folders, setFolders] = useState<DriveFolder[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<BreadcrumbItem[]>([]);
@@ -190,9 +191,8 @@ export default function DesignsSection({ storeId }: DesignsSectionProps) {
       setError(null);
       try {
         const params = new URLSearchParams({ store_id: storeId });
-        if (folderId) {
-          params.append('folder_id', folderId);
-        }
+        if (folderId) params.append('folder_id', folderId);
+        if (storeName) params.append('store_name', storeName);
 
         const response = await fetch(`/api/drive?${params.toString()}`);
         const data = await response.json();
