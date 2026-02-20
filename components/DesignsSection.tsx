@@ -417,50 +417,38 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
       {/* Section Header */}
       <div className="bg-[#1a0a2e] rounded-2xl border border-purple-500/20 overflow-hidden">
         {/* Top Bar */}
-        <div className="px-6 py-4 border-b border-purple-500/20 bg-purple-500/5">
-          <div className="flex items-center justify-between">
+        <div className="border-b border-purple-500/20 bg-purple-500/5">
+          {/* Header Row */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <svg
+                className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
             <div className="flex items-center gap-3">
+              <div className="text-right">
+                <h2 className="text-lg font-bold text-white">التصاميم</h2>
+                <p className="text-xs text-purple-400">إدارة ملفات التصاميم عبر Google Drive</p>
+              </div>
               <div className="w-10 h-10 rounded-xl bg-purple-600/40 border border-purple-500/30 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round"
                     d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
                   />
                 </svg>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">التصاميم</h2>
-                <p className="text-xs text-purple-400">
-                  إدارة ملفات التصاميم عبر Google Drive
-                </p>
-              </div>
             </div>
+          </button>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {/* Collapse toggle */}
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="p-2 rounded-lg text-purple-400 hover:text-purple-200 hover:bg-purple-800/40 transition-all"
-                title={isCollapsed ? 'توسيع' : 'طي'}
-              >
-                <svg
-                  className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+          {/* Tools Row - only when expanded */}
+          {!isCollapsed && (
+          <div className="px-5 pb-3 flex items-center gap-2 flex-wrap">
               {/* Search */}
               <div className="relative">
                 <input
@@ -602,7 +590,7 @@ export default function DesignsSection({ storeId, storeName }: DesignsSectionPro
                 }}
               />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Collapsible content */}
