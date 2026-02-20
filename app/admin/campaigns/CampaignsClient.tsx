@@ -65,6 +65,7 @@ function CampaignsContent() {
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
 
+  const [activePlatform, setActivePlatform] = useState<'snapchat' | 'meta'>('snapchat');
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
   const [campaignSearch, setCampaignSearch] = useState('');
   const [visibleCampaigns, setVisibleCampaigns] = useState(5);
@@ -243,7 +244,7 @@ function CampaignsContent() {
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
                 الحملات الإعلانية
               </h1>
-              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة ومتابعة حملات سناب شات الإعلانية</p>
+              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة ومتابعة الحملات الإعلانية</p>
             </div>
           </div>
         </div>
@@ -307,6 +308,34 @@ function CampaignsContent() {
         </div>
 
         
+        {/* Platform Tabs */}
+        {selectedStoreId && (
+          <div className="flex items-center gap-2 mb-6">
+            <button
+              onClick={() => setActivePlatform('snapchat')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                activePlatform === 'snapchat'
+                  ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
+                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-yellow-500/30'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 512 512" fill="currentColor"><path d="M496.926,366.6c-3.373-9.176-9.8-14.086-17.112-18.153-1.376-.806-2.641-1.451-3.72-1.947-2.182-1.128-4.414-2.22-6.634-3.373-22.8-12.09-40.609-27.341-52.959-45.42a102.889,102.889,0,0,1-9.089-16.269c-1.054-2.766-.992-4.377-.065-5.954a11.249,11.249,0,0,1,3.088-2.818c2.766-1.8,5.669-3.373,8.2-4.7,4.7-2.5,8.5-4.5,10.9-5.954,7.287-4.477,12.5-9.4,15.5-14.629a24.166,24.166,0,0,0,1.863-22.031c-4.328-12.266-17.9-19.263-28.263-19.263a35.007,35.007,0,0,0-9.834,1.376c-.124.037-.236.074-.347.111,0-1.451.024-2.915.024-4.377,0-22.92-2.508-46.152-10.9-67.615C378.538,91.727,341.063,56.7,286.741,50.6a118.907,118.907,0,0,0-12.293-.621h-36.9a118.907,118.907,0,0,0-12.293.621c-54.31,6.1-91.785,41.127-110.839,84.168-8.4,21.463-10.9,44.7-10.9,67.615,0,1.462.012,2.926.024,4.377-.111-.037-.223-.074-.347-.111a35.007,35.007,0,0,0-9.834-1.376c-10.362,0-23.935,7-28.263,19.263a24.166,24.166,0,0,0,1.863,22.031c3,5.233,8.213,10.152,15.5,14.629,2.4,1.451,6.2,3.46,10.9,5.954,2.52,1.327,5.418,2.9,8.181,4.7a11.3,11.3,0,0,1,3.088,2.818c.927,1.576.989,3.187-.065,5.954a102.889,102.889,0,0,1-9.089,16.269c-12.35,18.079-30.161,33.33-52.959,45.42-2.22,1.153-4.452,2.245-6.634,3.373-1.079.5-2.344,1.141-3.72,1.947-7.312,4.067-13.739,8.977-17.112,18.153-3.6,9.834-1.044,20.882,7.6,32.838a71.2,71.2,0,0,0,33.787,19.016c4.278.2,8.7-.161,13.168-.533,3.9-.322,7.9-.657,11.778-.657a53.666,53.666,0,0,1,9.725.806c.682,1.054,1.376,2.182,2.108,3.4,4.7,7.823,11.168,18.54,24.077,29.2,13.8,11.4,32.018,21.041,57.271,28.489a12.478,12.478,0,0,1,3.633,1.54c3.088,4.278,8.083,7.947,15.259,11.242,8.362,3.844,18.8,6.746,31.1,8.635a245.762,245.762,0,0,0,37.238,2.817c12.8,0,25.371-.918,37.238-2.817,12.3-1.889,22.738-4.791,31.1-8.635,7.176-3.3,12.171-6.964,15.259-11.242a12.478,12.478,0,0,1,3.633-1.54c25.253-7.448,43.469-17.087,57.271-28.489,12.909-10.659,19.375-21.376,24.077-29.2.732-1.215,1.426-2.344,2.108-3.4a53.666,53.666,0,0,1,9.725-.806c3.881,0,7.874.335,11.778.657,4.464.372,8.89.732,13.168.533a71.2,71.2,0,0,0,33.787-19.016C497.97,387.482,500.528,376.434,496.926,366.6Z"/></svg>
+              Snapchat
+            </button>
+            <button
+              onClick={() => setActivePlatform('meta')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                activePlatform === 'meta'
+                  ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
+                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-indigo-500/30'
+              }`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+              Meta Ads
+            </button>
+          </div>
+        )}
+
         {/* Store Content */}
         {selectedStoreId && (
           <div className="space-y-6">
@@ -594,20 +623,39 @@ function CampaignsContent() {
               </div>
             )}
 
-            {/* Coming Soon Platforms */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { name: 'TikTok Ads', icon: '🎵', color: 'pink' },
-                { name: 'Meta Ads', icon: '📘', color: 'blue' },
-                { name: 'Google Ads', icon: '🔍', color: 'green' },
-              ].map(platform => (
-                <div key={platform.name} className="bg-gray-500/10 border border-gray-500/30 rounded-2xl p-6 text-center opacity-60">
-                  <span className="text-4xl">{platform.icon}</span>
-                  <h4 className="text-white font-medium mt-3">{platform.name}</h4>
-                  <p className="text-xs text-gray-400 mt-1">قريبًا</p>
+            {/* Meta Ads Tab */}
+            {activePlatform === 'meta' && (
+              <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-8 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-indigo-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
                 </div>
-              ))}
-            </div>
+                <h3 className="text-white font-bold text-lg mb-2">Meta Ads</h3>
+                <p className="text-indigo-300/70 text-sm mb-6">اربط حساب Meta Ads لعرض حملاتك هنا</p>
+                <a
+                  href={`/api/meta/connect?storeId=${selectedStoreId}`}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
+                  ربط Meta Ads
+                </a>
+              </div>
+            )}
+
+            {/* Coming Soon Platforms */}
+            {activePlatform === 'snapchat' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { name: 'TikTok Ads', icon: '🎵' },
+                  { name: 'Google Ads', icon: '🔍' },
+                ].map(platform => (
+                  <div key={platform.name} className="bg-gray-500/10 border border-gray-500/30 rounded-2xl p-6 text-center opacity-50">
+                    <span className="text-4xl">{platform.icon}</span>
+                    <h4 className="text-white font-medium mt-3">{platform.name}</h4>
+                    <p className="text-xs text-gray-400 mt-1">قريبًا</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
