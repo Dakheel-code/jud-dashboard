@@ -40,15 +40,14 @@ interface TeamMember {
 
 // الأدوار الافتراضية كـ fallback فقط
 const DEFAULT_ROLES = [
-  { value: 'super_admin', label: 'مدير النظام',  color: '#dc2626' },
-  { value: 'admin',       label: 'مشرف',          color: '#7c3aed' },
-  { value: 'manager',     label: 'مدير فرع',      color: '#2563eb' },
-  { value: 'editor',      label: 'محرر',          color: '#0891b2' },
-  { value: 'employee',    label: 'موظف',          color: '#059669' },
-  { value: 'team_leader', label: 'قائد فريق',     color: '#d97706' },
-  { value: 'account_manager', label: 'مدير حساب', color: '#ec4899' },
-  { value: 'media_buyer', label: 'ميديا باير',    color: '#6366f1' },
-  { value: 'viewer',      label: 'مشاهد',         color: '#6b7280' },
+  { value: 'owner',           label: 'المالك',       color: '#dc2626' },
+  { value: 'general_manager', label: 'المدير العام', color: '#9333ea' },
+  { value: 'manager',         label: 'مدير',         color: '#2563eb' },
+  { value: 'team_leader',     label: 'قائد فريق',    color: '#d97706' },
+  { value: 'account_manager', label: 'مدير حساب',    color: '#ec4899' },
+  { value: 'media_buyer',     label: 'ميديا باير',   color: '#6366f1' },
+  { value: 'designer',        label: 'مصمم',         color: '#0891b2' },
+  { value: 'content_writer',  label: 'كاتب محتوى',  color: '#059669' },
 ];
 
 const PERMISSIONS = [
@@ -549,6 +548,7 @@ function UsersManagementContent() {
     // تحويل اللون الـ hex لـ Tailwind-like inline style
     switch (hex) {
       case '#dc2626': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case '#9333ea': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
       case '#7c3aed': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
       case '#2563eb': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
       case '#0891b2': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
