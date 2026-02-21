@@ -30,6 +30,8 @@ interface StoreFullData {
   google_account?: string;
   meta_account?: string;
   client_id?: string;
+  billing_type?: string | null;
+  billing_amount?: number | null;
   account_manager?: {
     id: string;
     name: string;
@@ -1121,7 +1123,7 @@ function StoreDetailsContent() {
           
           {/* بيانات الاشتراك */}
           <div className="border-t border-purple-500/20 p-4">
-            <div className="flex items-center justify-center gap-6">
+            <div className="flex items-center justify-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${storeData?.subscription_start_date ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                 <span className="text-sm text-purple-300">
@@ -1137,6 +1139,23 @@ function StoreDetailsContent() {
                   <span className="text-white font-medium">
                     {new Date(storeData.subscription_start_date).toLocaleDateString('en-US')}
                   </span>
+                </div>
+              )}
+              {storeData?.billing_amount != null && (
+                <div className="flex items-center gap-2 text-sm">
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+                  </svg>
+                  <span className="text-purple-300">الفوترة:</span>
+                  <span className="text-amber-300 font-bold font-mono">
+                    {Number(storeData.billing_amount).toLocaleString('ar-SA')} ر.س
+                  </span>
+                  {storeData.billing_type === 'package' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/20">باقة</span>
+                  )}
+                  {storeData.billing_type === 'custom' && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-400 border border-purple-500/20">مخصص</span>
+                  )}
                 </div>
               )}
             </div>
