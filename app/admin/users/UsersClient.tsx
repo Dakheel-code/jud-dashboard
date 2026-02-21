@@ -1172,29 +1172,6 @@ function UsersManagementContent() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-purple-300 text-sm mb-2">الصلاحيات</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PERMISSIONS.map((perm) => (
-                    <label key={perm.value} className="flex items-center gap-2 p-2 bg-purple-900/20 rounded-lg cursor-pointer hover:bg-purple-900/30">
-                      <input
-                        type="checkbox"
-                        checked={formData.permissions.includes(perm.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({ ...formData, permissions: [...formData.permissions, perm.value] });
-                          } else {
-                            setFormData({ ...formData, permissions: formData.permissions.filter(p => p !== perm.value) });
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-purple-500 text-purple-500 focus:ring-purple-500"
-                      />
-                      <span className="text-white text-sm">{perm.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
