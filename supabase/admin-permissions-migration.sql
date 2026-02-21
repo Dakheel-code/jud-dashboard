@@ -4,6 +4,31 @@
 -- الجداول تستخدم prefix: admin_ للتوافق مع lib/rbac.ts
 -- =====================================================
 
+-- =====================================================
+-- إضافة الأعمدة الناقصة للجداول الموجودة مسبقاً
+-- =====================================================
+ALTER TABLE admin_permissions ADD COLUMN IF NOT EXISTS label       TEXT;
+ALTER TABLE admin_permissions ADD COLUMN IF NOT EXISTS category    TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_permissions ADD COLUMN IF NOT EXISTS subcategory TEXT;
+
+-- نسخ name → label إذا كان label فارغاً
+UPDATE admin_permissions SET label = name WHERE label IS NULL OR label = '';
+
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS color   TEXT DEFAULT '#6b7280';
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS icon    TEXT DEFAULT '👤';
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS name_ar TEXT;
+
+-- نسخ name → name_ar إذا كان فارغاً
+UPDATE admin_roles SET name_ar = name WHERE name_ar IS NULL OR name_ar = '';
+
+-- إضافة عمود granted لـ admin_role_permissions إذا لم يكن موجوداً
+ALTER TABLE admin_role_permissions ADD COLUMN IF NOT EXISTS granted    BOOLEAN DEFAULT FALSE;
+ALTER TABLE admin_role_permissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- =====================================================
+-- إنشاء الجداول الجديدة إن لم تكن موجودة
+-- =====================================================
+
 -- 1) جدول الأدوار
 CREATE TABLE IF NOT EXISTS admin_roles (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
