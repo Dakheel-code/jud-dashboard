@@ -51,6 +51,16 @@ async function syncRoles(supabase: any) {
       await supabase.from('admin_role_permissions').delete().in('role_id', ids);
       await supabase.from('admin_roles').delete().in('id', ids);
     }
+    // 3) احذف أي أدوار بدون key صالح (فارغة أو null)
+    const { data: emptyRoles } = await supabase
+      .from('admin_roles')
+      .select('id')
+      .or('key.is.null,key.eq.');
+    if (emptyRoles && emptyRoles.length > 0) {
+      const ids = emptyRoles.map((r: any) => r.id);
+      await supabase.from('admin_role_permissions').delete().in('role_id', ids);
+      await supabase.from('admin_roles').delete().in('id', ids);
+    }
   } catch {}
 }
 
@@ -128,13 +138,25 @@ export async function POST(req: NextRequest) {
   try {
     if (action === 'create_role') {
       const { name, name_ar, description, color, icon } = body;
+      // validation: key و name_ar مطلوبان
+      if (!name || !name.trim()) {
+        return NextResponse.json({ error: 'المفتاح البرمجي للدور مطلوب' }, { status: 400 });
+      }
+      if (!name_ar || !name_ar.trim()) {
+        return NextResponse.json({ error: 'الاسم العربي للدور مطلوب' }, { status: 400 });
+      }
+      // تنظيف key: حروف صغيرة وشرطة سفلية فقط
+      const cleanKey = name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      if (!cleanKey) {
+        return NextResponse.json({ error: 'المفتاح البرمجي يجب أن يحتوي على حروف إنجليزية' }, { status: 400 });
+      }
       const { data, error } = await supabase
         .from('admin_roles')
-        .insert({ key: name, name: name_ar, description, color, icon, is_system: false })
+        .insert({ key: cleanKey, name: name_ar.trim(), name_ar: name_ar.trim(), description, color, icon, is_system: false, sort_order: 99 })
         .select()
         .single();
       if (error) throw error;
-      return NextResponse.json({ role: data });
+      return NextResponse.json({ role: { ...data, name_ar: data.name_ar || data.name } });
     }
 
     if (action === 'update_role') {
