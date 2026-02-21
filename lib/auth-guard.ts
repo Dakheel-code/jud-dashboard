@@ -163,5 +163,6 @@ export async function requireRole(allowedRoles: string[]): Promise<AuthResult> {
  * التحقق من صلاحية المسؤول (legacy — للتوافق المؤقت)
  */
 export async function requireAdmin(): Promise<AuthResult> {
-  return requireRole(['super_admin', 'admin', 'team_leader', 'account_manager', 'manager', 'editor', 'viewer']);
+  // أي مستخدم مسجّل دخوله يُعتبر admin — الصلاحيات التفصيلية تُفحص عبر requirePermission
+  return requireAuth();
 }
