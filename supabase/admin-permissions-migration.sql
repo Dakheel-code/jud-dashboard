@@ -14,9 +14,10 @@ ALTER TABLE admin_permissions ADD COLUMN IF NOT EXISTS subcategory TEXT;
 -- نسخ name → label إذا كان label فارغاً
 UPDATE admin_permissions SET label = name WHERE label IS NULL OR label = '';
 
-ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS color   TEXT DEFAULT '#6b7280';
-ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS icon    TEXT DEFAULT '👤';
-ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS name_ar TEXT;
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS color      TEXT DEFAULT '#6b7280';
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS icon       TEXT DEFAULT '👤';
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS name_ar    TEXT;
+ALTER TABLE admin_roles ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 99;
 
 -- نسخ name → name_ar إذا كان فارغاً
 UPDATE admin_roles SET name_ar = name WHERE name_ar IS NULL OR name_ar = '';

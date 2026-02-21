@@ -10,14 +10,14 @@ function getSupabase() {
 
 // الأدوار الرسمية الثمانية
 const OFFICIAL_ROLES = [
-  { key: 'owner',           name: 'المالك',       description: 'صلاحيات كاملة غير محدودة على كل النظام', color: '#dc2626', icon: '👑',  is_system: true },
-  { key: 'general_manager', name: 'المدير العام', description: 'إدارة كاملة مع صلاحيات واسعة جداً',     color: '#9333ea', icon: '🏆', is_system: true },
-  { key: 'manager',         name: 'مدير',         description: 'إدارة الفريق والعمليات اليومية',          color: '#2563eb', icon: '📋', is_system: true },
-  { key: 'team_leader',     name: 'قائد فريق',    description: 'قيادة الفريق ومتابعة المهام والحضور',     color: '#d97706', icon: '🎯', is_system: true },
-  { key: 'account_manager', name: 'مدير حساب',    description: 'إدارة حسابات العملاء والمتاجر',           color: '#ec4899', icon: '💼', is_system: true },
-  { key: 'media_buyer',     name: 'ميديا باير',   description: 'إدارة الحملات الإعلانية والتقارير',       color: '#6366f1', icon: '📊', is_system: true },
-  { key: 'designer',        name: 'مصمم',         description: 'إنشاء وتعديل التصاميم والمحتوى المرئي',  color: '#0891b2', icon: '🎨', is_system: true },
-  { key: 'content_writer',  name: 'كاتب محتوى',  description: 'كتابة وتحرير المحتوى النصي',              color: '#059669', icon: '✍️', is_system: true },
+  { key: 'owner',           name: 'المالك',       description: 'صلاحيات كاملة غير محدودة على كل النظام', color: '#dc2626', icon: '👑',  is_system: true, sort_order: 1 },
+  { key: 'general_manager', name: 'المدير العام', description: 'إدارة كاملة مع صلاحيات واسعة جداً',     color: '#9333ea', icon: '🏆', is_system: true, sort_order: 2 },
+  { key: 'manager',         name: 'مدير',         description: 'إدارة الفريق والعمليات اليومية',          color: '#2563eb', icon: '📋', is_system: true, sort_order: 3 },
+  { key: 'team_leader',     name: 'قائد فريق',    description: 'قيادة الفريق ومتابعة المهام والحضور',     color: '#d97706', icon: '🎯', is_system: true, sort_order: 4 },
+  { key: 'account_manager', name: 'مدير حساب',    description: 'إدارة حسابات العملاء والمتاجر',           color: '#ec4899', icon: '💼', is_system: true, sort_order: 5 },
+  { key: 'media_buyer',     name: 'ميديا باير',   description: 'إدارة الحملات الإعلانية والتقارير',       color: '#6366f1', icon: '📊', is_system: true, sort_order: 6 },
+  { key: 'content_writer',  name: 'كاتب محتوى',  description: 'كتابة وتحرير المحتوى النصي',              color: '#059669', icon: '✍️', is_system: true, sort_order: 7 },
+  { key: 'designer',        name: 'مصمم',         description: 'إنشاء وتعديل التصاميم والمحتوى المرئي',  color: '#0891b2', icon: '🎨', is_system: true, sort_order: 8 },
 ];
 
 // مفاتيح الأدوار القديمة التي يجب حذفها
@@ -36,6 +36,7 @@ async function syncRoles(supabase: any) {
           color: role.color,
           icon: role.icon,
           is_system: role.is_system,
+          sort_order: (role as any).sort_order,
         },
         { onConflict: 'key' }
       );
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
       const { data: roles, error: rolesError } = await supabase
         .from('admin_roles')
         .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at');
       if (rolesError) throw rolesError;
 
@@ -93,7 +95,7 @@ export async function GET(req: NextRequest) {
 
     // all
     const [rolesRes, permsRes, rolePermsRes] = await Promise.all([
-      supabase.from('admin_roles').select('*').order('created_at'),
+      supabase.from('admin_roles').select('*').order('sort_order', { ascending: true, nullsFirst: false }).order('created_at'),
       supabase.from('admin_permissions').select('*').order('category'),
       supabase.from('admin_role_permissions').select('*'),
     ]);
