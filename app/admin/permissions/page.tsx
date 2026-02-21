@@ -416,8 +416,8 @@ export default function PermissionsPage() {
         * { box-sizing: border-box; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          background: rgba(88, 28, 135, 0.08);
+          border: 1px solid rgba(139, 92, 246, 0.15);
           backdrop-filter: blur(20px);
         }
 
@@ -426,12 +426,13 @@ export default function PermissionsPage() {
           cursor: pointer;
         }
         .role-card:hover {
-          background: rgba(255, 255, 255, 0.06);
+          background: rgba(139, 92, 246, 0.12);
           transform: translateX(-2px);
+          border-color: rgba(139, 92, 246, 0.3);
         }
         .role-card.active {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.15);
+          background: rgba(139, 92, 246, 0.18);
+          border-color: rgba(139, 92, 246, 0.4);
         }
 
         .toggle-switch {
@@ -443,10 +444,11 @@ export default function PermissionsPage() {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .toggle-switch.off {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(139, 92, 246, 0.15);
+          border: 1px solid rgba(139, 92, 246, 0.2);
         }
         .toggle-switch.on {
-          background: #10b981;
+          background: #7c3aed;
         }
         .toggle-switch::after {
           content: '';
@@ -469,7 +471,7 @@ export default function PermissionsPage() {
           transition: all 0.15s ease;
         }
         .permission-row:hover {
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(139, 92, 246, 0.06);
         }
 
         .category-header {
@@ -477,7 +479,7 @@ export default function PermissionsPage() {
           cursor: pointer;
         }
         .category-header:hover {
-          background: rgba(255, 255, 255, 0.04);
+          background: rgba(139, 92, 246, 0.08);
         }
 
         .progress-ring {
@@ -637,7 +639,7 @@ export default function PermissionsPage() {
             {/* === القائمة الجانبية - الأدوار === */}
             <div className="w-[280px] flex-shrink-0">
               <div className="glass-card rounded-2xl p-4 sticky top-24">
-                <h3 className="text-sm font-bold text-white/60 mb-3 px-2">الأدوار ({roles.length})</h3>
+                <h3 className="text-sm font-bold text-purple-300/80 mb-3 px-2">الأدوار ({roles.length})</h3>
                 <div className="space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
                   {roles.map(role => {
                     const roleGranted = role.permissions.filter(p => p.granted).length
@@ -659,17 +661,17 @@ export default function PermissionsPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-bold text-white truncate">{role.name_ar}</span>
                               {role.is_system && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30">نظام</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/60">نظام</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div className="flex-1 h-1.5 rounded-full bg-purple-900/40 overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-300"
                                   style={{ width: `${rolePercent}%`, background: role.color }}
                                 />
                               </div>
-                              <span className="text-[10px] text-white/40 flex-shrink-0">{rolePercent}%</span>
+                              <span className="text-[10px] text-purple-400/60 flex-shrink-0">{rolePercent}%</span>
                             </div>
                           </div>
                         </div>
@@ -711,7 +713,7 @@ export default function PermissionsPage() {
                         {/* Progress Circle */}
                         <div className="relative w-16 h-16">
                           <svg className="progress-ring w-16 h-16" viewBox="0 0 60 60">
-                            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
+                            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(139,92,246,0.15)" strokeWidth="4" />
                             <circle
                               cx="30" cy="30" r="26" fill="none"
                               stroke={selectedRole.color}
@@ -726,13 +728,13 @@ export default function PermissionsPage() {
                         </div>
                         <div className="text-left">
                           <div className="text-2xl font-bold text-white">{totalGranted}</div>
-                          <div className="text-xs text-white/40">من {totalPerms} صلاحية</div>
+                          <div className="text-xs text-purple-300/60">من {totalPerms} صلاحية</div>
                         </div>
                         {/* أزرار التحرير والحذف */}
                         <div className="flex gap-2 mr-4">
                           <button
                             onClick={() => setEditingRole(selectedRole)}
-                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                            className="p-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300/70 hover:text-white transition-all"
                             title="تعديل الدور"
                           >
                             ✏️
@@ -753,16 +755,16 @@ export default function PermissionsPage() {
 
                   {/* بحث */}
                   <div className="glass-card rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-                    <span className="text-white/30">🔍</span>
+                    <span className="text-purple-400/50">🔍</span>
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       placeholder="ابحث في الصلاحيات..."
-                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/20"
+                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-purple-300/30"
                     />
                     {searchQuery && (
-                      <button onClick={() => setSearchQuery("")} className="text-white/30 hover:text-white/60 text-sm">✕</button>
+                      <button onClick={() => setSearchQuery("")} className="text-purple-400/40 hover:text-purple-300 text-sm">✕</button>
                     )}
                   </div>
 
@@ -802,11 +804,11 @@ export default function PermissionsPage() {
                               </div>
                               <div>
                                 <h3 className="text-sm font-bold text-white">{category}</h3>
-                                <p className="text-xs text-white/30 mt-0.5">{granted} من {total} صلاحية مفعّلة</p>
+                                <p className="text-xs text-purple-300/50 mt-0.5">{granted} من {total} صلاحية مفعّلة</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div className="w-24 h-1.5 rounded-full bg-purple-900/40 overflow-hidden">
                                 <div
                                   className="h-full rounded-full transition-all duration-300"
                                   style={{
@@ -815,7 +817,7 @@ export default function PermissionsPage() {
                                   }}
                                 />
                               </div>
-                              <span className="text-white/30 text-xs transition-transform duration-200"
+                              <span className="text-purple-400/40 text-xs transition-transform duration-200"
                                 style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
                                 ▼
                               </span>
@@ -824,26 +826,26 @@ export default function PermissionsPage() {
 
                           {/* Permission Rows */}
                           {isExpanded && (
-                            <div className="border-t border-white/5">
+                            <div className="border-t border-purple-500/10">
                               {[...subcategories.entries()].map(([subcat, perms]) => (
                                 <div key={subcat}>
                                   {subcat && (
-                                    <div className="px-5 py-2 bg-white/[0.02]">
-                                      <span className="text-xs font-bold text-white/25">{subcat}</span>
+                                    <div className="px-5 py-2 bg-purple-500/5">
+                                      <span className="text-xs font-bold text-purple-300/40">{subcat}</span>
                                     </div>
                                   )}
                                   {perms.map((perm, idx) => (
                                     <div
                                       key={perm.id}
                                       className="permission-row flex items-center justify-between px-5 py-3"
-                                      style={{ borderTop: idx > 0 || subcat ? "1px solid rgba(255,255,255,0.03)" : "none" }}
+                                      style={{ borderTop: idx > 0 || subcat ? "1px solid rgba(139,92,246,0.08)" : "none" }}
                                     >
                                       <div className="flex-1 min-w-0 pr-4">
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm text-white/90">{perm.label}</span>
-                                          <span className="text-[10px] font-mono text-white/15 hidden sm:inline">{perm.key}</span>
+                                          <span className="text-[10px] font-mono text-purple-400/25 hidden sm:inline">{perm.key}</span>
                                         </div>
-                                        <p className="text-xs text-white/30 mt-0.5">{perm.description}</p>
+                                        <p className="text-xs text-purple-300/40 mt-0.5">{perm.description}</p>
                                       </div>
                                       <div
                                         className={`toggle-switch ${isPermissionGranted(selectedRole, perm.id) ? "on" : "off"}`}
@@ -863,8 +865,8 @@ export default function PermissionsPage() {
               ) : (
                 <div className="glass-card rounded-2xl p-20 text-center">
                   <span className="text-4xl mb-4 block">🔐</span>
-                  <h3 className="text-lg font-bold text-white/60">اختر دوراً لعرض صلاحياته</h3>
-                  <p className="text-sm text-white/30 mt-2">اختر من القائمة الجانبية لبدء إدارة الصلاحيات</p>
+                  <h3 className="text-lg font-bold text-purple-300/60">اختر دوراً لعرض صلاحياته</h3>
+                  <p className="text-sm text-purple-300/40 mt-2">اختر من القائمة الجانبية لبدء إدارة الصلاحيات</p>
                 </div>
               )}
             </div>
@@ -872,7 +874,7 @@ export default function PermissionsPage() {
         </div>
       ) : (
         /* === تبويب نظرة عامة === */
-        <div className="max-w-[1600px] mx-auto p-6">
+        <div className="max-w-7xl mx-auto px-4 pb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {roles.map(role => {
               const roleGranted = role.permissions.filter(p => p.granted).length
@@ -882,13 +884,13 @@ export default function PermissionsPage() {
                   <div className="flex items-center gap-3 mb-4">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-                      style={{ background: `${role.color}15`, border: `1px solid ${role.color}30` }}
+                      style={{ background: `${role.color}20`, border: `1px solid ${role.color}40` }}
                     >
                       {role.icon}
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-white">{role.name_ar}</h3>
-                      <p className="text-xs text-white/40">{role.description}</p>
+                      <p className="text-xs text-purple-300/50">{role.description}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -896,8 +898,8 @@ export default function PermissionsPage() {
                       const { granted: cg, total: ct } = getCategoryGrantCount(role, cat)
                       return (
                         <div key={cat} className="flex items-center gap-2">
-                          <span className="text-xs text-white/50 w-28 truncate">{cat}</span>
-                          <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <span className="text-xs text-purple-300/50 w-28 truncate">{cat}</span>
+                          <div className="flex-1 h-1.5 rounded-full bg-purple-900/40 overflow-hidden">
                             <div
                               className="h-full rounded-full"
                               style={{
@@ -906,13 +908,13 @@ export default function PermissionsPage() {
                               }}
                             />
                           </div>
-                          <span className="text-[10px] text-white/30 w-8 text-left">{cg}/{ct}</span>
+                          <span className="text-[10px] text-purple-400/40 w-8 text-left">{cg}/{ct}</span>
                         </div>
                       )
                     })}
                   </div>
-                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-xs text-white/40">{roleGranted} صلاحية من {totalPerms}</span>
+                  <div className="mt-4 pt-3 border-t border-purple-500/10 flex items-center justify-between">
+                    <span className="text-xs text-purple-300/50">{roleGranted} صلاحية من {totalPerms}</span>
                     <span className="text-sm font-bold" style={{ color: role.color }}>{rolePercent}%</span>
                   </div>
                 </div>
@@ -922,14 +924,14 @@ export default function PermissionsPage() {
 
           {/* جدول مقارنة الأدوار */}
           <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/5">
+            <div className="px-5 py-4 border-b border-purple-500/10">
               <h3 className="text-sm font-bold text-white">مقارنة الصلاحيات بين الأدوار</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-right text-xs font-bold text-white/40 px-5 py-3">الصلاحية</th>
+                  <tr className="border-b border-purple-500/10">
+                    <th className="text-right text-xs font-bold text-purple-300/50 px-5 py-3">الصلاحية</th>
                     {roles.map(r => (
                       <th key={r.id} className="text-center text-xs font-bold px-3 py-3" style={{ color: r.color }}>
                         {r.icon} {r.name_ar}
@@ -940,12 +942,12 @@ export default function PermissionsPage() {
                 <tbody>
                   {getCategories().map(cat => (
                     <>
-                      <tr key={`cat-${cat}`} className="bg-white/[0.02]">
-                        <td colSpan={roles.length + 1} className="px-5 py-2 text-xs font-bold text-white/50">{cat}</td>
+                      <tr key={`cat-${cat}`} className="bg-purple-500/5">
+                        <td colSpan={roles.length + 1} className="px-5 py-2 text-xs font-bold text-purple-300/60">{cat}</td>
                       </tr>
                       {getPermissionsByCategory(cat).map(perm => (
-                        <tr key={perm.id} className="border-t border-white/[0.02] hover:bg-white/[0.02]">
-                          <td className="px-5 py-2 text-xs text-white/70">{perm.label}</td>
+                        <tr key={perm.id} className="border-t border-purple-500/5 hover:bg-purple-500/5">
+                          <td className="px-5 py-2 text-xs text-white/80">{perm.label}</td>
                           {roles.map(r => (
                             <td key={r.id} className="text-center px-3 py-2">
                               <span className={`text-sm ${isPermissionGranted(r, perm.id) ? "text-emerald-400" : "text-white/10"}`}>
