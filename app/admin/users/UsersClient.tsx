@@ -95,18 +95,25 @@ function UsersManagementContent() {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [dynamicRoles, setDynamicRoles] = useState(DEFAULT_ROLES);
 
-  // جلب الأدوار من Supabase
+  // جلب الأدوار من Supabase — يدمج API مع DEFAULT_ROLES لضمان ظهور الأدوار الجديدة
   const fetchRoles = async () => {
     try {
       const res = await fetch('/api/permissions?type=roles');
       if (!res.ok) return;
       const data = await res.json();
       if (data.roles && data.roles.length > 0) {
-        setDynamicRoles(data.roles.map((r: any) => ({
+        const apiRoles = data.roles.map((r: any) => ({
           value: r.key,
-          label: r.name || r.key,
+          label: r.name_ar || r.name || r.key,
           color: r.color || '#6b7280',
-        })));
+        }));
+        // دمج: API roles أولاً، ثم أي دور من DEFAULT_ROLES غير موجود في API
+        const apiKeys = new Set(apiRoles.map((r: any) => r.value));
+        const merged = [
+          ...apiRoles,
+          ...DEFAULT_ROLES.filter(r => !apiKeys.has(r.value)),
+        ];
+        setDynamicRoles(merged);
       }
     } catch {}
   };
