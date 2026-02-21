@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   try {
     if (type === 'permissions') {
       const { data, error } = await supabase
-        .from('permissions')
+        .from('admin_permissions')
         .select('*')
         .order('category');
       if (error) throw error;
@@ -25,13 +25,13 @@ export async function GET(req: NextRequest) {
 
     if (type === 'roles') {
       const { data: roles, error: rolesError } = await supabase
-        .from('roles')
+        .from('admin_roles')
         .select('*')
         .order('created_at');
       if (rolesError) throw rolesError;
 
       const { data: rolePerms, error: rpError } = await supabase
-        .from('role_permissions')
+        .from('admin_role_permissions')
         .select('*');
       if (rpError) throw rpError;
 
@@ -44,9 +44,9 @@ export async function GET(req: NextRequest) {
 
     // all
     const [rolesRes, permsRes, rolePermsRes] = await Promise.all([
-      supabase.from('roles').select('*').order('created_at'),
-      supabase.from('permissions').select('*').order('category'),
-      supabase.from('role_permissions').select('*'),
+      supabase.from('admin_roles').select('*').order('created_at'),
+      supabase.from('admin_permissions').select('*').order('category'),
+      supabase.from('admin_role_permissions').select('*'),
     ]);
 
     if (rolesRes.error) throw rolesRes.error;
@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
     if (action === 'create_role') {
       const { name, name_ar, description, color, icon } = body;
       const { data, error } = await supabase
-        .from('roles')
-        .insert({ name, name_ar, description, color, icon, is_system: false })
+        .from('admin_roles')
+        .insert({ key: name, name: name_ar, description, color, icon, is_system: false })
         .select()
         .single();
       if (error) throw error;
@@ -88,8 +88,8 @@ export async function POST(req: NextRequest) {
     if (action === 'update_role') {
       const { id, name, name_ar, description, color, icon } = body;
       const { data, error } = await supabase
-        .from('roles')
-        .update({ name, name_ar, description, color, icon, updated_at: new Date().toISOString() })
+        .from('admin_roles')
+        .update({ key: name, name: name_ar, description, color, icon, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();
@@ -99,7 +99,6 @@ export async function POST(req: NextRequest) {
 
     if (action === 'save_permissions') {
       const { role_id, permissions } = body;
-      // upsert جميع الصلاحيات للدور
       const upsertData = permissions.map((p: any) => ({
         role_id,
         permission_id: p.permission_id,
@@ -107,7 +106,7 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       }));
       const { error } = await supabase
-        .from('role_permissions')
+        .from('admin_role_permissions')
         .upsert(upsertData, { onConflict: 'role_id,permission_id' });
       if (error) throw error;
       return NextResponse.json({ success: true });
@@ -128,7 +127,7 @@ export async function DELETE(req: NextRequest) {
   try {
     // تحقق أن الدور ليس نظامياً
     const { data: role } = await supabase
-      .from('roles')
+      .from('admin_roles')
       .select('is_system')
       .eq('id', role_id)
       .single();
@@ -137,7 +136,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'لا يمكن حذف أدوار النظام' }, { status: 403 });
     }
 
-    const { error } = await supabase.from('roles').delete().eq('id', role_id);
+    const { error } = await supabase.from('admin_roles').delete().eq('id', role_id);
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (err: any) {

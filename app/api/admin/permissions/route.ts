@@ -14,9 +14,9 @@ export async function GET() {
     const supabase = getSupabase()
 
     const [rolesRes, permsRes, rolePermsRes] = await Promise.all([
-      supabase.from("roles").select("*").order("created_at"),
-      supabase.from("permissions").select("*").order("category"),
-      supabase.from("role_permissions").select("*"),
+      supabase.from("admin_roles").select("*").order("created_at"),
+      supabase.from("admin_permissions").select("*").order("category"),
+      supabase.from("admin_role_permissions").select("*"),
     ])
 
     if (rolesRes.error) throw rolesRes.error
@@ -47,22 +47,22 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabase()
 
     const { data: role, error } = await supabase
-      .from("roles")
-      .insert({ name, name_ar, description, color, icon, is_system: false })
+      .from("admin_roles")
+      .insert({ key: name, name: name_ar, description, color, icon, is_system: false })
       .select()
       .single()
 
     if (error) throw error
 
     // إنشاء صلاحيات فارغة للدور الجديد
-    const { data: allPerms } = await supabase.from("permissions").select("id")
+    const { data: allPerms } = await supabase.from("admin_permissions").select("id")
     if (allPerms && allPerms.length > 0) {
       const rolePerms = allPerms.map((p: any) => ({
         role_id: role.id,
         permission_id: p.id,
         granted: false,
       }))
-      await supabase.from("role_permissions").insert(rolePerms)
+      await supabase.from("admin_role_permissions").insert(rolePerms)
     }
 
     return NextResponse.json({ success: true, role })
@@ -86,7 +86,7 @@ export async function PUT(request: NextRequest) {
     // تحديث بيانات الدور إذا أُرسلت
     if (role_data) {
       const { error } = await supabase
-        .from("roles")
+        .from("admin_roles")
         .update({ ...role_data, updated_at: new Date().toISOString() })
         .eq("id", role_id)
       if (error) throw error
@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }))
       const { error } = await supabase
-        .from("role_permissions")
+        .from("admin_role_permissions")
         .upsert(upsertData, { onConflict: "role_id,permission_id" })
       if (error) throw error
     }
@@ -124,7 +124,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabase()
 
     const { data: role } = await supabase
-      .from("roles")
+      .from("admin_roles")
       .select("is_system")
       .eq("id", roleId)
       .single()
@@ -133,7 +133,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: "لا يمكن حذف أدوار النظام" }, { status: 403 })
     }
 
-    const { error } = await supabase.from("roles").delete().eq("id", roleId)
+    const { error } = await supabase.from("admin_roles").delete().eq("id", roleId)
     if (error) throw error
 
     return NextResponse.json({ success: true })
