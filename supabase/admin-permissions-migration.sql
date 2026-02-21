@@ -175,12 +175,24 @@ ON CONFLICT (key) DO NOTHING;
 -- إدخال الأدوار الافتراضية
 -- =====================================================
 INSERT INTO admin_roles (key, name, description, color, icon, is_system) VALUES
-('super_admin', 'مدير النظام', 'صلاحيات كاملة على جميع أقسام النظام', '#dc2626', '👑',  TRUE),
-('admin',       'مشرف',        'صلاحيات إدارية واسعة مع بعض القيود',  '#7c3aed', '🛡️', TRUE),
-('manager',     'مدير فرع',    'إدارة المتجر والموظفين والعمليات',     '#2563eb', '📋', TRUE),
-('employee',    'موظف',        'صلاحيات أساسية للعمل اليومي',          '#059669', '👤', TRUE),
-('viewer',      'مشاهد',       'عرض فقط بدون أي صلاحيات تعديل',       '#6b7280', '👁️', FALSE)
+('super_admin',     'مدير النظام',   'صلاحيات كاملة على جميع أقسام النظام',          '#dc2626', '👑',  TRUE),
+('admin',           'مشرف',          'صلاحيات إدارية واسعة مع بعض القيود',           '#7c3aed', '🛡️', TRUE),
+('manager',         'مدير فرع',      'إدارة المتجر والموظفين والعمليات',              '#2563eb', '📋', TRUE),
+('editor',          'محرر',          'تعديل المحتوى دون إدارة المستخدمين',           '#0891b2', '✏️', TRUE),
+('employee',        'موظف',          'صلاحيات أساسية للعمل اليومي',                  '#059669', '👤', TRUE),
+('team_leader',     'قائد فريق',     'إدارة الفريق ومتابعة المهام',                  '#d97706', '🎯', TRUE),
+('account_manager', 'مدير حساب',     'إدارة حسابات العملاء والمتاجر',                '#ec4899', '💼', TRUE),
+('media_buyer',     'ميديا باير',    'إدارة الحملات الإعلانية والتقارير',            '#6366f1', '📊', TRUE),
+('viewer',          'مشاهد',         'عرض فقط بدون أي صلاحيات تعديل',               '#6b7280', '👁️', FALSE)
 ON CONFLICT (key) DO NOTHING;
+
+-- تحديث الأسماء العربية للأدوار الموجودة مسبقاً
+UPDATE admin_roles SET name = 'مدير النظام', color = '#dc2626', icon = '👑' WHERE key = 'super_admin' AND name NOT LIKE '%مدير%';
+UPDATE admin_roles SET name = 'مشرف',        color = '#7c3aed', icon = '🛡️' WHERE key = 'admin'       AND name NOT LIKE '%مشرف%';
+UPDATE admin_roles SET name = 'مدير فرع',    color = '#2563eb', icon = '📋' WHERE key = 'manager'     AND name NOT LIKE '%مدير%';
+UPDATE admin_roles SET name = 'محرر',        color = '#0891b2', icon = '✏️' WHERE key = 'editor'      AND name NOT LIKE '%محرر%';
+UPDATE admin_roles SET name = 'موظف',        color = '#059669', icon = '👤' WHERE key = 'employee'    AND name NOT LIKE '%موظف%';
+UPDATE admin_roles SET name = 'مشاهد',       color = '#6b7280', icon = '👁️' WHERE key = 'viewer'      AND name NOT LIKE '%مشاهد%';
 
 -- =====================================================
 -- ربط الصلاحيات بالأدوار
@@ -232,6 +244,58 @@ SELECT r.id, p.id,
     THEN TRUE ELSE FALSE END
 FROM admin_roles r CROSS JOIN admin_permissions p
 WHERE r.key = 'viewer'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- المحرر: تعديل المحتوى بدون إدارة المستخدمين والإعدادات
+INSERT INTO admin_role_permissions (role_id, permission_id, granted)
+SELECT r.id, p.id,
+  CASE WHEN p.category IN ('إدارة المستخدمين','الإعدادات')
+    OR p.key LIKE '%delete%' OR p.key LIKE '%permissions%'
+    THEN FALSE ELSE TRUE END
+FROM admin_roles r CROSS JOIN admin_permissions p
+WHERE r.key = 'editor'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- قائد الفريق: إدارة المهام والحضور والتقارير
+INSERT INTO admin_role_permissions (role_id, permission_id, granted)
+SELECT r.id, p.id,
+  CASE WHEN p.key IN (
+    'dashboard.view','dashboard.stats',
+    'tasks.view','tasks.create','tasks.edit','tasks.toggle','tasks.assign','tasks.categories',
+    'attendance.view','attendance.checkin','attendance.checkout','attendance.manage','attendance.reports',
+    'clients.view','clients.details','clients.notes',
+    'reports.view','reports.performance',
+    'notifications.view','notifications.send','messages.view','messages.send',
+    'stores.view','stores.details'
+  ) THEN TRUE ELSE FALSE END
+FROM admin_roles r CROSS JOIN admin_permissions p
+WHERE r.key = 'team_leader'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- مدير الحساب: إدارة المتاجر والعملاء والتقارير
+INSERT INTO admin_role_permissions (role_id, permission_id, granted)
+SELECT r.id, p.id,
+  CASE WHEN p.category IN ('إدارة المستخدمين','الإعدادات')
+    OR p.key LIKE '%delete%' OR p.key LIKE '%permissions%'
+    THEN FALSE
+    WHEN p.category IN ('إدارة المتاجر','إدارة العملاء','التقارير والتحليلات','المتجر','لوحة التحكم','إدارة المهام')
+    THEN TRUE ELSE FALSE END
+FROM admin_roles r CROSS JOIN admin_permissions p
+WHERE r.key = 'account_manager'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ميديا باير: لوحة التحكم والتقارير والإعلانات
+INSERT INTO admin_role_permissions (role_id, permission_id, granted)
+SELECT r.id, p.id,
+  CASE WHEN p.key IN (
+    'dashboard.view','dashboard.stats','dashboard.export',
+    'reports.view','reports.sales','reports.financial','reports.performance','reports.export',
+    'stores.view','stores.details',
+    'clients.view','clients.details','clients.export',
+    'notifications.view','messages.view'
+  ) THEN TRUE ELSE FALSE END
+FROM admin_roles r CROSS JOIN admin_permissions p
+WHERE r.key = 'media_buyer'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- =====================================================

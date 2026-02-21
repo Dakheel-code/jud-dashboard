@@ -38,16 +38,17 @@ interface TeamMember {
   leader_id: string;
 }
 
-const ROLES = [
-  { value: 'super_admin', label: 'المسؤول الرئيسي', color: 'red' },
-  { value: 'manager', label: 'مدير', color: 'orange' },
-  { value: 'editor', label: 'محرر', color: 'blue' },
-  { value: 'viewer', label: 'مشاهد', color: 'cyan' },
-  { value: 'employee', label: 'موظف', color: 'green' },
-  { value: 'admin', label: 'المسؤول', color: 'purple' },
-  { value: 'team_leader', label: 'قائد فريق', color: 'yellow' },
-  { value: 'account_manager', label: 'مدير حساب', color: 'pink' },
-  { value: 'media_buyer', label: 'ميديا باير', color: 'indigo' },
+// الأدوار الافتراضية كـ fallback فقط
+const DEFAULT_ROLES = [
+  { value: 'super_admin', label: 'مدير النظام',  color: '#dc2626' },
+  { value: 'admin',       label: 'مشرف',          color: '#7c3aed' },
+  { value: 'manager',     label: 'مدير فرع',      color: '#2563eb' },
+  { value: 'editor',      label: 'محرر',          color: '#0891b2' },
+  { value: 'employee',    label: 'موظف',          color: '#059669' },
+  { value: 'team_leader', label: 'قائد فريق',     color: '#d97706' },
+  { value: 'account_manager', label: 'مدير حساب', color: '#ec4899' },
+  { value: 'media_buyer', label: 'ميديا باير',    color: '#6366f1' },
+  { value: 'viewer',      label: 'مشاهد',         color: '#6b7280' },
 ];
 
 const PERMISSIONS = [
@@ -93,6 +94,23 @@ function UsersManagementContent() {
   const [resultModalType, setResultModalType] = useState<'success' | 'error'>('success');
   const [resultModalMessage, setResultModalMessage] = useState('');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [dynamicRoles, setDynamicRoles] = useState(DEFAULT_ROLES);
+
+  // جلب الأدوار من Supabase
+  const fetchRoles = async () => {
+    try {
+      const res = await fetch('/api/permissions?type=roles');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.roles && data.roles.length > 0) {
+        setDynamicRoles(data.roles.map((r: any) => ({
+          value: r.key,
+          label: r.name || r.key,
+          color: r.color || '#6b7280',
+        })));
+      }
+    } catch {}
+  };
   
   // نظام المكافآت
   const [showRewardModal, setShowRewardModal] = useState(false);
@@ -146,6 +164,7 @@ function UsersManagementContent() {
   useEffect(() => {
     fetchUsers();
     fetchMyTeam();
+    fetchRoles();
     
     // تحديث تلقائي كل 60 ثانية (heartbeat يُحدّث last_seen_at كل 60 ثانية)
     const interval = setInterval(() => {
@@ -185,7 +204,7 @@ function UsersManagementContent() {
     total: users.length,
     active: users.filter(u => u.is_active).length,
     inactive: users.filter(u => !u.is_active).length,
-    byRole: ROLES.map(role => ({
+    byRole: dynamicRoles.map(role => ({
       ...role,
       count: users.filter(u => (u.roles || [u.role]).includes(role.value)).length
     }))
@@ -525,8 +544,20 @@ function UsersManagementContent() {
   };
 
   const getRoleColor = (role: string) => {
-    const roleObj = ROLES.find(r => r.value === role);
-    switch (roleObj?.color) {
+    const roleObj = dynamicRoles.find(r => r.value === role);
+    const hex = roleObj?.color || '#6b7280';
+    // تحويل اللون الـ hex لـ Tailwind-like inline style
+    switch (hex) {
+      case '#dc2626': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      case '#7c3aed': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+      case '#2563eb': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+      case '#0891b2': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+      case '#059669': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      case '#d97706': return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      case '#ec4899': return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+      case '#6366f1': return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+      case '#6b7280': return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+      // legacy color names
       case 'red': return 'bg-red-500/20 text-red-300 border-red-500/30';
       case 'orange': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
       case 'blue': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
@@ -540,7 +571,7 @@ function UsersManagementContent() {
   };
 
   const getRoleLabel = (role: string) => {
-    return ROLES.find(r => r.value === role)?.label || role;
+    return dynamicRoles.find(r => r.value === role)?.label || role;
   };
 
   if (loading) {
@@ -663,7 +694,7 @@ function UsersManagementContent() {
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold text-cyan-400">{ROLES.length}</p>
+                <p className="text-2xl font-bold text-cyan-400">{dynamicRoles.length}</p>
                 <p className="text-cyan-400/70 text-xs">أدوار متاحة</p>
               </div>
             </div>
@@ -727,7 +758,7 @@ function UsersManagementContent() {
                 className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400 [&>option]:bg-[#1a0a2e]"
               >
                 <option value="all">جميع الأدوار</option>
-                {ROLES.map(role => (
+                {dynamicRoles.map(role => (
                   <option key={role.value} value={role.value}>{role.label}</option>
                 ))}
               </select>
@@ -1113,7 +1144,7 @@ function UsersManagementContent() {
               <div>
                 <label className="block text-purple-300 text-sm mb-2">الأدوار</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {ROLES.map((role) => (
+                  {dynamicRoles.map((role) => (
                     <label 
                       key={role.value} 
                       className={`flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all border ${
