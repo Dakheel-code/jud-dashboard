@@ -23,43 +23,35 @@ const OFFICIAL_ROLES = [
 // مفاتيح الأدوار القديمة التي يجب حذفها
 const LEGACY_ROLE_KEYS = ['super_admin', 'admin', 'editor', 'employee', 'viewer'];
 
+// cache: تشغيل syncRoles مرة واحدة كل 10 دقائق فقط
+let lastSyncTime = 0;
+const SYNC_INTERVAL_MS = 10 * 60 * 1000;
+
 async function syncRoles(supabase: any) {
+  const now = Date.now();
+  if (now - lastSyncTime < SYNC_INTERVAL_MS) return; // تخطي إذا تمت المزامنة مؤخراً
+  lastSyncTime = now;
   try {
-    // 1) أضف/حدّث الأدوار الجديدة — name و name_ar كلاهما الاسم العربي
-    for (const role of OFFICIAL_ROLES) {
-      await supabase.from('admin_roles').upsert(
-        {
-          key: role.key,
-          name: role.name,
-          name_ar: role.name,
-          description: role.description,
-          color: role.color,
-          icon: role.icon,
-          is_system: role.is_system,
-          sort_order: (role as any).sort_order,
-        },
+    // 1) أضف/حدّث كل الأدوار بالتوازي
+    await Promise.all(OFFICIAL_ROLES.map(role =>
+      supabase.from('admin_roles').upsert(
+        { key: role.key, name: role.name, name_ar: role.name, description: role.description,
+          color: role.color, icon: role.icon, is_system: role.is_system, sort_order: (role as any).sort_order },
         { onConflict: 'key' }
-      );
-    }
-    // 2) احذف الأدوار القديمة
-    const { data: legacyRoles } = await supabase
-      .from('admin_roles')
-      .select('id')
-      .in('key', LEGACY_ROLE_KEYS);
-    if (legacyRoles && legacyRoles.length > 0) {
-      const ids = legacyRoles.map((r: any) => r.id);
-      await supabase.from('admin_role_permissions').delete().in('role_id', ids);
-      await supabase.from('admin_roles').delete().in('id', ids);
-    }
-    // 3) احذف أي أدوار بدون key صالح (فارغة أو null)
-    const { data: emptyRoles } = await supabase
-      .from('admin_roles')
-      .select('id')
-      .or('key.is.null,key.eq.');
-    if (emptyRoles && emptyRoles.length > 0) {
-      const ids = emptyRoles.map((r: any) => r.id);
-      await supabase.from('admin_role_permissions').delete().in('role_id', ids);
-      await supabase.from('admin_roles').delete().in('id', ids);
+      )
+    ));
+    // 2) احذف الأدوار القديمة والفارغة بالتوازي
+    const [{ data: legacyRoles }, { data: emptyRoles }] = await Promise.all([
+      supabase.from('admin_roles').select('id').in('key', LEGACY_ROLE_KEYS),
+      supabase.from('admin_roles').select('id').or('key.is.null,key.eq.'),
+    ]);
+    const idsToDelete = [
+      ...(legacyRoles || []).map((r: any) => r.id),
+      ...(emptyRoles  || []).map((r: any) => r.id),
+    ];
+    if (idsToDelete.length > 0) {
+      await supabase.from('admin_role_permissions').delete().in('role_id', idsToDelete);
+      await supabase.from('admin_roles').delete().in('id', idsToDelete);
     }
   } catch {}
 }
