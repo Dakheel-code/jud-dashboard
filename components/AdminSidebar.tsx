@@ -17,16 +17,20 @@ interface UserInfo {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  'super_admin': 'المسؤول الرئيسي',
-  'admin': 'مسؤول',
-  'team_leader': 'قائد فريق',
+  // الأدوار الجديدة الثمانية
+  'owner':           'المالك',
+  'general_manager': 'المدير العام',
+  'manager':         'مدير',
+  'team_leader':     'قائد فريق',
   'account_manager': 'مدير حساب',
-  'media_buyer': 'ميديا باير',
-  'programmer': 'مبرمج',
-  'designer': 'مصمم',
-  'web_developer': 'مطور ويب',
-  'employee': 'موظف',
-  'user': 'مستخدم',
+  'media_buyer':     'ميديا باير',
+  'designer':        'مصمم',
+  'content_writer':  'كاتب محتوى',
+  // أدوار قديمة للتوافق
+  'super_admin': 'المسؤول الرئيسي',
+  'admin':       'مسؤول',
+  'employee':    'موظف',
+  'user':        'مستخدم',
 };
 
 // دالة للحصول على أفضل وصف للدور
