@@ -8,10 +8,50 @@ function getSupabase() {
   );
 }
 
+// الأدوار الرسمية الثمانية
+const OFFICIAL_ROLES = [
+  { key: 'owner',           name: 'المالك',       description: 'صلاحيات كاملة غير محدودة على كل النظام', color: '#dc2626', icon: '👑',  is_system: true },
+  { key: 'general_manager', name: 'المدير العام', description: 'إدارة كاملة مع صلاحيات واسعة جداً',     color: '#9333ea', icon: '🏆', is_system: true },
+  { key: 'manager',         name: 'مدير',         description: 'إدارة الفريق والعمليات اليومية',          color: '#2563eb', icon: '📋', is_system: true },
+  { key: 'team_leader',     name: 'قائد فريق',    description: 'قيادة الفريق ومتابعة المهام والحضور',     color: '#d97706', icon: '🎯', is_system: true },
+  { key: 'account_manager', name: 'مدير حساب',    description: 'إدارة حسابات العملاء والمتاجر',           color: '#ec4899', icon: '💼', is_system: true },
+  { key: 'media_buyer',     name: 'ميديا باير',   description: 'إدارة الحملات الإعلانية والتقارير',       color: '#6366f1', icon: '📊', is_system: true },
+  { key: 'designer',        name: 'مصمم',         description: 'إنشاء وتعديل التصاميم والمحتوى المرئي',  color: '#0891b2', icon: '🎨', is_system: true },
+  { key: 'content_writer',  name: 'كاتب محتوى',  description: 'كتابة وتحرير المحتوى النصي',              color: '#059669', icon: '✍️', is_system: true },
+];
+
+// مفاتيح الأدوار القديمة التي يجب حذفها
+const LEGACY_ROLE_KEYS = ['super_admin', 'admin', 'editor', 'employee', 'viewer'];
+
+async function syncRoles(supabase: any) {
+  try {
+    // 1) أضف/حدّث الأدوار الجديدة
+    for (const role of OFFICIAL_ROLES) {
+      await supabase.from('admin_roles').upsert(
+        { key: role.key, name: role.name, description: role.description, color: role.color, icon: role.icon, is_system: role.is_system },
+        { onConflict: 'key' }
+      );
+    }
+    // 2) احذف الأدوار القديمة
+    const { data: legacyRoles } = await supabase
+      .from('admin_roles')
+      .select('id')
+      .in('key', LEGACY_ROLE_KEYS);
+    if (legacyRoles && legacyRoles.length > 0) {
+      const ids = legacyRoles.map((r: any) => r.id);
+      await supabase.from('admin_role_permissions').delete().in('role_id', ids);
+      await supabase.from('admin_roles').delete().in('id', ids);
+    }
+  } catch {}
+}
+
 // GET /api/permissions?type=roles|permissions|all
 export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get('type') || 'all';
   const supabase = getSupabase();
+
+  // مزامنة الأدوار الرسمية تلقائياً
+  await syncRoles(supabase);
 
   try {
     if (type === 'permissions') {
