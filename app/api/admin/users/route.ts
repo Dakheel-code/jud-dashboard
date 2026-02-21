@@ -153,9 +153,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'فشل في إنشاء المستخدم' }, { status: 500 });
     }
 
+    // ربط الأدوار في admin_user_roles
+    const { data: roleRows } = await supabase
+      .from('admin_roles')
+      .select('id, key')
+      .in('key', userRoles);
+
+    const roleLinks = (roleRows || []).map((r: any) => ({ user_id: newUser.id, role_id: r.id }));
+    if (roleLinks.length > 0) {
+      await supabase.from('admin_user_roles').insert(roleLinks);
+    }
+
     await logAuditFromRequest(request, auth.user!.id, 'users.create', { entity: 'admin_users', entity_id: newUser.id, meta: { username, name, roles: userRoles } });
 
-    return NextResponse.json({ user: newUser, message: 'تم إنشاء المستخدم بنجاح' });
+    return NextResponse.json({ user: { ...newUser, roles: userRoles, role: userRoles[0] }, message: 'تم إنشاء المستخدم بنجاح' });
   } catch (error) {
     return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
