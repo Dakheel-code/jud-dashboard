@@ -449,26 +449,30 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
               الفوترة الشهرية
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
-              {BILLING_PACKAGES.map((pkg) => (
-                <button
-                  key={pkg.label}
-                  type="button"
-                  onClick={() => setFormData(prev => ({
-                    ...prev,
-                    billing_type: 'package',
-                    billing_amount: String(pkg.amount),
-                  }))}
-                  className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-right ${
-                    formData.billing_type === 'package' && formData.billing_amount === String(pkg.amount)
-                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
-                      : 'bg-purple-900/20 border-purple-500/20 text-purple-300 hover:border-amber-500/40 hover:text-amber-300'
-                  }`}
-                >
-                  <span className="block text-xs opacity-70">{pkg.label}</span>
-                  <span className="block font-bold">{pkg.amount.toLocaleString('ar-SA')} ر.س</span>
-                </button>
-              ))}
+            <div className="flex gap-1.5 flex-wrap">
+              {BILLING_PACKAGES.map((pkg) => {
+                const isSelected = formData.billing_type === 'package' && formData.billing_amount === String(pkg.amount);
+                return (
+                  <button
+                    key={pkg.label}
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      billing_type: 'package',
+                      billing_amount: String(pkg.amount),
+                    }))}
+                    className={`flex-1 min-w-[calc(25%-6px)] px-2 py-1.5 rounded-lg border text-center transition-all ${
+                      isSelected
+                        ? 'bg-amber-500/20 border-amber-400/70 text-amber-300'
+                        : 'bg-purple-900/20 border-purple-500/20 text-purple-400 hover:border-amber-500/30 hover:text-amber-300/80'
+                    }`}
+                  >
+                    <span className="block text-[10px] leading-tight opacity-60">{pkg.label}</span>
+                    <span className="block text-xs font-bold leading-tight">{pkg.amount.toLocaleString('ar-SA')}</span>
+                    <span className="block text-[9px] opacity-50">ر.س</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center gap-2">
