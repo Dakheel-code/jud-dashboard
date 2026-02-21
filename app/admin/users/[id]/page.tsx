@@ -36,10 +36,20 @@ interface UserData {
   phone?: string;
   role: string;
   roles?: string[];
+  avatar?: string;
   is_active: boolean;
   created_at: string;
   last_login: string;
   last_seen_at?: string;
+}
+
+interface AttendanceStats {
+  present_days: number;
+  absent_days: number;
+  late_days: number;
+  total_work_hours: number;
+  avg_check_in: string | null;
+  avg_check_out: string | null;
 }
 
 interface TeamMemberKpi {
@@ -131,6 +141,7 @@ function UserDetailsContent() {
   const [closingNote, setClosingNote] = useState<{ taskId: string; note: string } | null>(null);
   const [updatingTask, setUpdatingTask] = useState<string | null>(null);
   const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
 
   // تبويب المدير
   const [managerTab, setManagerTab] = useState<'team' | 'logs'>('team');
@@ -156,6 +167,7 @@ function UserDetailsContent() {
       fetchTasks('top3');
       fetchCharts();
       fetchTeam();
+      fetchAttendanceStats();
     }
   }, [userId]);
 
@@ -239,6 +251,37 @@ function UserDetailsContent() {
       }
     } catch { setBulkResult('❌ حدث خطأ'); }
     finally { setBulkLoading(false); }
+  };
+
+  const fetchAttendanceStats = async () => {
+    try {
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const res = await fetch(`/api/admin/attendance?user_id=${userId}&month=${month}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const records: any[] = data.records || [];
+      const present = records.filter(r => r.status === 'present').length;
+      const late = records.filter(r => r.is_late).length;
+      const totalHours = records.reduce((s, r) => s + (r.work_hours || 0), 0);
+      // حساب متوسط وقت الحضور والانصراف
+      const checkIns = records.filter(r => r.check_in_time).map(r => new Date(r.check_in_time).getHours() * 60 + new Date(r.check_in_time).getMinutes());
+      const checkOuts = records.filter(r => r.check_out_time).map(r => new Date(r.check_out_time).getHours() * 60 + new Date(r.check_out_time).getMinutes());
+      const avgIn = checkIns.length ? Math.round(checkIns.reduce((a, b) => a + b, 0) / checkIns.length) : null;
+      const avgOut = checkOuts.length ? Math.round(checkOuts.reduce((a, b) => a + b, 0) / checkOuts.length) : null;
+      const fmtTime = (mins: number | null) => mins === null ? null : `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+      // أيام العمل في الشهر الحالي حتى اليوم
+      const daysInMonth = now.getDate();
+      const workDays = Math.ceil(daysInMonth * 5 / 7); // تقريب
+      setAttendanceStats({
+        present_days: present,
+        absent_days: Math.max(0, workDays - present),
+        late_days: late,
+        total_work_hours: Math.round(totalHours * 10) / 10,
+        avg_check_in: fmtTime(avgIn),
+        avg_check_out: fmtTime(avgOut),
+      });
+    } catch {}
   };
 
   const fetchCharts = async () => {
@@ -340,8 +383,14 @@ function UserDetailsContent() {
         {/* ═══ 1. HEADER ═══ */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shrink-0">
-              {user.name.charAt(0)}
+            <div className="w-16 h-16 rounded-2xl shrink-0 overflow-hidden border-2 border-purple-500/40">
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {user.name.charAt(0)}
+                </div>
+              )}
             </div>
             <div>
               <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>{user.name}</h1>
@@ -381,7 +430,7 @@ function UserDetailsContent() {
             </div>
             <div>
               <p className="text-purple-400/60 text-xs mb-1">رقم الجوال</p>
-              <p className="text-white text-sm" dir="ltr">{user.phone || '-'}</p>
+              <p className="text-white text-sm font-mono">{user.phone || '-'}</p>
             </div>
             <div>
               <p className="text-purple-400/60 text-xs mb-1">الحالة</p>
@@ -411,6 +460,66 @@ function UserDetailsContent() {
             </div>
           </div>
         </div>
+
+        {/* ═══ 3. إحصائيات الحضور والانصراف ═══ */}
+        {attendanceStats && (
+          <div className="bg-purple-950/40 rounded-2xl p-5 border border-purple-500/20 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-purple-300/70 uppercase tracking-wider">الحضور والانصراف — هذا الشهر</h2>
+              <a href="/admin/attendance" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">عرض التفاصيل ←</a>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="bg-green-500/10 rounded-xl p-3 border border-green-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-green-400" />
+                  <p className="text-green-400/70 text-xs">أيام الحضور</p>
+                </div>
+                <p className="text-2xl font-bold text-green-400">{attendanceStats.present_days}</p>
+                <p className="text-green-400/50 text-xs mt-1">يوم</p>
+              </div>
+              <div className="bg-red-500/10 rounded-xl p-3 border border-red-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  <p className="text-red-400/70 text-xs">أيام الغياب</p>
+                </div>
+                <p className="text-2xl font-bold text-red-400">{attendanceStats.absent_days}</p>
+                <p className="text-red-400/50 text-xs mt-1">يوم</p>
+              </div>
+              <div className="bg-yellow-500/10 rounded-xl p-3 border border-yellow-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <p className="text-yellow-400/70 text-xs">أيام التأخير</p>
+                </div>
+                <p className="text-2xl font-bold text-yellow-400">{attendanceStats.late_days}</p>
+                <p className="text-yellow-400/50 text-xs mt-1">يوم</p>
+              </div>
+              <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <p className="text-blue-400/70 text-xs">إجمالي ساعات العمل</p>
+                </div>
+                <p className="text-2xl font-bold text-blue-400">{attendanceStats.total_work_hours}</p>
+                <p className="text-blue-400/50 text-xs mt-1">ساعة</p>
+              </div>
+              <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-purple-400" />
+                  <p className="text-purple-400/70 text-xs">متوسط وقت الحضور</p>
+                </div>
+                <p className="text-xl font-bold text-purple-400 font-mono">{attendanceStats.avg_check_in || '--:--'}</p>
+                <p className="text-purple-400/50 text-xs mt-1">صباحاً</p>
+              </div>
+              <div className="bg-fuchsia-500/10 rounded-xl p-3 border border-fuchsia-500/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
+                  <p className="text-fuchsia-400/70 text-xs">متوسط وقت الانصراف</p>
+                </div>
+                <p className="text-xl font-bold text-fuchsia-400 font-mono">{attendanceStats.avg_check_out || '--:--'}</p>
+                <p className="text-fuchsia-400/50 text-xs mt-1">مساءً</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* KPI Cards */}
         {kpi && (
