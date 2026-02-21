@@ -25,10 +25,18 @@ const LEGACY_ROLE_KEYS = ['super_admin', 'admin', 'editor', 'employee', 'viewer'
 
 async function syncRoles(supabase: any) {
   try {
-    // 1) أضف/حدّث الأدوار الجديدة
+    // 1) أضف/حدّث الأدوار الجديدة — name و name_ar كلاهما الاسم العربي
     for (const role of OFFICIAL_ROLES) {
       await supabase.from('admin_roles').upsert(
-        { key: role.key, name: role.name, description: role.description, color: role.color, icon: role.icon, is_system: role.is_system },
+        {
+          key: role.key,
+          name: role.name,
+          name_ar: role.name,
+          description: role.description,
+          color: role.color,
+          icon: role.icon,
+          is_system: role.is_system,
+        },
         { onConflict: 'key' }
       );
     }
@@ -77,6 +85,7 @@ export async function GET(req: NextRequest) {
 
       const rolesWithPerms = roles.map((r: any) => ({
         ...r,
+        name_ar: r.name_ar || r.name,
         permissions: rolePerms.filter((rp: any) => rp.role_id === r.id),
       }));
       return NextResponse.json({ roles: rolesWithPerms });
@@ -95,6 +104,7 @@ export async function GET(req: NextRequest) {
 
     const rolesWithPerms = rolesRes.data.map((r: any) => ({
       ...r,
+      name_ar: r.name_ar || r.name,
       permissions: rolePermsRes.data.filter((rp: any) => rp.role_id === r.id),
     }));
 
