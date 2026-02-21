@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useBranding } from '@/contexts/BrandingContext'
 
 // ==================== TYPES ====================
 interface Permission {
@@ -196,6 +198,7 @@ const ROLE_ICONS = ["👑", "🛡️", "📋", "👤", "👁️", "⚡", "🎯",
 
 // ==================== المكون الرئيسي ====================
 export default function PermissionsPage() {
+  const { branding } = useBranding()
   const [roles, setRoles] = useState<Role[]>([])
   const [allPermissions, setAllPermissions] = useState<Permission[]>(DEFAULT_PERMISSIONS)
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
@@ -398,14 +401,14 @@ export default function PermissionsPage() {
 
   if (loading) {
     return (
-      <div dir="rtl" className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div dir="rtl" className="min-h-screen bg-[#0a0118] flex items-center justify-center">
         <div className="text-white/40 text-sm">جاري تحميل الصلاحيات...</div>
       </div>
     )
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-white" style={{ fontFamily: "'Tajawal', 'IBM Plex Sans Arabic', sans-serif" }}>
+    <div dir="rtl" className="min-h-screen bg-[#0a0118] text-white" style={{ fontFamily: "'Tajawal', 'IBM Plex Sans Arabic', sans-serif" }}>
       {/* خط Tajawal من Google Fonts */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
@@ -560,49 +563,76 @@ export default function PermissionsPage() {
       )}
 
       {/* Header */}
-      <div className="border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-800 flex items-center justify-center text-lg">
-                🔐
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">إدارة الصلاحيات والأدوار</h1>
-                <p className="text-xs text-white/40 mt-0.5">تحكم كامل في صلاحيات كل دور على كل ميزة في النظام</p>
-              </div>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          {/* العنوان */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
+            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
+            <div>
+              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>إدارة الصلاحيات والأدوار</h1>
+              <p className="text-purple-300/70 text-xs sm:text-sm">تحكم كامل في صلاحيات كل دور على كل ميزة في النظام</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex bg-white/5 rounded-lg p-0.5">
-                <button
-                  onClick={() => setActiveTab("permissions")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    activeTab === "permissions" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70"
-                  }`}>
-                  الصلاحيات
-                </button>
-                <button
-                  onClick={() => setActiveTab("overview")}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    activeTab === "overview" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70"
-                  }`}>
-                  نظرة عامة
-                </button>
-              </div>
+          </div>
+          {/* أزرار الهيدر */}
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+            {/* تبويبات */}
+            <div className="flex bg-white/5 border border-white/10 rounded-xl p-1">
               <button
-                onClick={() => setShowNewRoleModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-all"
-              >
-                <span>+</span>
-                <span>دور جديد</span>
+                onClick={() => setActiveTab("permissions")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "permissions"
+                    ? "bg-purple-600 text-white shadow"
+                    : "text-white/50 hover:text-white/80"
+                }`}>
+                الصلاحيات
+              </button>
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "overview"
+                    ? "bg-purple-600 text-white shadow"
+                    : "text-white/50 hover:text-white/80"
+                }`}>
+                نظرة عامة
               </button>
             </div>
+            {/* زر دور جديد */}
+            <button
+              onClick={() => setShowNewRoleModal(true)}
+              className="p-3 text-green-400 border border-green-500/30 hover:border-green-400/50 hover:bg-green-500/10 rounded-xl transition-all"
+              title="إضافة دور جديد"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            {/* زر العودة للمستخدمين */}
+            <Link
+              href="/admin/users"
+              className="p-3 text-blue-400 border border-blue-500/30 hover:border-blue-400/50 hover:bg-blue-500/10 rounded-xl transition-all"
+              title="إدارة المستخدمين"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </Link>
+            {/* زر العودة للوحة التحكم */}
+            <Link
+              href="/admin"
+              className="p-3 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
+              title="العودة للوحة التحكم"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
           </div>
         </div>
       </div>
 
       {activeTab === "permissions" ? (
-        <div className="max-w-[1600px] mx-auto p-6">
+        <div className="max-w-7xl mx-auto px-4 pb-8">
           <div className="flex gap-6" style={{ minHeight: "calc(100vh - 120px)" }}>
             {/* === القائمة الجانبية - الأدوار === */}
             <div className="w-[280px] flex-shrink-0">
