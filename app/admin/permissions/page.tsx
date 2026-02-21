@@ -196,25 +196,53 @@ const ROLE_ICONS = ["👑", "🛡️", "📋", "👤", "👁️", "⚡", "🎯",
 
 // ==================== المكون الرئيسي ====================
 export default function PermissionsPage() {
-  const [roles, setRoles] = useState<Role[]>(DEFAULT_ROLES)
-  const [selectedRole, setSelectedRole] = useState<Role | null>(DEFAULT_ROLES[0])
+  const [roles, setRoles] = useState<Role[]>([])
+  const [allPermissions, setAllPermissions] = useState<Permission[]>(DEFAULT_PERMISSIONS)
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [showNewRoleModal, setShowNewRoleModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(getCategories().map(c => c)))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(DEFAULT_PERMISSIONS.map(p => p.category)))
   const [hasChanges, setHasChanges] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
   const [activeTab, setActiveTab] = useState<"permissions" | "overview">("permissions")
 
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/permissions?type=all')
+      const data = await res.json()
+      if (data.roles && data.roles.length > 0) {
+        setRoles(data.roles)
+        setAllPermissions(data.permissions || DEFAULT_PERMISSIONS)
+        setSelectedRole(data.roles[0])
+      } else {
+        // fallback للبيانات الافتراضية إذا لم تُنفَّذ migration بعد
+        setRoles(DEFAULT_ROLES)
+        setSelectedRole(DEFAULT_ROLES[0])
+      }
+    } catch {
+      setRoles(DEFAULT_ROLES)
+      setSelectedRole(DEFAULT_ROLES[0])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function getCategories(): string[] {
-    const cats = new Set(DEFAULT_PERMISSIONS.map(p => p.category))
+    const cats = new Set(allPermissions.map(p => p.category))
     return Array.from(cats)
   }
 
   function getPermissionsByCategory(category: string): Permission[] {
-    return DEFAULT_PERMISSIONS.filter(p => p.category === category)
+    return allPermissions.filter(p => p.category === category)
   }
 
   function isPermissionGranted(role: Role, permissionId: string): boolean {
@@ -302,12 +330,26 @@ export default function PermissionsPage() {
   }
 
   const handleSave = async () => {
+    if (!selectedRole) return
     setSaving(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800))
-    setSaving(false)
-    setHasChanges(false)
-    showToast("تم حفظ الصلاحيات بنجاح", "success")
+    try {
+      const res = await fetch('/api/permissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_permissions',
+          role_id: selectedRole.id,
+          permissions: selectedRole.permissions,
+        }),
+      })
+      if (!res.ok) throw new Error('فشل الحفظ')
+      setHasChanges(false)
+      showToast("تم حفظ الصلاحيات بنجاح", "success")
+    } catch {
+      showToast("فشل في حفظ الصلاحيات", "error")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const showToast = (message: string, type: "success" | "error") => {
@@ -315,34 +357,52 @@ export default function PermissionsPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleDeleteRole = (roleId: string) => {
-    setRoles(prev => prev.filter(r => r.id !== roleId))
-    if (selectedRole?.id === roleId) {
-      setSelectedRole(roles.find(r => r.id !== roleId) || null)
+  const handleDeleteRole = async (roleId: string) => {
+    try {
+      const res = await fetch(`/api/permissions?role_id=${roleId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'فشل الحذف')
+      }
+      setRoles(prev => prev.filter(r => r.id !== roleId))
+      if (selectedRole?.id === roleId) {
+        setSelectedRole(roles.find(r => r.id !== roleId) || null)
+      }
+      setShowDeleteConfirm(null)
+      showToast("تم حذف الدور بنجاح", "success")
+    } catch (err: any) {
+      showToast(err.message || "فشل في حذف الدور", "error")
+      setShowDeleteConfirm(null)
     }
-    setShowDeleteConfirm(null)
-    showToast("تم حذف الدور بنجاح", "success")
   }
 
   const totalGranted = selectedRole
     ? selectedRole.permissions.filter(p => p.granted).length
     : 0
-  const totalPerms = DEFAULT_PERMISSIONS.length
+  const totalPerms = allPermissions.length
   const grantedPercent = Math.round((totalGranted / totalPerms) * 100)
 
   const filteredPermissions = searchQuery
-    ? DEFAULT_PERMISSIONS.filter(
+    ? allPermissions.filter(
         p =>
           p.label.includes(searchQuery) ||
           p.description.includes(searchQuery) ||
           p.key.includes(searchQuery) ||
           p.category.includes(searchQuery)
       )
-    : DEFAULT_PERMISSIONS
+    : allPermissions
 
   const filteredCategories = searchQuery
     ? [...new Set(filteredPermissions.map(p => p.category))]
     : getCategories()
+
+  if (loading) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="text-white/40 text-sm">جاري تحميل الصلاحيات...</div>
+      </div>
+    )
+  }
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-white" style={{ fontFamily: "'Tajawal', 'IBM Plex Sans Arabic', sans-serif" }}>
@@ -902,24 +962,54 @@ export default function PermissionsPage() {
           editRole={editingRole}
           existingNames={roles.map(r => r.name)}
           onClose={() => { setShowNewRoleModal(false); setEditingRole(null); }}
-          onSave={(role) => {
-            if (editingRole) {
-              setRoles(prev => prev.map(r => r.id === editingRole.id ? { ...r, ...role, permissions: r.permissions } : r))
-              if (selectedRole?.id === editingRole.id) {
-                setSelectedRole(prev => prev ? { ...prev, ...role, permissions: prev.permissions } : null)
+          onSave={async (role) => {
+            try {
+              if (editingRole) {
+                const res = await fetch('/api/permissions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'update_role', id: editingRole.id, ...role }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error)
+                setRoles(prev => prev.map(r => r.id === editingRole.id ? { ...r, ...data.role, permissions: r.permissions } : r))
+                if (selectedRole?.id === editingRole.id) {
+                  setSelectedRole(prev => prev ? { ...prev, ...data.role, permissions: prev.permissions } : null)
+                }
+                showToast("تم تعديل الدور بنجاح", "success")
+              } else {
+                const res = await fetch('/api/permissions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'create_role', ...role }),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error)
+                const newRole: Role = {
+                  ...data.role,
+                  permissions: allPermissions.map(p => ({ role_id: data.role.id, permission_id: p.id, granted: false })),
+                }
+                setRoles(prev => [...prev, newRole])
+                setSelectedRole(newRole)
+                showToast("تم إضافة الدور بنجاح", "success")
               }
-              showToast("تم تعديل الدور بنجاح", "success")
-            } else {
-              const newRole: Role = {
-                ...role,
-                id: `role_${Date.now()}`,
-                is_system: false,
-                created_at: new Date().toISOString().split("T")[0],
-                permissions: DEFAULT_PERMISSIONS.map(p => ({ permission_id: p.id, granted: false })),
+            } catch (err: any) {
+              // fallback محلي إذا لم تُنفَّذ migration بعد
+              if (editingRole) {
+                setRoles(prev => prev.map(r => r.id === editingRole.id ? { ...r, ...role, permissions: r.permissions } : r))
+                if (selectedRole?.id === editingRole.id) {
+                  setSelectedRole(prev => prev ? { ...prev, ...role, permissions: prev.permissions } : null)
+                }
+              } else {
+                const newRole: Role = {
+                  ...role, id: `role_${Date.now()}`, is_system: false,
+                  created_at: new Date().toISOString().split("T")[0],
+                  permissions: allPermissions.map(p => ({ role_id: '', permission_id: p.id, granted: false })),
+                }
+                setRoles(prev => [...prev, newRole])
+                setSelectedRole(newRole)
               }
-              setRoles(prev => [...prev, newRole])
-              setSelectedRole(newRole)
-              showToast("تم إضافة الدور بنجاح", "success")
+              showToast("تم الحفظ محلياً (تحقق من migration)", "success")
             }
             setShowNewRoleModal(false)
             setEditingRole(null)
