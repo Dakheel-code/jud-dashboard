@@ -33,6 +33,7 @@ export async function GET(
         account_manager_id, media_buyer_id, notes, priority, budget, status,
         is_active, created_at, updated_at, subscription_start_date,
         store_group_url, category, client_id,
+        billing_type, billing_amount,
         snapchat_account, tiktok_account, google_account, meta_account,
         client:clients(id, name, phone, email)
       `)
@@ -96,6 +97,8 @@ export async function PUT(
     if (body.media_buyer_id !== undefined) updateData.media_buyer_id = body.media_buyer_id || null;
     if (body.store_group_url !== undefined) updateData.store_group_url = body.store_group_url || null;
     if (body.category !== undefined) updateData.category = body.category || null;
+    if (body.billing_type !== undefined) updateData.billing_type = body.billing_type || null;
+    if (body.billing_amount !== undefined) updateData.billing_amount = body.billing_amount != null ? body.billing_amount : null;
 
     const { data: store, error } = await supabase
       .from('stores')

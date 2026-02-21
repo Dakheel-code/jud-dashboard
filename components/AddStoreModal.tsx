@@ -187,17 +187,20 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
 
     try {
       const token = localStorage.getItem('admin_token');
-      const url = editingStore ? `/api/admin/stores` : '/api/admin/stores';
+      const url = editingStore ? `/api/admin/stores/${editingStore.id}` : '/api/admin/stores';
       const method = editingStore ? 'PUT' : 'POST';
+      const billingAmount = formData.billing_amount !== '' ? Number(formData.billing_amount) : null;
+      const billingType = formData.billing_type || null;
       const body = editingStore
         ? {
-            id: editingStore.id,
             ...formData,
-            billing_amount: formData.billing_amount !== '' ? Number(formData.billing_amount) : null,
+            billing_type: billingType,
+            billing_amount: billingAmount,
           }
         : {
             ...formData,
-            billing_amount: formData.billing_amount !== '' ? Number(formData.billing_amount) : null,
+            billing_type: billingType,
+            billing_amount: billingAmount,
           };
 
       const response = await fetch(url, {
