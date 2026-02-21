@@ -335,6 +335,7 @@ function UserDetailsContent() {
       const data = await res.json();
       const records: any[] = data.records || [];
       const present = records.filter(r => r.status === 'present').length;
+      const absent = records.filter(r => r.status === 'absent').length;
       // حساب ساعات التأخير: الفرق بين وقت الحضور الفعلي و 9:00 صباحاً
       const WORK_START_MINUTES = 9 * 60; // 9:00 AM
       const lateMinutesTotal = records
@@ -353,12 +354,9 @@ function UserDetailsContent() {
       const avgIn = checkIns.length ? Math.round(checkIns.reduce((a, b) => a + b, 0) / checkIns.length) : null;
       const avgOut = checkOuts.length ? Math.round(checkOuts.reduce((a, b) => a + b, 0) / checkOuts.length) : null;
       const fmtTime = (mins: number | null) => mins === null ? null : `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
-      // أيام العمل في الشهر الحالي حتى اليوم
-      const daysInMonth = now.getDate();
-      const workDays = Math.ceil(daysInMonth * 5 / 7); // تقريب
       setAttendanceStats({
         present_days: present,
-        absent_days: Math.max(0, workDays - present),
+        absent_days: absent,
         late_hours: lateHours,
         total_work_hours: Math.round(totalHours * 10) / 10,
         avg_check_in: fmtTime(avgIn),
