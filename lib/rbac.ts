@@ -30,70 +30,65 @@ export interface UserPermissions {
  * 4. deny ينتصر على grant
  */
 export async function getUserPermissions(userId: string): Promise<UserPermissions> {
-  const supabase = getSupabaseClient();
+  try {
+    const supabase = getSupabaseClient();
 
-  // 1) جلب أدوار المستخدم
-  const { data: userRoles } = await supabase
-    .from('admin_user_roles')
-    .select('role:admin_roles(key)')
-    .eq('user_id', userId);
+    // 1) جلب أدوار المستخدم
+    let roles: string[] = [];
+    try {
+      const { data: userRoles } = await supabase
+        .from('admin_user_roles')
+        .select('role:admin_roles(key)')
+        .eq('user_id', userId);
+      roles = (userRoles || []).map((r: any) => r.role?.key).filter(Boolean);
+    } catch { /* جدول غير موجود أو خطأ */ }
 
-  const roles: string[] = (userRoles || [])
-    .map((r: any) => r.role?.key)
-    .filter(Boolean);
+    // 2) جلب صلاحيات الأدوار — granted=true فقط
+    const rolePermSet = new Set<string>();
+    try {
+      const { data: rolePerms } = await supabase
+        .from('admin_user_roles')
+        .select(`
+          role:admin_roles!inner(
+            permissions:admin_role_permissions(
+              granted,
+              permission:admin_permissions(key)
+            )
+          )
+        `)
+        .eq('user_id', userId);
+      (rolePerms || []).forEach((r: any) => {
+        (r.role?.permissions || []).forEach((rp: any) => {
+          if (rp.granted && rp.permission?.key) rolePermSet.add(rp.permission.key);
+        });
+      });
+    } catch { /* جدول غير موجود أو خطأ */ }
 
-  // 2) جلب صلاحيات الأدوار — granted=true فقط
-  const { data: rolePerms } = await supabase
-    .from('admin_user_roles')
-    .select(`
-      role:admin_roles!inner(
-        permissions:admin_role_permissions(
-          granted,
-          permission:admin_permissions(key)
-        )
-      )
-    `)
-    .eq('user_id', userId);
+    // 3) جلب overrides المباشرة (grant / deny) — اختياري
+    const grants = new Set<string>();
+    const denies = new Set<string>();
+    try {
+      const { data: overrides } = await supabase
+        .from('admin_user_permissions')
+        .select('mode, permission:admin_permissions(key)')
+        .eq('user_id', userId);
+      (overrides || []).forEach((o: any) => {
+        const key = o.permission?.key;
+        if (!key) return;
+        if (o.mode === 'grant') grants.add(key);
+        if (o.mode === 'deny') denies.add(key);
+      });
+    } catch { /* الجدول غير موجود — تجاهل */ }
 
-  const rolePermSet = new Set<string>();
-  (rolePerms || []).forEach((r: any) => {
-    (r.role?.permissions || []).forEach((rp: any) => {
-      if (rp.granted && rp.permission?.key) rolePermSet.add(rp.permission.key);
-    });
-  });
+    // 4) دمج: role permissions + grants - denies
+    const finalPerms = new Set<string>();
+    rolePermSet.forEach((p) => { if (!denies.has(p)) finalPerms.add(p); });
+    grants.forEach((p) => { if (!denies.has(p)) finalPerms.add(p); });
 
-  // 3) جلب overrides المباشرة (grant / deny)
-  const { data: overrides } = await supabase
-    .from('admin_user_permissions')
-    .select('mode, permission:admin_permissions(key)')
-    .eq('user_id', userId);
-
-  const grants = new Set<string>();
-  const denies = new Set<string>();
-
-  (overrides || []).forEach((o: any) => {
-    const key = o.permission?.key;
-    if (!key) return;
-    if (o.mode === 'grant') grants.add(key);
-    if (o.mode === 'deny') denies.add(key);
-  });
-
-  // 4) دمج: role permissions + grants - denies
-  //    deny ينتصر دائماً
-  const finalPerms = new Set<string>();
-
-  rolePermSet.forEach((p) => {
-    if (!denies.has(p)) finalPerms.add(p);
-  });
-
-  grants.forEach((p) => {
-    if (!denies.has(p)) finalPerms.add(p);
-  });
-
-  return {
-    roles,
-    permissions: Array.from(finalPerms),
-  };
+    return { roles, permissions: Array.from(finalPerms) };
+  } catch {
+    return { roles: [], permissions: [] };
+  }
 }
 
 /**
