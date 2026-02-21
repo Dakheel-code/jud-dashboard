@@ -37,24 +37,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // فحص صلاحيات الصفحات الحساسة
-  const tokenRoles: string[] = (token.roles as string[]) || (token.role ? [token.role as string] : []);
-  const tokenPerms: string[] = (token.permissions as string[]) || [];
-
-  // المالك والمدير العام يمرون مباشرة
-  if (SUPER_ROLES.some(r => tokenRoles.includes(r))) {
-    return NextResponse.next();
-  }
-
-  for (const route of PROTECTED_ROUTES) {
-    if (route.pattern.test(pathname)) {
-      if (!tokenPerms.includes(route.permission)) {
-        return NextResponse.redirect(new URL('/admin?error=forbidden', request.url));
-      }
-      break;
-    }
-  }
-
+  // ملاحظة: فحص الصلاحيات التفصيلي يتم على مستوى API (requireAdmin + getUserPermissions)
+  // الـ JWT token لا يحمل permissions لأنها ديناميكية من RBAC
   return NextResponse.next();
 }
 
