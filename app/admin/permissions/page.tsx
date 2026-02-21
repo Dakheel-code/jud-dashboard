@@ -1,0 +1,1084 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+
+// ==================== TYPES ====================
+interface Permission {
+  id: string
+  key: string
+  label: string
+  description: string
+  category: string
+  subcategory?: string
+}
+
+interface RolePermission {
+  permission_id: string
+  granted: boolean
+}
+
+interface Role {
+  id: string
+  name: string
+  name_ar: string
+  description: string
+  color: string
+  icon: string
+  is_system: boolean // أدوار النظام لا يمكن حذفها
+  created_at: string
+  permissions: RolePermission[]
+}
+
+// ==================== بيانات الصلاحيات الافتراضية ====================
+const DEFAULT_PERMISSIONS: Permission[] = [
+  // === لوحة التحكم ===
+  { id: "p1", key: "dashboard.view", label: "عرض لوحة التحكم", description: "الوصول للوحة التحكم الرئيسية", category: "لوحة التحكم" },
+  { id: "p2", key: "dashboard.stats", label: "عرض الإحصائيات", description: "عرض الإحصائيات والتقارير المختصرة", category: "لوحة التحكم" },
+  { id: "p3", key: "dashboard.export", label: "تصدير التقارير", description: "تصدير بيانات لوحة التحكم", category: "لوحة التحكم" },
+
+  // === إدارة المتاجر ===
+  { id: "p4", key: "stores.view", label: "عرض المتاجر", description: "عرض قائمة المتاجر", category: "إدارة المتاجر" },
+  { id: "p5", key: "stores.create", label: "إضافة متجر", description: "إضافة متجر جديد", category: "إدارة المتاجر" },
+  { id: "p6", key: "stores.edit", label: "تعديل متجر", description: "تعديل بيانات المتجر", category: "إدارة المتاجر" },
+  { id: "p7", key: "stores.delete", label: "حذف متجر", description: "حذف متجر من النظام", category: "إدارة المتاجر" },
+  { id: "p8", key: "stores.details", label: "تفاصيل المتجر", description: "عرض التفاصيل الكاملة للمتجر", category: "إدارة المتاجر" },
+  { id: "p9", key: "stores.settings", label: "إعدادات المتجر", description: "تعديل إعدادات المتجر", category: "إدارة المتاجر" },
+
+  // === إدارة المهام ===
+  { id: "p10", key: "tasks.view", label: "عرض المهام", description: "عرض قائمة المهام", category: "إدارة المهام" },
+  { id: "p11", key: "tasks.create", label: "إضافة مهمة", description: "إنشاء مهمة جديدة", category: "إدارة المهام" },
+  { id: "p12", key: "tasks.edit", label: "تعديل مهمة", description: "تعديل بيانات المهمة", category: "إدارة المهام" },
+  { id: "p13", key: "tasks.delete", label: "حذف مهمة", description: "حذف مهمة من النظام", category: "إدارة المهام" },
+  { id: "p14", key: "tasks.toggle", label: "تغيير حالة المهمة", description: "تحديد المهمة كمنجزة أو غير منجزة", category: "إدارة المهام" },
+  { id: "p15", key: "tasks.assign", label: "تعيين المهام", description: "تعيين المهام للمستخدمين", category: "إدارة المهام" },
+  { id: "p16", key: "tasks.categories", label: "إدارة فئات المهام", description: "إضافة وتعديل وحذف فئات المهام", category: "إدارة المهام" },
+
+  // === إدارة المستخدمين ===
+  { id: "p17", key: "users.view", label: "عرض المستخدمين", description: "عرض قائمة المستخدمين", category: "إدارة المستخدمين" },
+  { id: "p18", key: "users.create", label: "إضافة مستخدم", description: "إضافة مستخدم جديد", category: "إدارة المستخدمين" },
+  { id: "p19", key: "users.edit", label: "تعديل مستخدم", description: "تعديل بيانات المستخدم", category: "إدارة المستخدمين" },
+  { id: "p20", key: "users.delete", label: "حذف مستخدم", description: "حذف مستخدم من النظام", category: "إدارة المستخدمين" },
+  { id: "p21", key: "users.roles", label: "تغيير دور المستخدم", description: "تعيين أو تغيير دور المستخدم", category: "إدارة المستخدمين" },
+  { id: "p22", key: "users.activate", label: "تفعيل/تعطيل المستخدم", description: "تفعيل أو تعطيل حساب المستخدم", category: "إدارة المستخدمين" },
+  { id: "p23", key: "users.permissions", label: "إدارة الصلاحيات", description: "إدارة الأدوار والصلاحيات", category: "إدارة المستخدمين" },
+
+  // === إدارة العملاء ===
+  { id: "p24", key: "clients.view", label: "عرض العملاء", description: "عرض قائمة العملاء", category: "إدارة العملاء" },
+  { id: "p25", key: "clients.create", label: "إضافة عميل", description: "إضافة عميل جديد", category: "إدارة العملاء" },
+  { id: "p26", key: "clients.edit", label: "تعديل بيانات العميل", description: "تعديل معلومات العميل", category: "إدارة العملاء" },
+  { id: "p27", key: "clients.delete", label: "حذف عميل", description: "حذف عميل من النظام", category: "إدارة العملاء" },
+  { id: "p28", key: "clients.details", label: "تفاصيل العميل", description: "عرض التفاصيل الكاملة للعميل", category: "إدارة العملاء" },
+  { id: "p29", key: "clients.export", label: "تصدير بيانات العملاء", description: "تصدير قائمة العملاء", category: "إدارة العملاء" },
+  { id: "p30", key: "clients.notes", label: "ملاحظات العميل", description: "إضافة وتعديل ملاحظات العميل", category: "إدارة العملاء" },
+
+  // === الحضور والانصراف ===
+  { id: "p31", key: "attendance.view", label: "عرض الحضور", description: "عرض سجل الحضور والانصراف", category: "الحضور والانصراف" },
+  { id: "p32", key: "attendance.checkin", label: "تسجيل حضور", description: "تسجيل الحضور يدوياً", category: "الحضور والانصراف" },
+  { id: "p33", key: "attendance.checkout", label: "تسجيل انصراف", description: "تسجيل الانصراف يدوياً", category: "الحضور والانصراف" },
+  { id: "p34", key: "attendance.manage", label: "إدارة الحضور", description: "تعديل وإدارة سجلات الحضور", category: "الحضور والانصراف" },
+  { id: "p35", key: "attendance.reports", label: "تقارير الحضور", description: "عرض وتصدير تقارير الحضور", category: "الحضور والانصراف" },
+  { id: "p36", key: "attendance.overtime", label: "إدارة الأوقات الإضافية", description: "إدارة وموافقة على الأوقات الإضافية", category: "الحضور والانصراف" },
+  { id: "p37", key: "attendance.leaves", label: "إدارة الإجازات", description: "إدارة طلبات الإجازات والموافقة عليها", category: "الحضور والانصراف" },
+
+  // === المتجر / المنتجات ===
+  { id: "p38", key: "shop.view", label: "عرض المتجر", description: "عرض صفحة المتجر والمنتجات", category: "المتجر" },
+  { id: "p39", key: "shop.products.create", label: "إضافة منتج", description: "إضافة منتج جديد", category: "المتجر", subcategory: "المنتجات" },
+  { id: "p40", key: "shop.products.edit", label: "تعديل منتج", description: "تعديل بيانات المنتج", category: "المتجر", subcategory: "المنتجات" },
+  { id: "p41", key: "shop.products.delete", label: "حذف منتج", description: "حذف منتج من المتجر", category: "المتجر", subcategory: "المنتجات" },
+  { id: "p42", key: "shop.products.pricing", label: "تعديل الأسعار", description: "تعديل أسعار المنتجات", category: "المتجر", subcategory: "المنتجات" },
+  { id: "p43", key: "shop.products.inventory", label: "إدارة المخزون", description: "إدارة مخزون المنتجات", category: "المتجر", subcategory: "المنتجات" },
+  { id: "p44", key: "shop.orders.view", label: "عرض الطلبات", description: "عرض قائمة الطلبات", category: "المتجر", subcategory: "الطلبات" },
+  { id: "p45", key: "shop.orders.manage", label: "إدارة الطلبات", description: "تحديث حالة الطلبات وإدارتها", category: "المتجر", subcategory: "الطلبات" },
+  { id: "p46", key: "shop.orders.refund", label: "إرجاع واسترداد", description: "معالجة طلبات الإرجاع والاسترداد", category: "المتجر", subcategory: "الطلبات" },
+  { id: "p47", key: "shop.categories", label: "إدارة الأقسام", description: "إدارة أقسام وتصنيفات المتجر", category: "المتجر" },
+  { id: "p48", key: "shop.coupons", label: "إدارة الكوبونات", description: "إنشاء وإدارة كوبونات الخصم", category: "المتجر" },
+
+  // === التقارير والتحليلات ===
+  { id: "p49", key: "reports.view", label: "عرض التقارير", description: "عرض التقارير العامة", category: "التقارير والتحليلات" },
+  { id: "p50", key: "reports.sales", label: "تقارير المبيعات", description: "عرض تقارير المبيعات التفصيلية", category: "التقارير والتحليلات" },
+  { id: "p51", key: "reports.financial", label: "التقارير المالية", description: "عرض التقارير المالية والأرباح", category: "التقارير والتحليلات" },
+  { id: "p52", key: "reports.performance", label: "تقارير الأداء", description: "عرض تقارير أداء الموظفين", category: "التقارير والتحليلات" },
+  { id: "p53", key: "reports.export", label: "تصدير التقارير", description: "تصدير التقارير بصيغ مختلفة", category: "التقارير والتحليلات" },
+
+  // === الإعدادات العامة ===
+  { id: "p54", key: "settings.general", label: "الإعدادات العامة", description: "تعديل الإعدادات العامة للنظام", category: "الإعدادات" },
+  { id: "p55", key: "settings.notifications", label: "إعدادات الإشعارات", description: "إدارة إعدادات الإشعارات", category: "الإعدادات" },
+  { id: "p56", key: "settings.integrations", label: "التكاملات الخارجية", description: "إدارة التكاملات مع الخدمات الخارجية", category: "الإعدادات" },
+  { id: "p57", key: "settings.backup", label: "النسخ الاحتياطي", description: "إدارة النسخ الاحتياطي واستعادة البيانات", category: "الإعدادات" },
+  { id: "p58", key: "settings.logs", label: "سجل النظام", description: "عرض سجل العمليات والأحداث", category: "الإعدادات" },
+
+  // === الإشعارات والرسائل ===
+  { id: "p59", key: "notifications.view", label: "عرض الإشعارات", description: "عرض الإشعارات الواردة", category: "الإشعارات والرسائل" },
+  { id: "p60", key: "notifications.send", label: "إرسال إشعارات", description: "إرسال إشعارات للمستخدمين", category: "الإشعارات والرسائل" },
+  { id: "p61", key: "notifications.manage", label: "إدارة الإشعارات", description: "إدارة وأرشفة الإشعارات", category: "الإشعارات والرسائل" },
+  { id: "p62", key: "messages.view", label: "عرض الرسائل", description: "عرض الرسائل الواردة والصادرة", category: "الإشعارات والرسائل" },
+  { id: "p63", key: "messages.send", label: "إرسال رسائل", description: "إرسال رسائل للمستخدمين والعملاء", category: "الإشعارات والرسائل" },
+]
+
+// ==================== الأدوار الافتراضية ====================
+const DEFAULT_ROLES: Role[] = [
+  {
+    id: "role_1",
+    name: "super_admin",
+    name_ar: "مدير النظام",
+    description: "صلاحيات كاملة على جميع أقسام النظام",
+    color: "#dc2626",
+    icon: "👑",
+    is_system: true,
+    created_at: "2024-01-01",
+    permissions: DEFAULT_PERMISSIONS.map(p => ({ permission_id: p.id, granted: true })),
+  },
+  {
+    id: "role_2",
+    name: "admin",
+    name_ar: "مشرف",
+    description: "صلاحيات إدارية واسعة مع بعض القيود",
+    color: "#7c3aed",
+    icon: "🛡️",
+    is_system: true,
+    created_at: "2024-01-01",
+    permissions: DEFAULT_PERMISSIONS.map(p => ({
+      permission_id: p.id,
+      granted: !["settings.backup", "settings.logs", "users.permissions", "users.delete", "stores.delete"].includes(p.key),
+    })),
+  },
+  {
+    id: "role_3",
+    name: "manager",
+    name_ar: "مدير فرع",
+    description: "إدارة المتجر والموظفين والعمليات اليومية",
+    color: "#2563eb",
+    icon: "📋",
+    is_system: true,
+    created_at: "2024-01-01",
+    permissions: DEFAULT_PERMISSIONS.map(p => ({
+      permission_id: p.id,
+      granted: p.category !== "الإعدادات" && !p.key.includes("delete") && !p.key.includes("permissions"),
+    })),
+  },
+  {
+    id: "role_4",
+    name: "employee",
+    name_ar: "موظف",
+    description: "صلاحيات أساسية للعمل اليومي",
+    color: "#059669",
+    icon: "👤",
+    is_system: true,
+    created_at: "2024-01-01",
+    permissions: DEFAULT_PERMISSIONS.map(p => ({
+      permission_id: p.id,
+      granted: ["dashboard.view", "tasks.view", "tasks.toggle", "attendance.view", "attendance.checkin", "attendance.checkout", "shop.view", "shop.orders.view", "notifications.view", "messages.view", "clients.view", "clients.details"].includes(p.key),
+    })),
+  },
+  {
+    id: "role_5",
+    name: "viewer",
+    name_ar: "مشاهد",
+    description: "عرض فقط بدون أي صلاحيات تعديل",
+    color: "#6b7280",
+    icon: "👁️",
+    is_system: false,
+    created_at: "2024-01-15",
+    permissions: DEFAULT_PERMISSIONS.map(p => ({
+      permission_id: p.id,
+      granted: p.key.includes(".view") || p.key === "dashboard.stats",
+    })),
+  },
+]
+
+const ROLE_COLORS = [
+  "#dc2626", "#ea580c", "#d97706", "#65a30d", "#059669",
+  "#0891b2", "#2563eb", "#7c3aed", "#c026d3", "#e11d48",
+  "#78716c", "#0f766e", "#4f46e5", "#9333ea", "#be185d",
+]
+
+const ROLE_ICONS = ["👑", "🛡️", "📋", "👤", "👁️", "⚡", "🎯", "🔧", "📊", "💼", "🏪", "📦", "💰", "🔔", "⭐"]
+
+// ==================== المكون الرئيسي ====================
+export default function PermissionsPage() {
+  const [roles, setRoles] = useState<Role[]>(DEFAULT_ROLES)
+  const [selectedRole, setSelectedRole] = useState<Role | null>(DEFAULT_ROLES[0])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showNewRoleModal, setShowNewRoleModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [editingRole, setEditingRole] = useState<Role | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(getCategories().map(c => c)))
+  const [hasChanges, setHasChanges] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
+  const [activeTab, setActiveTab] = useState<"permissions" | "overview">("permissions")
+
+  function getCategories(): string[] {
+    const cats = new Set(DEFAULT_PERMISSIONS.map(p => p.category))
+    return Array.from(cats)
+  }
+
+  function getPermissionsByCategory(category: string): Permission[] {
+    return DEFAULT_PERMISSIONS.filter(p => p.category === category)
+  }
+
+  function isPermissionGranted(role: Role, permissionId: string): boolean {
+    const rp = role.permissions.find(p => p.permission_id === permissionId)
+    return rp?.granted ?? false
+  }
+
+  function getCategoryGrantCount(role: Role, category: string): { granted: number; total: number } {
+    const perms = getPermissionsByCategory(category)
+    const granted = perms.filter(p => isPermissionGranted(role, p.id)).length
+    return { granted, total: perms.length }
+  }
+
+  function isCategoryFullyGranted(role: Role, category: string): boolean {
+    const { granted, total } = getCategoryGrantCount(role, category)
+    return granted === total
+  }
+
+  function isCategoryPartiallyGranted(role: Role, category: string): boolean {
+    const { granted, total } = getCategoryGrantCount(role, category)
+    return granted > 0 && granted < total
+  }
+
+  const togglePermission = useCallback((permissionId: string) => {
+    if (!selectedRole) return
+    setRoles(prev =>
+      prev.map(r => {
+        if (r.id !== selectedRole.id) return r
+        const updated = {
+          ...r,
+          permissions: r.permissions.map(p =>
+            p.permission_id === permissionId ? { ...p, granted: !p.granted } : p
+          ),
+        }
+        return updated
+      })
+    )
+    setSelectedRole(prev => {
+      if (!prev || prev.id !== selectedRole.id) return prev
+      return {
+        ...prev,
+        permissions: prev.permissions.map(p =>
+          p.permission_id === permissionId ? { ...p, granted: !p.granted } : p
+        ),
+      }
+    })
+    setHasChanges(true)
+  }, [selectedRole])
+
+  const toggleCategory = useCallback((category: string) => {
+    if (!selectedRole) return
+    const shouldGrant = !isCategoryFullyGranted(selectedRole, category)
+    const categoryPermIds = getPermissionsByCategory(category).map(p => p.id)
+
+    setRoles(prev =>
+      prev.map(r => {
+        if (r.id !== selectedRole.id) return r
+        return {
+          ...r,
+          permissions: r.permissions.map(p =>
+            categoryPermIds.includes(p.permission_id) ? { ...p, granted: shouldGrant } : p
+          ),
+        }
+      })
+    )
+    setSelectedRole(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        permissions: prev.permissions.map(p =>
+          categoryPermIds.includes(p.permission_id) ? { ...p, granted: shouldGrant } : p
+        ),
+      }
+    })
+    setHasChanges(true)
+  }, [selectedRole])
+
+  const toggleCategoryExpansion = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800))
+    setSaving(false)
+    setHasChanges(false)
+    showToast("تم حفظ الصلاحيات بنجاح", "success")
+  }
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleDeleteRole = (roleId: string) => {
+    setRoles(prev => prev.filter(r => r.id !== roleId))
+    if (selectedRole?.id === roleId) {
+      setSelectedRole(roles.find(r => r.id !== roleId) || null)
+    }
+    setShowDeleteConfirm(null)
+    showToast("تم حذف الدور بنجاح", "success")
+  }
+
+  const totalGranted = selectedRole
+    ? selectedRole.permissions.filter(p => p.granted).length
+    : 0
+  const totalPerms = DEFAULT_PERMISSIONS.length
+  const grantedPercent = Math.round((totalGranted / totalPerms) * 100)
+
+  const filteredPermissions = searchQuery
+    ? DEFAULT_PERMISSIONS.filter(
+        p =>
+          p.label.includes(searchQuery) ||
+          p.description.includes(searchQuery) ||
+          p.key.includes(searchQuery) ||
+          p.category.includes(searchQuery)
+      )
+    : DEFAULT_PERMISSIONS
+
+  const filteredCategories = searchQuery
+    ? [...new Set(filteredPermissions.map(p => p.category))]
+    : getCategories()
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-white" style={{ fontFamily: "'Tajawal', 'IBM Plex Sans Arabic', sans-serif" }}>
+      {/* خط Tajawal من Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+
+        * { box-sizing: border-box; }
+
+        .glass-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          backdrop-filter: blur(20px);
+        }
+
+        .role-card {
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+        .role-card:hover {
+          background: rgba(255, 255, 255, 0.06);
+          transform: translateX(-2px);
+        }
+        .role-card.active {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .toggle-switch {
+          width: 44px;
+          height: 24px;
+          border-radius: 12px;
+          position: relative;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toggle-switch.off {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .toggle-switch.on {
+          background: #10b981;
+        }
+        .toggle-switch::after {
+          content: '';
+          position: absolute;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: white;
+          top: 3px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toggle-switch.off::after {
+          right: 3px;
+        }
+        .toggle-switch.on::after {
+          right: 23px;
+        }
+
+        .permission-row {
+          transition: all 0.15s ease;
+        }
+        .permission-row:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .category-header {
+          transition: all 0.15s ease;
+          cursor: pointer;
+        }
+        .category-header:hover {
+          background: rgba(255, 255, 255, 0.04);
+        }
+
+        .progress-ring {
+          transform: rotate(-90deg);
+        }
+
+        .floating-save {
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .toast {
+          animation: toastIn 0.3s ease;
+        }
+
+        @keyframes toastIn {
+          from { transform: translateY(-20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-overlay {
+          animation: fadeIn 0.2s ease;
+        }
+        .modal-content {
+          animation: scaleIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
+        .checkbox-category {
+          width: 20px;
+          height: 20px;
+          border-radius: 4px;
+          border: 2px solid rgba(255,255,255,0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+        .checkbox-category.checked {
+          background: #10b981;
+          border-color: #10b981;
+        }
+        .checkbox-category.partial {
+          background: #f59e0b;
+          border-color: #f59e0b;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.1);
+          border-radius: 2px;
+        }
+      `}</style>
+
+      {/* Toast */}
+      {toast && (
+        <div className="toast fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl text-sm font-medium shadow-2xl"
+          style={{
+            background: toast.type === "success" ? "#065f46" : "#7f1d1d",
+            border: `1px solid ${toast.type === "success" ? "#10b981" : "#ef4444"}`,
+          }}>
+          {toast.type === "success" ? "✅" : "❌"} {toast.message}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl sticky top-0 z-40">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-800 flex items-center justify-center text-lg">
+                🔐
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">إدارة الصلاحيات والأدوار</h1>
+                <p className="text-xs text-white/40 mt-0.5">تحكم كامل في صلاحيات كل دور على كل ميزة في النظام</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex bg-white/5 rounded-lg p-0.5">
+                <button
+                  onClick={() => setActiveTab("permissions")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    activeTab === "permissions" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70"
+                  }`}>
+                  الصلاحيات
+                </button>
+                <button
+                  onClick={() => setActiveTab("overview")}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    activeTab === "overview" ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70"
+                  }`}>
+                  نظرة عامة
+                </button>
+              </div>
+              <button
+                onClick={() => setShowNewRoleModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-all"
+              >
+                <span>+</span>
+                <span>دور جديد</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {activeTab === "permissions" ? (
+        <div className="max-w-[1600px] mx-auto p-6">
+          <div className="flex gap-6" style={{ minHeight: "calc(100vh - 120px)" }}>
+            {/* === القائمة الجانبية - الأدوار === */}
+            <div className="w-[280px] flex-shrink-0">
+              <div className="glass-card rounded-2xl p-4 sticky top-24">
+                <h3 className="text-sm font-bold text-white/60 mb-3 px-2">الأدوار ({roles.length})</h3>
+                <div className="space-y-1.5 max-h-[calc(100vh-220px)] overflow-y-auto scrollbar-thin">
+                  {roles.map(role => {
+                    const roleGranted = role.permissions.filter(p => p.granted).length
+                    const rolePercent = Math.round((roleGranted / totalPerms) * 100)
+                    return (
+                      <div
+                        key={role.id}
+                        onClick={() => { setSelectedRole(role); }}
+                        className={`role-card rounded-xl p-3 glass-card ${selectedRole?.id === role.id ? "active" : ""}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                            style={{ background: `${role.color}20`, border: `1px solid ${role.color}40` }}
+                          >
+                            {role.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-white truncate">{role.name_ar}</span>
+                              {role.is_system && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/30">نظام</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${rolePercent}%`, background: role.color }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-white/40 flex-shrink-0">{rolePercent}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* === المحتوى الرئيسي - الصلاحيات === */}
+            <div className="flex-1 min-w-0">
+              {selectedRole ? (
+                <>
+                  {/* معلومات الدور المحدد */}
+                  <div className="glass-card rounded-2xl p-5 mb-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                          style={{ background: `${selectedRole.color}15`, border: `1px solid ${selectedRole.color}30` }}
+                        >
+                          {selectedRole.icon}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-xl font-bold text-white">{selectedRole.name_ar}</h2>
+                            <span
+                              className="text-xs px-2 py-1 rounded-full font-mono"
+                              style={{ background: `${selectedRole.color}15`, color: selectedRole.color }}
+                            >
+                              {selectedRole.name}
+                            </span>
+                          </div>
+                          <p className="text-sm text-white/40 mt-1">{selectedRole.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {/* Progress Circle */}
+                        <div className="relative w-16 h-16">
+                          <svg className="progress-ring w-16 h-16" viewBox="0 0 60 60">
+                            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
+                            <circle
+                              cx="30" cy="30" r="26" fill="none"
+                              stroke={selectedRole.color}
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                              strokeDasharray={`${(grantedPercent / 100) * 163.36} 163.36`}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-sm font-bold" style={{ color: selectedRole.color }}>{grantedPercent}%</span>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-2xl font-bold text-white">{totalGranted}</div>
+                          <div className="text-xs text-white/40">من {totalPerms} صلاحية</div>
+                        </div>
+                        {/* أزرار التحرير والحذف */}
+                        <div className="flex gap-2 mr-4">
+                          <button
+                            onClick={() => setEditingRole(selectedRole)}
+                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                            title="تعديل الدور"
+                          >
+                            ✏️
+                          </button>
+                          {!selectedRole.is_system && (
+                            <button
+                              onClick={() => setShowDeleteConfirm(selectedRole.id)}
+                              className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all"
+                              title="حذف الدور"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* بحث */}
+                  <div className="glass-card rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+                    <span className="text-white/30">🔍</span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="ابحث في الصلاحيات..."
+                      className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-white/20"
+                    />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery("")} className="text-white/30 hover:text-white/60 text-sm">✕</button>
+                    )}
+                  </div>
+
+                  {/* قائمة الصلاحيات */}
+                  <div className="space-y-3">
+                    {filteredCategories.map(category => {
+                      const isExpanded = expandedCategories.has(category)
+                      const { granted, total } = getCategoryGrantCount(selectedRole, category)
+                      const categoryPerms = searchQuery
+                        ? filteredPermissions.filter(p => p.category === category)
+                        : getPermissionsByCategory(category)
+                      const isFullyGranted = isCategoryFullyGranted(selectedRole, category)
+                      const isPartial = isCategoryPartiallyGranted(selectedRole, category)
+
+                      // Group by subcategory
+                      const subcategories = new Map<string, Permission[]>()
+                      categoryPerms.forEach(p => {
+                        const sub = p.subcategory || ""
+                        if (!subcategories.has(sub)) subcategories.set(sub, [])
+                        subcategories.get(sub)!.push(p)
+                      })
+
+                      return (
+                        <div key={category} className="glass-card rounded-2xl overflow-hidden">
+                          {/* Category Header */}
+                          <div
+                            className="category-header flex items-center justify-between px-5 py-4"
+                            onClick={() => toggleCategoryExpansion(category)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`checkbox-category ${isFullyGranted ? "checked" : isPartial ? "partial" : ""}`}
+                                onClick={e => { e.stopPropagation(); toggleCategory(category); }}
+                              >
+                                {isFullyGranted && <span className="text-white text-xs">✓</span>}
+                                {isPartial && <span className="text-white text-xs">—</span>}
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-bold text-white">{category}</h3>
+                                <p className="text-xs text-white/30 mt-0.5">{granted} من {total} صلاحية مفعّلة</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${total > 0 ? (granted / total) * 100 : 0}%`,
+                                    background: granted === total ? "#10b981" : granted > 0 ? "#f59e0b" : "transparent",
+                                  }}
+                                />
+                              </div>
+                              <span className="text-white/30 text-xs transition-transform duration-200"
+                                style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                                ▼
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Permission Rows */}
+                          {isExpanded && (
+                            <div className="border-t border-white/5">
+                              {[...subcategories.entries()].map(([subcat, perms]) => (
+                                <div key={subcat}>
+                                  {subcat && (
+                                    <div className="px-5 py-2 bg-white/[0.02]">
+                                      <span className="text-xs font-bold text-white/25">{subcat}</span>
+                                    </div>
+                                  )}
+                                  {perms.map((perm, idx) => (
+                                    <div
+                                      key={perm.id}
+                                      className="permission-row flex items-center justify-between px-5 py-3"
+                                      style={{ borderTop: idx > 0 || subcat ? "1px solid rgba(255,255,255,0.03)" : "none" }}
+                                    >
+                                      <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm text-white/90">{perm.label}</span>
+                                          <span className="text-[10px] font-mono text-white/15 hidden sm:inline">{perm.key}</span>
+                                        </div>
+                                        <p className="text-xs text-white/30 mt-0.5">{perm.description}</p>
+                                      </div>
+                                      <div
+                                        className={`toggle-switch ${isPermissionGranted(selectedRole, perm.id) ? "on" : "off"}`}
+                                        onClick={() => togglePermission(perm.id)}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="glass-card rounded-2xl p-20 text-center">
+                  <span className="text-4xl mb-4 block">🔐</span>
+                  <h3 className="text-lg font-bold text-white/60">اختر دوراً لعرض صلاحياته</h3>
+                  <p className="text-sm text-white/30 mt-2">اختر من القائمة الجانبية لبدء إدارة الصلاحيات</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* === تبويب نظرة عامة === */
+        <div className="max-w-[1600px] mx-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {roles.map(role => {
+              const roleGranted = role.permissions.filter(p => p.granted).length
+              const rolePercent = Math.round((roleGranted / totalPerms) * 100)
+              return (
+                <div key={role.id} className="glass-card rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
+                      style={{ background: `${role.color}15`, border: `1px solid ${role.color}30` }}
+                    >
+                      {role.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white">{role.name_ar}</h3>
+                      <p className="text-xs text-white/40">{role.description}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {getCategories().map(cat => {
+                      const { granted: cg, total: ct } = getCategoryGrantCount(role, cat)
+                      return (
+                        <div key={cat} className="flex items-center gap-2">
+                          <span className="text-xs text-white/50 w-28 truncate">{cat}</span>
+                          <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${ct > 0 ? (cg / ct) * 100 : 0}%`,
+                                background: cg === ct ? "#10b981" : cg > 0 ? "#f59e0b" : "transparent",
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-white/30 w-8 text-left">{cg}/{ct}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-xs text-white/40">{roleGranted} صلاحية من {totalPerms}</span>
+                    <span className="text-sm font-bold" style={{ color: role.color }}>{rolePercent}%</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* جدول مقارنة الأدوار */}
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5">
+              <h3 className="text-sm font-bold text-white">مقارنة الصلاحيات بين الأدوار</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-right text-xs font-bold text-white/40 px-5 py-3">الصلاحية</th>
+                    {roles.map(r => (
+                      <th key={r.id} className="text-center text-xs font-bold px-3 py-3" style={{ color: r.color }}>
+                        {r.icon} {r.name_ar}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {getCategories().map(cat => (
+                    <>
+                      <tr key={`cat-${cat}`} className="bg-white/[0.02]">
+                        <td colSpan={roles.length + 1} className="px-5 py-2 text-xs font-bold text-white/50">{cat}</td>
+                      </tr>
+                      {getPermissionsByCategory(cat).map(perm => (
+                        <tr key={perm.id} className="border-t border-white/[0.02] hover:bg-white/[0.02]">
+                          <td className="px-5 py-2 text-xs text-white/70">{perm.label}</td>
+                          {roles.map(r => (
+                            <td key={r.id} className="text-center px-3 py-2">
+                              <span className={`text-sm ${isPermissionGranted(r, perm.id) ? "text-emerald-400" : "text-white/10"}`}>
+                                {isPermissionGranted(r, perm.id) ? "✓" : "—"}
+                              </span>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* زر الحفظ العائم */}
+      {hasChanges && (
+        <div className="floating-save fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+          <div className="glass-card rounded-2xl px-6 py-3 flex items-center gap-4 shadow-2xl border-violet-500/20">
+            <span className="text-sm text-white/60">لديك تغييرات غير محفوظة</span>
+            <button
+              onClick={() => { setHasChanges(false); setSelectedRole(roles.find(r => r.id === selectedRole?.id) || selectedRole); }}
+              className="px-4 py-2 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all"
+            >
+              تراجع
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-all disabled:opacity-50"
+            >
+              {saving ? "جاري الحفظ..." : "💾 حفظ التغييرات"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* مودال إضافة دور جديد */}
+      {(showNewRoleModal || editingRole) && (
+        <NewRoleModal
+          editRole={editingRole}
+          existingNames={roles.map(r => r.name)}
+          onClose={() => { setShowNewRoleModal(false); setEditingRole(null); }}
+          onSave={(role) => {
+            if (editingRole) {
+              setRoles(prev => prev.map(r => r.id === editingRole.id ? { ...r, ...role, permissions: r.permissions } : r))
+              if (selectedRole?.id === editingRole.id) {
+                setSelectedRole(prev => prev ? { ...prev, ...role, permissions: prev.permissions } : null)
+              }
+              showToast("تم تعديل الدور بنجاح", "success")
+            } else {
+              const newRole: Role = {
+                ...role,
+                id: `role_${Date.now()}`,
+                is_system: false,
+                created_at: new Date().toISOString().split("T")[0],
+                permissions: DEFAULT_PERMISSIONS.map(p => ({ permission_id: p.id, granted: false })),
+              }
+              setRoles(prev => [...prev, newRole])
+              setSelectedRole(newRole)
+              showToast("تم إضافة الدور بنجاح", "success")
+            }
+            setShowNewRoleModal(false)
+            setEditingRole(null)
+          }}
+        />
+      )}
+
+      {/* تأكيد الحذف */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="modal-content glass-card rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-3xl mx-auto mb-4">⚠️</div>
+              <h3 className="text-lg font-bold text-white mb-2">حذف الدور</h3>
+              <p className="text-sm text-white/50 mb-6">
+                هل أنت متأكد من حذف هذا الدور؟ سيتم إزالة جميع الصلاحيات المرتبطة به. هذا الإجراء لا يمكن التراجع عنه.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-medium transition-all"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={() => handleDeleteRole(showDeleteConfirm)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-all"
+                >
+                  حذف الدور
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ==================== مودال إضافة/تعديل دور ====================
+function NewRoleModal({
+  editRole,
+  existingNames,
+  onClose,
+  onSave,
+}: {
+  editRole: Role | null
+  existingNames: string[]
+  onClose: () => void
+  onSave: (role: Omit<Role, "id" | "is_system" | "created_at" | "permissions">) => void
+}) {
+  const [name, setName] = useState(editRole?.name || "")
+  const [nameAr, setNameAr] = useState(editRole?.name_ar || "")
+  const [description, setDescription] = useState(editRole?.description || "")
+  const [color, setColor] = useState(editRole?.color || ROLE_COLORS[0])
+  const [icon, setIcon] = useState(editRole?.icon || ROLE_ICONS[0])
+  const [error, setError] = useState("")
+
+  const handleSave = () => {
+    if (!name.trim() || !nameAr.trim()) {
+      setError("يرجى تعبئة الاسم بالعربي والإنجليزي")
+      return
+    }
+    if (!editRole && existingNames.includes(name.trim())) {
+      setError("اسم الدور موجود مسبقاً")
+      return
+    }
+    onSave({ name: name.trim(), name_ar: nameAr.trim(), description: description.trim(), color, icon } as any)
+  }
+
+  return (
+    <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="modal-content glass-card rounded-2xl p-6 w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-white mb-5">
+          {editRole ? "تعديل الدور" : "إضافة دور جديد"}
+        </h3>
+
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">اسم الدور (عربي) *</label>
+              <input
+                value={nameAr}
+                onChange={e => { setNameAr(e.target.value); setError(""); }}
+                placeholder="مثال: محاسب"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-violet-500/50 transition-all placeholder:text-white/20"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">اسم الدور (إنجليزي) *</label>
+              <input
+                value={name}
+                onChange={e => { setName(e.target.value.replace(/[^a-zA-Z_]/g, "").toLowerCase()); setError(""); }}
+                placeholder="مثال: accountant"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-violet-500/50 transition-all font-mono placeholder:text-white/20"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">الوصف</label>
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="وصف مختصر لصلاحيات هذا الدور..."
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-violet-500/50 transition-all placeholder:text-white/20"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">الأيقونة</label>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_ICONS.map(ic => (
+                <button
+                  key={ic}
+                  onClick={() => setIcon(ic)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all ${
+                    icon === ic ? "bg-violet-600/30 border border-violet-500/50 scale-110" : "bg-white/5 hover:bg-white/10"
+                  }`}
+                >
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">اللون</label>
+            <div className="flex flex-wrap gap-2">
+              {ROLE_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setColor(c)}
+                  className={`w-8 h-8 rounded-lg transition-all ${color === c ? "scale-125 ring-2 ring-white/30" : "hover:scale-110"}`}
+                  style={{ background: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-medium transition-all"
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex-1 px-4 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-all"
+          >
+            {editRole ? "حفظ التعديلات" : "إضافة الدور"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
