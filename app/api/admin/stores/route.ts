@@ -154,7 +154,9 @@ export async function POST(request: Request) {
       client_id,
       subscription_start_date,
       store_group_url,
-      category
+      category,
+      billing_type,
+      billing_amount
     } = body;
 
     // التحقق من الحقول المطلوبة
@@ -200,6 +202,8 @@ export async function POST(request: Request) {
         subscription_start_date: subscription_start_date || null,
         store_group_url:         store_group_url         || null,
         category:                category                || null,
+        billing_type:            billing_type            || null,
+        billing_amount:          billing_amount          != null ? billing_amount : null,
         is_active: true
       })
       .select()
@@ -258,10 +262,17 @@ export async function PUT(request: Request) {
       owner_phone, 
       owner_email, 
       account_manager_id,
+      media_buyer_id,
       priority,
+      status,
       budget,
       notes,
-      client_id 
+      client_id,
+      subscription_start_date,
+      store_group_url,
+      category,
+      billing_type,
+      billing_amount
     } = body;
 
     if (!id) {
@@ -282,11 +293,18 @@ export async function PUT(request: Request) {
         owner_name: owner_name || '-',
         owner_phone,
         owner_email: owner_email || null,
-        account_manager_id: account_manager_id || null,
-        priority: priority || 'medium',
-        budget: budget || null,
-        notes: notes || null,
-        client_id: client_id || null,
+        account_manager_id:      account_manager_id      || null,
+        media_buyer_id:          media_buyer_id          || null,
+        priority:                priority                || 'medium',
+        status:                  status                  || 'new',
+        budget:                  budget                  || null,
+        notes:                   notes                   || null,
+        client_id:               client_id               || null,
+        subscription_start_date: subscription_start_date || null,
+        store_group_url:         store_group_url         || null,
+        category:                category                || null,
+        billing_type:            billing_type            || null,
+        billing_amount:          billing_amount          != null ? billing_amount : null,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

@@ -16,6 +16,13 @@ interface Client {
   company_name: string | null;
 }
 
+const BILLING_PACKAGES = [
+  { label: '10K – 19K', amount: 3200 },
+  { label: '20K – 49K', amount: 3700 },
+  { label: '50K – 99K', amount: 4800 },
+  { label: '100K – 299K', amount: 5800 },
+];
+
 interface StoreFormData {
   store_name: string;
   store_url: string;
@@ -32,6 +39,8 @@ interface StoreFormData {
   client_id: string;
   subscription_start_date: string;
   store_group_url: string;
+  billing_type: 'package' | 'custom' | '';
+  billing_amount: string;
 }
 
 
@@ -60,6 +69,8 @@ interface AddStoreModalProps {
     subscription_start_date?: string;
     store_group_url?: string;
     category?: string;
+    billing_type?: string;
+    billing_amount?: number | null;
   } | null;
 }
 
@@ -78,7 +89,9 @@ const initialFormData: StoreFormData = {
   notes: '',
   client_id: '',
   subscription_start_date: '',
-  store_group_url: ''
+  store_group_url: '',
+  billing_type: '',
+  billing_amount: '',
 };
 
 export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore }: AddStoreModalProps) {
@@ -112,7 +125,9 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
           notes: editingStore.notes || '',
           client_id: (editingStore as any).client_id || '',
           subscription_start_date: editingStore.subscription_start_date || '',
-          store_group_url: editingStore.store_group_url || ''
+          store_group_url: editingStore.store_group_url || '',
+          billing_type: (editingStore.billing_type as any) || '',
+          billing_amount: editingStore.billing_amount != null ? String(editingStore.billing_amount) : '',
         });
       } else {
         setFormData(initialFormData);
@@ -174,7 +189,16 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
       const token = localStorage.getItem('admin_token');
       const url = editingStore ? `/api/admin/stores` : '/api/admin/stores';
       const method = editingStore ? 'PUT' : 'POST';
-      const body = editingStore ? { id: editingStore.id, ...formData } : formData;
+      const body = editingStore
+        ? {
+            id: editingStore.id,
+            ...formData,
+            billing_amount: formData.billing_amount !== '' ? Number(formData.billing_amount) : null,
+          }
+        : {
+            ...formData,
+            billing_amount: formData.billing_amount !== '' ? Number(formData.billing_amount) : null,
+          };
 
       const response = await fetch(url, {
         method,
@@ -414,6 +438,78 @@ export default function AddStoreModal({ isOpen, onClose, onSuccess, editingStore
               placeholder="https://chat.whatsapp.com/..."
               dir="ltr"
             />
+          </div>
+
+          {/* ═══ قسم الفوترة ═══ */}
+          <div className="border border-amber-500/20 rounded-xl p-4 bg-amber-500/5 space-y-3">
+            <p className="text-sm font-semibold text-amber-400 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+              </svg>
+              الفوترة الشهرية
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {BILLING_PACKAGES.map((pkg) => (
+                <button
+                  key={pkg.label}
+                  type="button"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    billing_type: 'package',
+                    billing_amount: String(pkg.amount),
+                  }))}
+                  className={`px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-right ${
+                    formData.billing_type === 'package' && formData.billing_amount === String(pkg.amount)
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                      : 'bg-purple-900/20 border-purple-500/20 text-purple-300 hover:border-amber-500/40 hover:text-amber-300'
+                  }`}
+                >
+                  <span className="block text-xs opacity-70">{pkg.label}</span>
+                  <span className="block font-bold">{pkg.amount.toLocaleString('ar-SA')} ر.س</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-purple-500/20" />
+              <span className="text-purple-400/50 text-xs">أو كتابة يدوية</span>
+              <div className="flex-1 h-px bg-purple-500/20" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="مبلغ مخصص..."
+                value={formData.billing_type === 'custom' ? formData.billing_amount : ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  billing_type: 'custom',
+                  billing_amount: e.target.value,
+                }))}
+                className="flex-1 px-4 py-2.5 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-400 outline-none"
+                dir="ltr"
+              />
+              <span className="text-purple-400 text-sm whitespace-nowrap">ر.س / شهر</span>
+              {formData.billing_amount && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, billing_type: '', billing_amount: '' }))}
+                  className="p-2 text-purple-400/50 hover:text-red-400 transition-colors"
+                  title="مسح"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {formData.billing_amount && (
+              <p className="text-amber-400/70 text-xs text-center">
+                المبلغ المحدد: <span className="font-bold text-amber-300">{Number(formData.billing_amount).toLocaleString('ar-SA')} ر.س / شهر</span>
+              </p>
+            )}
           </div>
 
           <div>
