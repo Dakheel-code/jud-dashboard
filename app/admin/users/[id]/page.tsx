@@ -37,6 +37,7 @@ interface UserData {
   role: string;
   roles?: string[];
   avatar?: string;
+  monthly_salary?: number | null;
   is_active: boolean;
   created_at: string;
   last_login: string;
@@ -126,9 +127,81 @@ const ROLE_COLORS: Record<string, string> = {
   web_developer: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
 };
 
+function SalaryField({ userId, salary, onSaved }: { userId: string; salary: number | null; onSaved: (val: number | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(salary != null ? String(salary) : '');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const parsed = value.trim() === '' ? null : Number(value.replace(/,/g, ''));
+      await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthly_salary: parsed }),
+      });
+      onSaved(parsed);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="col-span-2 md:col-span-1 bg-amber-500/10 rounded-xl p-3 border border-amber-500/20">
+      <div className="flex items-center gap-1.5 mb-1">
+        <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-amber-400/70 text-xs">الراتب الشهري</p>
+        <span className="text-amber-500/50 text-[10px] mr-auto">🔒 للمالك فقط</span>
+      </div>
+      {editing ? (
+        <div className="flex items-center gap-1 mt-1">
+          <input
+            type="number"
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            placeholder="0"
+            className="w-full bg-amber-900/20 border border-amber-500/40 rounded-lg px-2 py-1 text-white text-sm font-mono focus:outline-none focus:border-amber-400"
+            autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+          />
+          <button onClick={save} disabled={saving} className="px-2 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs rounded-lg font-bold transition-colors disabled:opacity-50">
+            {saving ? '...' : '✓'}
+          </button>
+          <button onClick={() => setEditing(false)} className="px-2 py-1 bg-purple-800/50 hover:bg-purple-700/50 text-white text-xs rounded-lg transition-colors">✕</button>
+        </div>
+      ) : (
+        <button onClick={() => { setValue(salary != null ? String(salary) : ''); setEditing(true); }} className="w-full text-right mt-1 group">
+          <p className="text-white text-sm font-mono font-bold group-hover:text-amber-300 transition-colors">
+            {salary != null ? Number(salary).toLocaleString('ar-SA') + ' ر.س' : <span className="text-amber-400/40 text-xs">انقر لتحديد الراتب</span>}
+          </p>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function UserDetailsContent() {
   const params = useParams();
   const userId = params.id as string;
+
+  // دور المستخدم الحالي (من localStorage)
+  const [currentUserRole, setCurrentUserRole] = useState<string>('');
+  const isOwner = currentUserRole === 'owner';
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('admin_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const roles: string[] = parsed.roles || (parsed.role ? [parsed.role] : []);
+        setCurrentUserRole(roles.includes('owner') ? 'owner' : (parsed.role || ''));
+      }
+    } catch {}
+  }, []);
   
   const [user, setUser] = useState<UserData | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
@@ -458,6 +531,9 @@ function UserDetailsContent() {
                   : '-'}
               </p>
             </div>
+            {isOwner && (
+              <SalaryField userId={userId} salary={user.monthly_salary ?? null} onSaved={(val) => setUser(prev => prev ? { ...prev, monthly_salary: val } : prev)} />
+            )}
           </div>
         </div>
 

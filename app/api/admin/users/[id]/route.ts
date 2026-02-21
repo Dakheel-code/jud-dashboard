@@ -40,12 +40,19 @@ export async function GET(
     // جلب بيانات المستخدم
     const { data: user, error: userError } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, phone, role, roles, avatar, is_active, created_at, last_login, last_seen_at')
+      .select('id, username, name, email, phone, role, roles, avatar, monthly_salary, is_active, created_at, last_login, last_seen_at')
       .eq('id', userId)
       .single();
 
     if (userError || !user) {
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
+    }
+
+    // إخفاء الراتب إذا لم يكن المستخدم الحالي owner
+    const callerRoles: string[] = (auth.user as any)?.roles || ((auth.user as any)?.role ? [(auth.user as any).role] : []);
+    const callerIsOwner = callerRoles.includes('owner');
+    if (!callerIsOwner) {
+      delete (user as any).monthly_salary;
     }
 
     // جلب المتاجر المسندة لهذا المستخدم
@@ -145,8 +152,9 @@ export async function PATCH(
     if (body.email     !== undefined) updateData.email     = body.email;
     if (body.username  !== undefined) updateData.username  = body.username;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (body.avatar    !== undefined) updateData.avatar    = body.avatar;
-    if (body.password)               updateData.password_hash = hashPassword(body.password);
+    if (body.avatar          !== undefined) updateData.avatar          = body.avatar;
+    if (body.monthly_salary   !== undefined) updateData.monthly_salary  = body.monthly_salary;
+    if (body.password)                       updateData.password_hash   = hashPassword(body.password);
 
     const { data, error } = await supabase
       .from('admin_users')
