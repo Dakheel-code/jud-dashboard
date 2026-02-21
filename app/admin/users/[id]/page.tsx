@@ -47,7 +47,7 @@ interface UserData {
 interface AttendanceStats {
   present_days: number;
   absent_days: number;
-  late_days: number;
+  late_hours: number;
   total_work_hours: number;
   avg_check_in: string | null;
   avg_check_out: string | null;
@@ -335,7 +335,17 @@ function UserDetailsContent() {
       const data = await res.json();
       const records: any[] = data.records || [];
       const present = records.filter(r => r.status === 'present').length;
-      const late = records.filter(r => r.is_late).length;
+      // حساب ساعات التأخير: الفرق بين وقت الحضور الفعلي و 9:00 صباحاً
+      const WORK_START_MINUTES = 9 * 60; // 9:00 AM
+      const lateMinutesTotal = records
+        .filter(r => r.check_in_time)
+        .reduce((sum, r) => {
+          const ci = new Date(r.check_in_time);
+          const ciMins = ci.getHours() * 60 + ci.getMinutes();
+          const diff = ciMins - WORK_START_MINUTES;
+          return sum + (diff > 0 ? diff : 0);
+        }, 0);
+      const lateHours = Math.round((lateMinutesTotal / 60) * 10) / 10;
       const totalHours = records.reduce((s, r) => s + (r.work_hours || 0), 0);
       // حساب متوسط وقت الحضور والانصراف
       const checkIns = records.filter(r => r.check_in_time).map(r => new Date(r.check_in_time).getHours() * 60 + new Date(r.check_in_time).getMinutes());
@@ -349,7 +359,7 @@ function UserDetailsContent() {
       setAttendanceStats({
         present_days: present,
         absent_days: Math.max(0, workDays - present),
-        late_days: late,
+        late_hours: lateHours,
         total_work_hours: Math.round(totalHours * 10) / 10,
         avg_check_in: fmtTime(avgIn),
         avg_check_out: fmtTime(avgOut),
@@ -564,10 +574,10 @@ function UserDetailsContent() {
               <div className="bg-yellow-500/10 rounded-xl p-3 border border-yellow-500/20">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="w-2 h-2 rounded-full bg-yellow-400" />
-                  <p className="text-yellow-400/70 text-xs">أيام التأخير</p>
+                  <p className="text-yellow-400/70 text-xs">ساعات التأخير</p>
                 </div>
-                <p className="text-2xl font-bold text-yellow-400">{attendanceStats.late_days}</p>
-                <p className="text-yellow-400/50 text-xs mt-1">يوم</p>
+                <p className="text-2xl font-bold text-yellow-400">{attendanceStats.late_hours}</p>
+                <p className="text-yellow-400/50 text-xs mt-1">ساعة</p>
               </div>
               <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-1">
