@@ -354,9 +354,19 @@ function UserDetailsContent() {
       const avgIn = checkIns.length ? Math.round(checkIns.reduce((a, b) => a + b, 0) / checkIns.length) : null;
       const avgOut = checkOuts.length ? Math.round(checkOuts.reduce((a, b) => a + b, 0) / checkOuts.length) : null;
       const fmtTime = (mins: number | null) => mins === null ? null : `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+      // حساب أيام العمل الفعلية (أحد=0 .. خميس=4) من بداية الشهر حتى اليوم
+      const countWorkDays = (year: number, month: number, upToDay: number): number => {
+        let count = 0;
+        for (let d = 1; d <= upToDay; d++) {
+          const day = new Date(year, month, d).getDay(); // 0=Sun..6=Sat
+          if (day >= 0 && day <= 4) count++; // Sun-Thu
+        }
+        return count;
+      };
+      const workDaysUntilToday = countWorkDays(now.getFullYear(), now.getMonth(), now.getDate());
       setAttendanceStats({
         present_days: present,
-        absent_days: absent,
+        absent_days: Math.max(0, workDaysUntilToday - present),
         late_hours: lateHours,
         total_work_hours: Math.round(totalHours * 10) / 10,
         avg_check_in: fmtTime(avgIn),
