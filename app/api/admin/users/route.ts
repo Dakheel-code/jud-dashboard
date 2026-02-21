@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { requireAdmin } from '@/lib/auth-guard';
 import { logAuditFromRequest } from '@/lib/audit';
 import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
-// Simple password hashing (in production, use bcrypt)
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
 }
 
 function getSupabaseClient() {
@@ -102,6 +101,20 @@ export async function POST(request: NextRequest) {
         { error: 'جميع الحقول المطلوبة يجب ملؤها' },
         { status: 400 }
       );
+    }
+
+    // التحقق من صحة المدخلات
+    if (username.trim().length < 3) {
+      return NextResponse.json({ error: 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل' }, { status: 400 });
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(username.trim())) {
+      return NextResponse.json({ error: 'اسم المستخدم يجب أن يحتوي على حروف إنجليزية وأرقام فقط' }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }, { status: 400 });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'صيغة البريد الإلكتروني غير صحيحة' }, { status: 400 });
     }
 
     const supabase = getSupabaseClient();

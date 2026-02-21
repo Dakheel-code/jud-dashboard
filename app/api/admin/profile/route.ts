@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
 
-// Simple password hashing (same as users route)
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  if (hash.length === 64 && /^[a-f0-9]{64}$/.test(hash)) {
+    const crypto = require('crypto');
+    const sha256 = crypto.createHash('sha256').update(password).digest('hex');
+    return sha256 === hash;
+  }
+  return bcrypt.compareSync(password, hash);
 }
 
 export async function PUT(request: Request) {
@@ -65,9 +73,8 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
       }
 
-      // Verify current password (using sha256 hash)
-      const hashedCurrentPassword = hashPassword(currentPassword);
-      if (hashedCurrentPassword !== user.password_hash) {
+      // التحقق من كلمة المرور الحالية (يدعم SHA256 القديم و bcrypt)
+      if (!verifyPassword(currentPassword, user.password_hash)) {
         return NextResponse.json({ error: 'كلمة المرور الحالية غير صحيحة' }, { status: 400 });
       }
 

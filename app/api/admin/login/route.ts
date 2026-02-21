@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { logAuditFromRequest } from '@/lib/audit';
 import { getUserPermissions } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
-// Simple password hashing
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  if (hash.length === 64 && /^[a-f0-9]{64}$/.test(hash)) {
+    const sha256 = crypto.createHash('sha256').update(password).digest('hex');
+    return sha256 === hash;
+  }
+  return bcrypt.compareSync(password, hash);
 }
 
 // توليد token بسيط
@@ -42,7 +50,6 @@ export async function POST(request: NextRequest) {
     const normalizedUsername = username.toLowerCase().trim();
 
     const supabase = getSupabaseClient();
-    const passwordHash = hashPassword(password);
 
     // البحث عن المستخدم في قاعدة البيانات (بحث غير حساس لحالة الحروف)
     const { data: user, error: userError } = await supabase
@@ -57,7 +64,7 @@ export async function POST(request: NextRequest) {
       // بيانات افتراضية للمسؤول
       if (normalizedUsername === 'admin' && password === 'admin123') {
         const token = generateToken();
-        
+
         await logAuditFromRequest(request, 'default-admin', 'auth.login', { meta: { method: 'credentials', username: 'admin' } });
 
         const response = NextResponse.json({
@@ -92,12 +99,21 @@ export async function POST(request: NextRequest) {
     }
 
     // التحقق من كلمة المرور
-    if (user.password_hash !== passwordHash) {
+    if (!verifyPassword(password, user.password_hash)) {
       await logAuditFromRequest(request, user.id, 'auth.login_failed', { meta: { username: normalizedUsername, reason: 'wrong_password' } });
       return NextResponse.json(
         { error: 'اسم المستخدم أو كلمة المرور غير صحيحة' },
         { status: 401 }
       );
+    }
+
+    // ترقية تلقائية: إذا كان الهاش قديم (SHA256) → أعد التشفير بـ bcrypt
+    if (user.password_hash.length === 64 && /^[a-f0-9]{64}$/.test(user.password_hash)) {
+      const newHash = hashPassword(password);
+      await supabase
+        .from('admin_users')
+        .update({ password_hash: newHash })
+        .eq('id', user.id);
     }
 
     const token = generateToken();

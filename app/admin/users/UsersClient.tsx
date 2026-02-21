@@ -120,6 +120,9 @@ function UsersManagementContent() {
     roles: ['account_manager'] as string[],
     permissions: [] as string[],
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   // فلترة وبحث
   const [searchQuery, setSearchQuery] = useState('');
@@ -191,9 +194,18 @@ function UsersManagementContent() {
   const fetchUsers = async () => {
     try {
       const response = await fetch('/api/admin/users');
+      if (!response.ok) {
+        setResultModalType('error');
+        setResultModalMessage('فشل في جلب المستخدمين');
+        setShowResultModal(true);
+        return;
+      }
       const data = await response.json();
       setUsers(data.users || []);
     } catch (err) {
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ في الاتصال بالخادم');
+      setShowResultModal(true);
     } finally {
       setLoading(false);
     }
@@ -209,7 +221,8 @@ function UsersManagementContent() {
         setMyTeam(data.team);
         setTeamMembers(data.members || []);
       }
-    } catch {
+    } catch (err) {
+      console.error('فشل في جلب بيانات الفريق:', err);
     } finally {
       setLoadingTeam(false);
     }
@@ -222,7 +235,8 @@ function UsersManagementContent() {
       if (!res.ok) return;
       const data = await res.json();
       setAllTeams(data.teams || []);
-    } catch {
+    } catch (err) {
+      console.error('فشل في جلب الفرق:', err);
     } finally {
       setLoadingAllTeams(false);
     }
@@ -272,8 +286,19 @@ function UsersManagementContent() {
       if (res.ok) {
         await fetchAllTeams();
         await fetchMyTeam();
+        setResultModalType('success');
+        setResultModalMessage('تم حذف الفريق بنجاح');
+        setShowResultModal(true);
+      } else {
+        setResultModalType('error');
+        setResultModalMessage('فشل في حذف الفريق');
+        setShowResultModal(true);
       }
-    } catch {}
+    } catch (err) {
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ أثناء حذف الفريق');
+      setShowResultModal(true);
+    }
   };
 
   const openRewardModal = (user: AdminUser) => {
@@ -314,9 +339,41 @@ function UsersManagementContent() {
     }
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.username.trim()) {
+      errors.username = 'اسم المستخدم مطلوب';
+    } else if (formData.username.trim().length < 3) {
+      errors.username = 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل';
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(formData.username.trim())) {
+      errors.username = 'اسم المستخدم يجب أن يحتوي على حروف إنجليزية وأرقام فقط';
+    }
+
+    if (!editingUser && !formData.password) {
+      errors.password = 'كلمة المرور مطلوبة';
+    } else if (formData.password && formData.password.length < 6) {
+      errors.password = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    }
+
+    if (!formData.name.trim()) {
+      errors.name = 'الاسم الكامل مطلوب';
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'صيغة البريد الإلكتروني غير صحيحة';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!validateForm()) return;
+    setSubmitting(true);
+
     try {
       let response: Response;
       let data: any;
@@ -380,11 +437,14 @@ function UsersManagementContent() {
       setResultModalType('error');
       setResultModalMessage('حدث خطأ في الاتصال');
       setShowResultModal(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
     if (!userToDelete) return;
+    setDeletingUser(true);
 
     try {
       const response = await fetch(`/api/admin/users?id=${userToDelete.id}`, {
@@ -409,10 +469,14 @@ function UsersManagementContent() {
     } finally {
       setShowDeleteModal(false);
       setUserToDelete(null);
+      setDeletingUser(false);
     }
   };
 
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+
   const handleToggleActive = async (user: AdminUser) => {
+    setTogglingUserId(user.id);
     try {
       const response = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -422,8 +486,17 @@ function UsersManagementContent() {
 
       if (response.ok) {
         fetchUsers();
+      } else {
+        setResultModalType('error');
+        setResultModalMessage('فشل في تغيير حالة المستخدم');
+        setShowResultModal(true);
       }
     } catch (err) {
+      setResultModalType('error');
+      setResultModalMessage('حدث خطأ في الاتصال');
+      setShowResultModal(true);
+    } finally {
+      setTogglingUserId(null);
     }
   };
 
@@ -762,13 +835,15 @@ function UsersManagementContent() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleToggleActive(user)}
-                      className={`px-3 py-1 rounded-full text-xs ${
+                      disabled={togglingUserId === user.id}
+                      className={`px-3 py-1 rounded-full text-xs transition-all ${
+                        togglingUserId === user.id ? 'opacity-50 cursor-not-allowed' :
                         user.is_active
                           ? 'bg-green-500/20 text-green-300'
                           : 'bg-red-500/20 text-red-300'
                       }`}
                     >
-                      {user.is_active ? 'نشط' : 'معطل'}
+                      {togglingUserId === user.id ? '...' : user.is_active ? 'نشط' : 'معطل'}
                     </button>
                     <span className="text-purple-500 text-xs">
                       {user.last_seen_at
@@ -981,11 +1056,11 @@ function UsersManagementContent() {
                   <input
                     type="text"
                     value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
-                    required
+                    onChange={(e) => { setFormData({ ...formData, username: e.target.value }); setFormErrors(prev => ({ ...prev, username: '' })); }}
+                    className={`w-full px-4 py-3 bg-purple-900/30 border rounded-xl text-white focus:outline-none ${formErrors.username ? 'border-red-500 focus:border-red-400' : 'border-purple-500/30 focus:border-purple-400'}`}
                     dir="ltr"
                   />
+                  {formErrors.username && <p className="text-red-400 text-xs mt-1">{formErrors.username}</p>}
                 </div>
                 <div>
                   <label className="block text-purple-300 text-sm mb-2">
@@ -994,11 +1069,11 @@ function UsersManagementContent() {
                   <input
                     type="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
-                    required={!editingUser}
+                    onChange={(e) => { setFormData({ ...formData, password: e.target.value }); setFormErrors(prev => ({ ...prev, password: '' })); }}
+                    className={`w-full px-4 py-3 bg-purple-900/30 border rounded-xl text-white focus:outline-none ${formErrors.password ? 'border-red-500 focus:border-red-400' : 'border-purple-500/30 focus:border-purple-400'}`}
                     dir="ltr"
                   />
+                  {formErrors.password && <p className="text-red-400 text-xs mt-1">{formErrors.password}</p>}
                 </div>
               </div>
 
@@ -1008,20 +1083,21 @@ function UsersManagementContent() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
-                    required
+                    onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => ({ ...prev, name: '' })); }}
+                    className={`w-full px-4 py-3 bg-purple-900/30 border rounded-xl text-white focus:outline-none ${formErrors.name ? 'border-red-500 focus:border-red-400' : 'border-purple-500/30 focus:border-purple-400'}`}
                   />
+                  {formErrors.name && <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>}
                 </div>
                 <div>
                   <label className="block text-purple-300 text-sm mb-2">البريد الإلكتروني</label>
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-400"
+                    onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({ ...prev, email: '' })); }}
+                    className={`w-full px-4 py-3 bg-purple-900/30 border rounded-xl text-white focus:outline-none ${formErrors.email ? 'border-red-500 focus:border-red-400' : 'border-purple-500/30 focus:border-purple-400'}`}
                     dir="ltr"
                   />
+                  {formErrors.email && <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>}
                 </div>
               </div>
 
@@ -1082,18 +1158,21 @@ function UsersManagementContent() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-fuchsia-600 transition-all"
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-fuchsia-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingUser ? 'حفظ التغييرات' : 'إضافة المستخدم'}
+                  {submitting ? 'جاري الحفظ...' : editingUser ? 'حفظ التغييرات' : 'إضافة المستخدم'}
                 </button>
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingUser(null);
                     resetForm();
+                    setFormErrors({});
                   }}
-                  className="flex-1 py-3 bg-purple-900/50 text-white font-medium rounded-xl hover:bg-purple-900/70 transition-all"
+                  className="flex-1 py-3 bg-purple-900/50 text-white font-medium rounded-xl hover:bg-purple-900/70 transition-all disabled:opacity-50"
                 >
                   إلغاء
                 </button>

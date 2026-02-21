@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/auth-guard';
 import { getUserPermissions } from '@/lib/rbac';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -13,7 +13,7 @@ function getAdminClient() {
 }
 
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
 }
 
 export const dynamic = 'force-dynamic';

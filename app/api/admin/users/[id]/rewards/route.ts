@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { requireAuth, requirePermission } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase credentials');
   }
-  
+
   return createClient(supabaseUrl, supabaseKey);
 }
 
@@ -21,6 +21,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireAuth();
+    if (!auth.authenticated) return auth.error!;
+
     const supabase = getSupabaseClient();
     const userId = params.id;
 
@@ -66,24 +69,28 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // التحقق من الصلاحية: يجب أن يكون لديه صلاحية تعديل المستخدمين
+    const auth = await requirePermission('users.write');
+    if (!auth.authenticated) return auth.error!;
+
     const supabase = getSupabaseClient();
     const userId = params.id;
     const body = await request.json();
-    
+
     const { title, points, description, type } = body;
 
-    // جلب معلومات المستخدم الحالي من الكوكيز
-    const cookieStore = cookies();
-    const adminUserCookie = cookieStore.get('admin_user');
-    let awardedBy = null;
-    
-    if (adminUserCookie) {
-      try {
-        const adminUser = JSON.parse(adminUserCookie.value);
-        awardedBy = adminUser.id;
-      } catch (e) {
-      }
+    // التحقق من المدخلات
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      return NextResponse.json({ error: 'عنوان المكافأة مطلوب' }, { status: 400 });
     }
+    if (!points || typeof points !== 'number' || points <= 0) {
+      return NextResponse.json({ error: 'النقاط يجب أن تكون أكبر من صفر' }, { status: 400 });
+    }
+    if (type && !['bonus', 'achievement', 'recognition'].includes(type)) {
+      return NextResponse.json({ error: 'نوع المكافأة غير صالح' }, { status: 400 });
+    }
+
+    const awardedBy = auth.user!.id;
 
     // التحقق من وجود الجدول
     const { error: tableError } = await supabase

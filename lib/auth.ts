@@ -1,12 +1,22 @@
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { getUserPermissions } from './rbac';
 
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
+}
+
+function verifyPassword(password: string, hash: string): boolean {
+  // دعم التوافق: إذا كان الهاش قديم (SHA256 = 64 حرف hex) نقارن بالطريقة القديمة
+  if (hash.length === 64 && /^[a-f0-9]{64}$/.test(hash)) {
+    const crypto = require('crypto');
+    const sha256 = crypto.createHash('sha256').update(password).digest('hex');
+    return sha256 === hash;
+  }
+  return bcrypt.compareSync(password, hash);
 }
 
 function getSupabaseClient() {
@@ -57,7 +67,6 @@ providers.push(
 
       // البحث في قاعدة البيانات أولاً دائماً
       const supabase = getSupabaseClient();
-      const passwordHash = hashPassword(password);
 
       // مرحلة انتقالية: إذا فيه @ ابحث بالـ email، وإلا ابحث بالـ username
       const isEmail = identifier.includes('@');
@@ -83,8 +92,17 @@ providers.push(
         return null;
       }
       
-      if (user.password_hash !== passwordHash) {
+      if (!verifyPassword(password, user.password_hash)) {
         return null;
+      }
+
+      // ترقية تلقائية: إذا كان الهاش قديم (SHA256) → أعد التشفير بـ bcrypt
+      if (user.password_hash.length === 64 && /^[a-f0-9]{64}$/.test(user.password_hash)) {
+        const newHash = hashPassword(password);
+        await supabase
+          .from('admin_users')
+          .update({ password_hash: newHash })
+          .eq('id', user.id);
       }
 
       // تحديث آخر تسجيل دخول
