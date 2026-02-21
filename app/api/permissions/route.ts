@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get('type') || 'all';
   const supabase = getSupabase();
 
-  // مزامنة الأدوار الرسمية تلقائياً
-  await syncRoles(supabase);
+  // مزامنة الأدوار في الخلفية — بدون await حتى لا تُبطئ الاستجابة
+  syncRoles(supabase);
 
   try {
     if (type === 'permissions') {
@@ -75,22 +75,17 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'roles') {
-      const { data: roles, error: rolesError } = await supabase
-        .from('admin_roles')
-        .select('*')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('created_at');
+      const [{ data: roles, error: rolesError }, { data: rolePerms, error: rpError }] = await Promise.all([
+        supabase.from('admin_roles').select('*').order('sort_order', { ascending: true, nullsFirst: false }).order('created_at'),
+        supabase.from('admin_role_permissions').select('*'),
+      ]);
       if (rolesError) throw rolesError;
-
-      const { data: rolePerms, error: rpError } = await supabase
-        .from('admin_role_permissions')
-        .select('*');
       if (rpError) throw rpError;
 
-      const rolesWithPerms = roles.map((r: any) => ({
+      const rolesWithPerms = (roles || []).map((r: any) => ({
         ...r,
         name_ar: r.name_ar || r.name,
-        permissions: rolePerms.filter((rp: any) => rp.role_id === r.id),
+        permissions: (rolePerms || []).filter((rp: any) => rp.role_id === r.id),
       }));
       return NextResponse.json({ roles: rolesWithPerms });
     }
