@@ -42,12 +42,13 @@ export async function getUserPermissions(userId: string): Promise<UserPermission
     .map((r: any) => r.role?.key)
     .filter(Boolean);
 
-  // 2) جلب صلاحيات الأدوار
+  // 2) جلب صلاحيات الأدوار — granted=true فقط
   const { data: rolePerms } = await supabase
     .from('admin_user_roles')
     .select(`
       role:admin_roles!inner(
         permissions:admin_role_permissions(
+          granted,
           permission:admin_permissions(key)
         )
       )
@@ -57,7 +58,7 @@ export async function getUserPermissions(userId: string): Promise<UserPermission
   const rolePermSet = new Set<string>();
   (rolePerms || []).forEach((r: any) => {
     (r.role?.permissions || []).forEach((rp: any) => {
-      if (rp.permission?.key) rolePermSet.add(rp.permission.key);
+      if (rp.granted && rp.permission?.key) rolePermSet.add(rp.permission.key);
     });
   });
 
