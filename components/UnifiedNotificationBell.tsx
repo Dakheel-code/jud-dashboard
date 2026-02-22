@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
 interface TaskNotification {
@@ -40,15 +40,6 @@ export default function UnifiedNotificationBell() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const isMountedRef = useRef(true);
 
-  useLayoutEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 8,
-        left: Math.max(8, rect.left - 320 + rect.width),
-      });
-    }
-  }, [isOpen]);
 
   const getUserId = useCallback((): string | null => {
     try {
@@ -244,7 +235,16 @@ export default function UnifiedNotificationBell() {
       {/* Bell Button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setDropdownPos({
+              top: rect.bottom + 8,
+              left: Math.max(8, rect.left - 320 + rect.width),
+            });
+          }
+          setIsOpen(!isOpen);
+        }}
         className="relative p-2 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-xl transition-all"
         title="التنبيهات"
       >
