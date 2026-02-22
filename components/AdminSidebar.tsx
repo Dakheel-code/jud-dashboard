@@ -64,6 +64,7 @@ interface MenuItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  children?: { href: string; label: string; icon: React.ReactNode }[];
 }
 
 const menuItems: MenuItem[] = [
@@ -167,15 +168,36 @@ const menuItems: MenuItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     ),
-  },
-  {
-    href: '/admin/notification-settings',
-    label: 'إعدادات الإشعارات',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-      </svg>
-    ),
+    children: [
+      {
+        href: '/admin/settings',
+        label: 'الإعدادات العامة',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        ),
+      },
+      {
+        href: '/admin/notification-settings',
+        label: 'إعدادات الإشعارات',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        ),
+      },
+      {
+        href: '/admin/permissions',
+        label: 'الصلاحيات والأدوار',
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        ),
+      },
+    ],
   },
 ];
 
@@ -198,6 +220,9 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
   const [profileSuccess, setProfileSuccess] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState(0);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+
+  const toggleMenu = (href: string) => setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }));
 
   // دالة لتحميل بيانات المستخدم من localStorage
   const loadUserFromStorage = () => {
@@ -430,40 +455,83 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
               const isActive = checkActive(item.href);
               const isAttendance = item.href === '/admin/attendance';
               const showBadge = isAttendance && pendingLeaveRequests > 0;
+              const hasChildren = item.children && item.children.length > 0;
+              const isMenuOpen = openMenus[item.href] || (hasChildren && item.children!.some(c => checkActive(c.href)));
+
               return (
-                <button
-                  key={index}
-                  onClick={(e) => handleNavClick(e, item.href)}
-                  title={isCollapsed ? item.label : undefined}
-                  className={`
-                    w-full flex items-center gap-3 mb-1 rounded-xl text-right px-4 py-3 transition-colors relative
-                    ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
-                    ${isActive 
-                      ? 'bg-gradient-to-r from-purple-600/30 to-fuchsia-600/30 text-white border border-purple-500/30' 
-                      : 'text-purple-300 hover:bg-purple-500/10 hover:text-white border border-transparent'
-                    }
-                  `}
-                >
-                  <span className="flex-shrink-0 relative">
-                    {item.icon}
-                    {showBadge && isCollapsed && (
-                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
-                        {pendingLeaveRequests}
-                      </span>
-                    )}
-                  </span>
-                  {!isCollapsed && (
-                    <span className="font-medium flex-1 flex items-center justify-between">
-                      {item.label}
-                      {showBadge && (
-                        <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                <div key={index}>
+                  {/* الزر الرئيسي */}
+                  <button
+                    onClick={(e) => {
+                      if (hasChildren && !isCollapsed) {
+                        toggleMenu(item.href);
+                      } else {
+                        handleNavClick(e, item.href);
+                      }
+                    }}
+                    title={isCollapsed ? item.label : undefined}
+                    className={`
+                      w-full flex items-center gap-3 mb-1 rounded-xl text-right px-4 py-3 transition-colors relative
+                      ${isCollapsed ? 'lg:justify-center lg:px-2' : ''}
+                      ${isActive || (hasChildren && item.children!.some(c => checkActive(c.href)))
+                        ? 'bg-gradient-to-r from-purple-600/30 to-fuchsia-600/30 text-white border border-purple-500/30'
+                        : 'text-purple-300 hover:bg-purple-500/10 hover:text-white border border-transparent'
+                      }
+                    `}
+                  >
+                    <span className="flex-shrink-0 relative">
+                      {item.icon}
+                      {showBadge && isCollapsed && (
+                        <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
                           {pendingLeaveRequests}
                         </span>
                       )}
                     </span>
+                    {!isCollapsed && (
+                      <span className="font-medium flex-1 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          {item.label}
+                          {showBadge && (
+                            <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                              {pendingLeaveRequests}
+                            </span>
+                          )}
+                        </span>
+                        {hasChildren && (
+                          <svg className={`w-4 h-4 text-purple-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                      </span>
+                    )}
+                    {isCollapsed && <span className="font-medium lg:hidden">{item.label}</span>}
+                  </button>
+
+                  {/* الخيارات الفرعية */}
+                  {hasChildren && !isCollapsed && isMenuOpen && (
+                    <div className="mr-4 mb-1 border-r-2 border-purple-500/20 pr-2 space-y-0.5">
+                      {item.children!.map((child, ci) => {
+                        const isChildActive = checkActive(child.href);
+                        return (
+                          <button
+                            key={ci}
+                            onClick={(e) => handleNavClick(e, child.href)}
+                            className={`
+                              w-full flex items-center gap-2 rounded-lg text-right px-3 py-2 transition-colors
+                              ${isChildActive
+                                ? 'bg-purple-600/20 text-white border border-purple-500/20'
+                                : 'text-purple-400 hover:bg-purple-500/10 hover:text-white border border-transparent'
+                              }
+                            `}
+                          >
+                            <span className="flex-shrink-0 text-purple-400">{child.icon}</span>
+                            <span className="text-sm font-medium">{child.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                  {isCollapsed && <span className="font-medium lg:hidden">{item.label}</span>}
-                </button>
+                </div>
               );
             })}
           </nav>
