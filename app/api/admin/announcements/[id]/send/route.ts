@@ -91,13 +91,10 @@ export async function POST(
       }
     }
 
-    // تحديث حالة التعميم
+    // تحديث وقت الإرسال (sent_at هو المؤشر الوحيد للإرسال)
     const { error: updateError } = await supabase
       .from('announcements')
-      .update({ 
-        status: 'sent', 
-        sent_at: new Date().toISOString() 
-      })
+      .update({ sent_at: new Date().toISOString() })
       .eq('id', id);
 
     if (updateError) {
