@@ -1,11 +1,11 @@
-name: Meta Ads Scheduled Sync
+﻿name: Meta Ads Scheduled Sync
 
 on:
   schedule:
-    # كل 6 ساعات: 00:00, 06:00, 12:00, 18:00 UTC
+    # ┘â┘ 6 ╪│╪د╪╣╪د╪ز: 00:00, 06:00, 12:00, 18:00 UTC
     - cron: '0 */6 * * *'
   workflow_dispatch:
-    # تشغيل يدوي من GitHub Actions UI
+    # ╪ز╪┤╪║┘è┘ ┘è╪»┘ê┘è ┘à┘ GitHub Actions UI
 
 jobs:
   sync:
@@ -14,18 +14,27 @@ jobs:
 
     steps:
       - name: Trigger Meta Sync
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            "${{ secrets.NEXT_PUBLIC_APP_URL }}/api/meta/scheduled-sync")
-          
-          echo "HTTP Status: $response"
-          
-          if [ "$response" != "200" ]; then
-            echo "Sync failed with status $response"
+          APP_URL="https://jud-dashboard.netlify.app"
+
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ERROR: CRON_SECRET secret is not set in GitHub repository secrets"
             exit 1
           fi
-          
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${APP_URL}/api/meta/scheduled-sync")
+
+          echo "HTTP Status: $response"
+
+          if [ "$response" != "200" ]; then
+            echo "Sync failed with status: $response"
+            exit 1
+          fi
+
           echo "Meta sync completed successfully"
