@@ -102,6 +102,20 @@ const DEFAULT_PERMISSIONS: Permission[] = [
   { id: "p52", key: "reports.performance", label: "تقارير الأداء", description: "عرض تقارير أداء الموظفين", category: "التقارير والتحليلات" },
   { id: "p53", key: "reports.export", label: "تصدير التقارير", description: "تصدير التقارير بصيغ مختلفة", category: "التقارير والتحليلات" },
 
+  // === الفوترة ===
+  { id: "p64", key: "billing.view",               label: "عرض الفوترة",            description: "الوصول لصفحة الفوترة وعرض البيانات",           category: "الفوترة" },
+  { id: "p65", key: "billing.invoices.view",       label: "عرض الفواتير",           description: "عرض قائمة الفواتير الشهرية",                   category: "الفوترة" },
+  { id: "p66", key: "billing.invoices.manage",     label: "إدارة الفواتير",         description: "تعديل حالة الفواتير والموافقة عليها",           category: "الفوترة" },
+  { id: "p67", key: "billing.invoices.generate",   label: "توليد الفواتير",         description: "توليد الفواتير الشهرية تلقائياً",               category: "الفوترة" },
+  { id: "p68", key: "billing.commissions.view",    label: "عرض العمولات",           description: "عرض عمولات الموظفين",                          category: "الفوترة" },
+  { id: "p69", key: "billing.commissions.manage",  label: "إدارة العمولات",         description: "تعديل وإدارة عمولات الموظفين",                 category: "الفوترة" },
+  { id: "p70", key: "billing.bonuses.view",        label: "عرض البونص",             description: "عرض بونص الموظفين",                            category: "الفوترة" },
+  { id: "p71", key: "billing.bonuses.manage",      label: "إدارة البونص",           description: "تعديل وإدارة بونص الموظفين",                   category: "الفوترة" },
+  { id: "p72", key: "billing.salaries.view",       label: "عرض الرواتب",            description: "عرض رواتب الموظفين",                           category: "الفوترة" },
+  { id: "p73", key: "billing.salaries.manage",     label: "إدارة الرواتب",          description: "تعديل الرواتب والخصومات والإضافات",            category: "الفوترة" },
+  { id: "p74", key: "billing.salaries.generate",   label: "توليد الرواتب",          description: "توليد الرواتب الشهرية تلقائياً",               category: "الفوترة" },
+  { id: "p75", key: "billing.reports",             label: "تقارير الفوترة",         description: "عرض التقارير المالية والملخصات",               category: "الفوترة" },
+
   // === الإعدادات العامة ===
   { id: "p54", key: "settings.general", label: "الإعدادات العامة", description: "تعديل الإعدادات العامة للنظام", category: "الإعدادات" },
   { id: "p55", key: "settings.notifications", label: "إعدادات الإشعارات", description: "إدارة إعدادات الإشعارات", category: "الإعدادات" },
@@ -155,7 +169,7 @@ const DEFAULT_ROLES: Role[] = [
     created_at: "2024-01-01",
     permissions: DEFAULT_PERMISSIONS.map(p => ({
       permission_id: p.id,
-      granted: p.category !== "الإعدادات" && !p.key.includes("delete") && !p.key.includes("permissions"),
+      granted: p.category !== "الإعدادات" && !p.key.includes("delete") && !p.key.includes("permissions") && p.key !== "billing.salaries.generate" && p.key !== "billing.invoices.generate",
     })),
   },
   {
@@ -169,7 +183,7 @@ const DEFAULT_ROLES: Role[] = [
     created_at: "2024-01-01",
     permissions: DEFAULT_PERMISSIONS.map(p => ({
       permission_id: p.id,
-      granted: ["dashboard.view","dashboard.stats","tasks.view","tasks.create","tasks.edit","tasks.toggle","tasks.assign","tasks.categories","attendance.view","attendance.checkin","attendance.checkout","attendance.manage","attendance.reports","clients.view","clients.details","clients.notes","reports.view","reports.performance","notifications.view","notifications.send","messages.view","messages.send","stores.view","stores.details"].includes(p.key),
+      granted: ["dashboard.view","dashboard.stats","tasks.view","tasks.create","tasks.edit","tasks.toggle","tasks.assign","tasks.categories","attendance.view","attendance.checkin","attendance.checkout","attendance.manage","attendance.reports","clients.view","clients.details","clients.notes","reports.view","reports.performance","notifications.view","notifications.send","messages.view","messages.send","stores.view","stores.details","billing.view","billing.invoices.view","billing.commissions.view","billing.bonuses.view","billing.salaries.view","billing.reports"].includes(p.key),
     })),
   },
   {

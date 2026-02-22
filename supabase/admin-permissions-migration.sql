@@ -169,7 +169,20 @@ INSERT INTO admin_permissions (key, name, label, description, category, subcateg
 ('notifications.send',   'إرسال إشعارات',   'إرسال إشعارات',   'إرسال إشعارات للمستخدمين',              'الإشعارات والرسائل', NULL),
 ('notifications.manage', 'إدارة الإشعارات', 'إدارة الإشعارات', 'إدارة وأرشفة الإشعارات',                'الإشعارات والرسائل', NULL),
 ('messages.view',        'عرض الرسائل',     'عرض الرسائل',     'عرض الرسائل الواردة والصادرة',          'الإشعارات والرسائل', NULL),
-('messages.send',        'إرسال رسائل',     'إرسال رسائل',     'إرسال رسائل للمستخدمين والعملاء',       'الإشعارات والرسائل', NULL)
+('messages.send',        'إرسال رسائل',     'إرسال رسائل',     'إرسال رسائل للمستخدمين والعملاء',       'الإشعارات والرسائل', NULL),
+-- الفوترة
+('billing.view',               'عرض الفوترة',           'عرض الفوترة',           'الوصول لصفحة الفوترة وعرض البيانات',           'الفوترة', NULL),
+('billing.invoices.view',       'عرض الفواتير',          'عرض الفواتير',          'عرض قائمة الفواتير الشهرية',                   'الفوترة', NULL),
+('billing.invoices.manage',     'إدارة الفواتير',        'إدارة الفواتير',        'تعديل حالة الفواتير والموافقة عليها',           'الفوترة', NULL),
+('billing.invoices.generate',   'توليد الفواتير',        'توليد الفواتير',        'توليد الفواتير الشهرية تلقائياً',               'الفوترة', NULL),
+('billing.commissions.view',    'عرض العمولات',          'عرض العمولات',          'عرض عمولات الموظفين',                          'الفوترة', NULL),
+('billing.commissions.manage',  'إدارة العمولات',        'إدارة العمولات',        'تعديل وإدارة عمولات الموظفين',                 'الفوترة', NULL),
+('billing.bonuses.view',        'عرض البونص',            'عرض البونص',            'عرض بونص الموظفين',                            'الفوترة', NULL),
+('billing.bonuses.manage',      'إدارة البونص',          'إدارة البونص',          'تعديل وإدارة بونص الموظفين',                   'الفوترة', NULL),
+('billing.salaries.view',       'عرض الرواتب',           'عرض الرواتب',           'عرض رواتب الموظفين',                           'الفوترة', NULL),
+('billing.salaries.manage',     'إدارة الرواتب',         'إدارة الرواتب',         'تعديل الرواتب والخصومات والإضافات',            'الفوترة', NULL),
+('billing.salaries.generate',   'توليد الرواتب',         'توليد الرواتب',         'توليد الرواتب الشهرية تلقائياً',               'الفوترة', NULL),
+('billing.reports',             'تقارير الفوترة',        'تقارير الفوترة',        'عرض التقارير المالية والملخصات',               'الفوترة', NULL)
 ON CONFLICT (key) DO NOTHING;
 
 -- =====================================================
@@ -239,7 +252,9 @@ SELECT r.id, p.id,
     'clients.view','clients.details','clients.notes',
     'reports.view','reports.performance',
     'notifications.view','notifications.send','messages.view','messages.send',
-    'stores.view','stores.details'
+    'stores.view','stores.details',
+    'billing.view','billing.invoices.view','billing.commissions.view',
+    'billing.bonuses.view','billing.salaries.view','billing.reports'
   ) THEN TRUE ELSE FALSE END
 FROM admin_roles r CROSS JOIN admin_permissions p
 WHERE r.key = 'team_leader'
