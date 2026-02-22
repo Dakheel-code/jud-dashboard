@@ -86,6 +86,12 @@ function AnnouncementsContent() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const userStr = localStorage.getItem('admin_user');
@@ -209,13 +215,13 @@ function AnnouncementsContent() {
       });
       const data = await response.json();
       if (response.ok) {
-        alert(data.message);
+        showToast(data.message || 'تم إرسال التعميم بنجاح', 'success');
         fetchAnnouncements();
       } else {
-        alert((data.error || 'فشل في إرسال التعميم') + (data.detail ? '\n' + data.detail : '') + (data.code ? '\nCode: ' + data.code : ''));
+        showToast(data.error || 'فشل في إرسال التعميم', 'error');
       }
     } catch (error) {
-      alert('حدث خطأ');
+      showToast('حدث خطأ غير متوقع', 'error');
     }
   };
 
@@ -227,12 +233,13 @@ function AnnouncementsContent() {
         method: 'POST'
       });
       if (response.ok) {
+        showToast('تم إلغاء التعميم', 'success');
         fetchAnnouncements();
       } else {
-        alert('فشل في إلغاء التعميم');
+        showToast('فشل في إلغاء التعميم', 'error');
       }
     } catch (error) {
-      alert('حدث خطأ');
+      showToast('حدث خطأ غير متوقع', 'error');
     }
   };
 
@@ -244,9 +251,10 @@ function AnnouncementsContent() {
         method: 'DELETE'
       });
       if (response.ok) {
+        showToast('تم حذف التعميم بنجاح', 'success');
         fetchAnnouncements();
       } else {
-        alert('فشل في حذف التعميم');
+        showToast('فشل في حذف التعميم', 'error');
       }
     } catch (error) {
       alert('حدث خطأ');
@@ -265,6 +273,30 @@ function AnnouncementsContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0118] relative overflow-hidden">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-300 ${
+          toast.type === 'success'
+            ? 'bg-green-500/20 border-green-500/40 text-green-300'
+            : 'bg-red-500/20 border-red-500/40 text-red-300'
+        }`}>
+          {toast.type === 'success' ? (
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          <span className="font-medium text-sm">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="mr-2 opacity-60 hover:opacity-100 transition-opacity">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
