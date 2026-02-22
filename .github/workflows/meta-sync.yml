@@ -2,10 +2,8 @@
 
 on:
   schedule:
-    # ┘â┘ 6 ╪│╪د╪╣╪د╪ز: 00:00, 06:00, 12:00, 18:00 UTC
     - cron: '0 */6 * * *'
   workflow_dispatch:
-    # ╪ز╪┤╪║┘è┘ ┘è╪»┘ê┘è ┘à┘ GitHub Actions UI
 
 jobs:
   sync:
