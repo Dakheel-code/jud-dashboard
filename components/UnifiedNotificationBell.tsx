@@ -267,6 +267,7 @@ export default function UnifiedNotificationBell() {
           <div
             className="fixed w-80 bg-gradient-to-br from-purple-950 to-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999] overflow-hidden"
             style={{ top: dropdownPos.top, left: dropdownPos.left }}
+            onClick={e => e.stopPropagation()}
           >
 
             {/* Header */}
