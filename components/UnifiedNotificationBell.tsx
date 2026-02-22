@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import Link from 'next/link';
 
 interface TaskNotification {
@@ -35,8 +35,20 @@ export default function UnifiedNotificationBell() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const isMountedRef = useRef(true);
+
+  useLayoutEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 8,
+        left: Math.max(8, rect.left - 320 + rect.width),
+      });
+    }
+  }, [isOpen]);
 
   const getUserId = useCallback((): string | null => {
     try {
@@ -231,6 +243,7 @@ export default function UnifiedNotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-purple-300 hover:text-white hover:bg-purple-500/20 rounded-xl transition-all"
         title="التنبيهات"
@@ -246,11 +259,14 @@ export default function UnifiedNotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — fixed positioning لتجنب اقتطاعه بأي overflow في الـ sidebar */}
       {isOpen && (
         <>
           <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
-          <div className="fixed top-16 left-4 sm:left-auto sm:right-4 w-[calc(100%-2rem)] sm:w-80 bg-gradient-to-br from-purple-950 to-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999] overflow-hidden">
+          <div
+            className="fixed w-80 bg-gradient-to-br from-purple-950 to-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999] overflow-hidden"
+            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+          >
             {/* Header */}
             <div className="p-3 border-b border-purple-500/20">
               <h3 className="text-white font-semibold text-sm mb-2">التنبيهات</h3>
