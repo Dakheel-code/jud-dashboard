@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase credentials');
@@ -32,10 +32,6 @@ export async function POST(
 
     if (fetchError || !announcement) {
       return NextResponse.json({ error: 'التعميم غير موجود' }, { status: 404 });
-    }
-
-    if (announcement.status === 'sent') {
-      return NextResponse.json({ error: 'تم إرسال هذا التعميم مسبقاً' }, { status: 400 });
     }
 
     // تحديد المستخدمين المستهدفين
@@ -84,7 +80,7 @@ export async function POST(
       .eq('id', id);
 
     if (updateError) {
-      return NextResponse.json({ error: 'فشل في تحديث حالة التعميم' }, { status: 500 });
+      return NextResponse.json({ error: 'فشل في تحديث حالة التعميم', detail: updateError.message, code: updateError.code }, { status: 500 });
     }
 
     return NextResponse.json({ 
