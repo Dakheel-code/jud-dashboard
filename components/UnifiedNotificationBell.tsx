@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 
 interface TaskNotification {
@@ -259,14 +260,15 @@ export default function UnifiedNotificationBell() {
         )}
       </button>
 
-      {/* Dropdown — fixed positioning لتجنب اقتطاعه بأي overflow في الـ sidebar */}
-      {isOpen && (
+      {/* Dropdown — portal على document.body لتجنب أي z-index أو overflow في الـ sidebar */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <>
           <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
           <div
             className="fixed w-80 bg-gradient-to-br from-purple-950 to-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999] overflow-hidden"
             style={{ top: dropdownPos.top, left: dropdownPos.left }}
           >
+
             {/* Header */}
             <div className="p-3 border-b border-purple-500/20">
               <h3 className="text-white font-semibold text-sm mb-2">التنبيهات</h3>
@@ -367,7 +369,8 @@ export default function UnifiedNotificationBell() {
               </Link>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
