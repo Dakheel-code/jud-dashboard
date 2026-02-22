@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import UnifiedNotificationBell from './UnifiedNotificationBell';
 import { getAvatarUrl, getAvatarInitial } from '@/lib/avatar';
 import { useBranding } from '@/contexts/BrandingContext';
 
@@ -392,6 +393,7 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <UnifiedNotificationBell />
                 <button 
                   onClick={onClose}
                   className="lg:hidden p-2 text-purple-400 hover:bg-purple-500/10 rounded-lg"

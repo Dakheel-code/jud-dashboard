@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminBottomNav from '@/components/AdminBottomNav';
 import AdminAuth from '@/components/AdminAuth';
-import UnifiedNotificationBell from '@/components/UnifiedNotificationBell';
 import { useBranding } from '@/contexts/BrandingContext';
 import PresenceHeartbeat from './PresenceHeartbeat';
 
@@ -70,11 +69,6 @@ export default function AdminLayout({
           <main className="min-h-screen">
             {children}
           </main>
-
-          {/* Notification Bell — مستقل تماماً خارج الـ sidebar */}
-          <div className="fixed top-4 left-4 z-[99990]">
-            <UnifiedNotificationBell />
-          </div>
           
           {/* Bottom Navigation for Mobile */}
           <AdminBottomNav />

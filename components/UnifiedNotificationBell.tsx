@@ -40,6 +40,22 @@ export default function UnifiedNotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const isMountedRef = useRef(true);
+  const dropdownElRef = useRef<HTMLDivElement>(null);
+
+  // إغلاق النافذة عند النقر خارجها
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownElRef.current && !dropdownElRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
 
   const getUserId = useCallback((): string | null => {
@@ -263,11 +279,10 @@ export default function UnifiedNotificationBell() {
       {/* Dropdown — portal على document.body لتجنب أي z-index أو overflow في الـ sidebar */}
       {isOpen && typeof document !== 'undefined' && createPortal(
         <>
-          <div className="fixed inset-0 z-[99998]" onClick={() => setIsOpen(false)} />
           <div
+            ref={dropdownElRef}
             className="fixed w-80 bg-gradient-to-br from-purple-950 to-slate-900 border border-purple-500/30 rounded-xl shadow-2xl z-[99999] overflow-hidden"
             style={{ top: dropdownPos.top, left: dropdownPos.left }}
-            onClick={e => e.stopPropagation()}
           >
 
             {/* Header */}
