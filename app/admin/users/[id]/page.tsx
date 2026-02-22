@@ -38,6 +38,10 @@ interface UserData {
   roles?: string[];
   avatar?: string;
   monthly_salary?: number | null;
+  bank_name?: string | null;
+  bank_iban?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
   is_active: boolean;
   created_at: string;
   last_login: string;
@@ -179,6 +183,137 @@ function SalaryField({ userId, salary, onSaved }: { userId: string; salary: numb
             {salary != null ? Number(salary).toLocaleString('ar-SA') + ' ر.س' : <span className="text-amber-400/40 text-xs">انقر لتحديد الراتب</span>}
           </p>
         </button>
+      )}
+    </div>
+  );
+}
+
+function BankInfoSection({ userId, user, onSaved }: {
+  userId: string;
+  user: UserData;
+  onSaved: (fields: Partial<UserData>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [form, setForm] = useState({
+    bank_name:           user.bank_name           || '',
+    bank_iban:           user.bank_iban           || '',
+    bank_account_name:   user.bank_account_name   || '',
+    bank_account_number: user.bank_account_number || '',
+  });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bank_name:           form.bank_name           || null,
+          bank_iban:           form.bank_iban           || null,
+          bank_account_name:   form.bank_account_name   || null,
+          bank_account_number: form.bank_account_number || null,
+        }),
+      });
+      onSaved(form);
+      setEditing(false);
+    } finally { setSaving(false); }
+  };
+
+  const hasBankData = user.bank_name || user.bank_iban || user.bank_account_name || user.bank_account_number;
+
+  return (
+    <div className="col-span-2 bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <p className="text-blue-400/80 text-sm font-semibold">البيانات البنكية</p>
+          <span className="text-blue-500/50 text-[10px]">🔒 للمالك فقط</span>
+        </div>
+        {!editing && (
+          <button
+            onClick={() => {
+              setForm({
+                bank_name:           user.bank_name           || '',
+                bank_iban:           user.bank_iban           || '',
+                bank_account_name:   user.bank_account_name   || '',
+                bank_account_number: user.bank_account_number || '',
+              });
+              setEditing(true);
+            }}
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            تعديل
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              { key: 'bank_name',           label: 'اسم البنك',          placeholder: 'مثال: الراجحي، الأهلي...' },
+              { key: 'bank_account_name',   label: 'اسم صاحب الحساب',    placeholder: 'الاسم كما في البنك' },
+              { key: 'bank_iban',           label: 'رقم الآيبان (IBAN)', placeholder: 'SA...' },
+              { key: 'bank_account_number', label: 'رقم الحساب',         placeholder: 'رقم الحساب البنكي' },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-blue-400/60 text-xs mb-1 block">{f.label}</label>
+                <input
+                  type="text"
+                  value={(form as any)[f.key]}
+                  onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  className="w-full bg-blue-900/20 border border-blue-500/30 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-blue-400 placeholder-blue-400/30"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white text-xs rounded-lg font-bold transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              {saving ? '...' : '✓ حفظ'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="px-3 py-1.5 bg-purple-800/50 hover:bg-purple-700/50 text-white text-xs rounded-lg transition-colors"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { label: 'اسم البنك',          value: user.bank_name,           icon: '🏦' },
+            { label: 'اسم صاحب الحساب',    value: user.bank_account_name,   icon: '👤' },
+            { label: 'رقم الآيبان',        value: user.bank_iban,           icon: '💳', mono: true },
+            { label: 'رقم الحساب',         value: user.bank_account_number, icon: '🔢', mono: true },
+          ].map(item => (
+            <div key={item.label} className="flex items-start gap-2">
+              <span className="text-base mt-0.5">{item.icon}</span>
+              <div className="min-w-0">
+                <p className="text-blue-400/50 text-xs">{item.label}</p>
+                {item.value ? (
+                  <p className={`text-white text-sm mt-0.5 break-all ${item.mono ? 'font-mono' : ''}`}>{item.value}</p>
+                ) : (
+                  <p className="text-blue-400/30 text-xs mt-0.5">غير محدد</p>
+                )}
+              </div>
+            </div>
+          ))}
+          {!hasBankData && (
+            <p className="col-span-2 text-blue-400/30 text-xs text-center py-2">لم تُضف بيانات بنكية بعد — انقر تعديل</p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -554,6 +689,17 @@ function UserDetailsContent() {
             )}
           </div>
         </div>
+
+        {/* ═══ البيانات البنكية ═══ */}
+        {isOwner && (
+          <div className="bg-purple-950/40 rounded-2xl p-5 border border-purple-500/20 mb-6">
+            <BankInfoSection
+              userId={userId}
+              user={user}
+              onSaved={(fields) => setUser(prev => prev ? { ...prev, ...fields } : prev)}
+            />
+          </div>
+        )}
 
         {/* ═══ 3. إحصائيات الحضور والانصراف ═══ */}
         {attendanceStats && (

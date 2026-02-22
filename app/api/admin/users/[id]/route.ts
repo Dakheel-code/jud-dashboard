@@ -40,7 +40,7 @@ export async function GET(
     // جلب بيانات المستخدم
     const { data: user, error: userError } = await supabase
       .from('admin_users')
-      .select('id, username, name, email, phone, role, roles, avatar, monthly_salary, is_active, created_at, last_login, last_seen_at')
+      .select('id, username, name, email, phone, role, roles, avatar, monthly_salary, bank_name, bank_iban, bank_account_name, bank_account_number, is_active, created_at, last_login, last_seen_at')
       .eq('id', userId)
       .single();
 
@@ -48,11 +48,15 @@ export async function GET(
       return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 });
     }
 
-    // إخفاء الراتب إذا لم يكن المستخدم الحالي owner
+    // إخفاء الراتب والبيانات البنكية إذا لم يكن المستخدم الحالي owner
     const callerRoles: string[] = (auth.user as any)?.roles || ((auth.user as any)?.role ? [(auth.user as any).role] : []);
     const callerIsOwner = callerRoles.includes('owner');
     if (!callerIsOwner) {
       delete (user as any).monthly_salary;
+      delete (user as any).bank_name;
+      delete (user as any).bank_iban;
+      delete (user as any).bank_account_name;
+      delete (user as any).bank_account_number;
     }
 
     // جلب المتاجر المسندة لهذا المستخدم
@@ -152,9 +156,13 @@ export async function PATCH(
     if (body.email     !== undefined) updateData.email     = body.email;
     if (body.username  !== undefined) updateData.username  = body.username;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (body.avatar          !== undefined) updateData.avatar          = body.avatar;
-    if (body.monthly_salary   !== undefined) updateData.monthly_salary  = body.monthly_salary;
-    if (body.password)                       updateData.password_hash   = hashPassword(body.password);
+    if (body.avatar               !== undefined) updateData.avatar               = body.avatar;
+    if (body.monthly_salary        !== undefined) updateData.monthly_salary       = body.monthly_salary;
+    if (body.bank_name             !== undefined) updateData.bank_name            = body.bank_name;
+    if (body.bank_iban             !== undefined) updateData.bank_iban            = body.bank_iban;
+    if (body.bank_account_name     !== undefined) updateData.bank_account_name    = body.bank_account_name;
+    if (body.bank_account_number   !== undefined) updateData.bank_account_number  = body.bank_account_number;
+    if (body.password)                            updateData.password_hash        = hashPassword(body.password);
 
     const { data, error } = await supabase
       .from('admin_users')
