@@ -32,23 +32,55 @@ function periodLabel(p: string) {
   return `${months[Number(m) - 1]} ${y}`;
 }
 
-function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color: string }) {
+interface KpiProps {
+  label: string; value: string; sub?: string;
+  icon: string; gradient: string; border: string;
+  badge?: { text: string; cls: string };
+}
+function KpiCard({ label, value, sub, icon, gradient, border, badge }: KpiProps) {
   return (
-    <div className={`rounded-2xl border p-4 ${color}`}>
-      <p className="text-xs opacity-60 mb-1">{label}</p>
-      <p className="text-xl font-bold font-mono leading-tight">{value}</p>
+    <div className={`relative rounded-2xl border p-4 overflow-hidden ${gradient} ${border}`}>
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-2xl">{icon}</span>
+        {badge && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>{badge.text}</span>}
+      </div>
+      <p className="text-xs opacity-60">{label}</p>
+      <p className="text-xl font-bold font-mono leading-tight mt-0.5">{value}</p>
       {sub && <p className="text-xs opacity-50 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function ProgressBar({ value, color, label }: { value: number; color: string; label: string }) {
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-purple-400/70">{label}</span>
+        <span className="text-white font-bold">{value}%</span>
+      </div>
+      <div className="w-full h-2 bg-purple-900/40 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, cls }: { label: string; value: string | number; cls: string }) {
+  return (
+    <div className={`flex items-center justify-between px-3 py-2 rounded-xl border ${cls}`}>
+      <span className="text-xs opacity-70">{label}</span>
+      <span className="font-mono font-bold text-sm">{value}</span>
     </div>
   );
 }
 
 type TabKey = 'invoices' | 'commissions' | 'bonuses' | 'reports';
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'invoices',    label: 'فواتير المتاجر' },
-  { key: 'commissions', label: 'العمولات' },
-  { key: 'bonuses',     label: 'البونص' },
-  { key: 'reports',     label: 'التقارير' },
+const TABS: { key: TabKey; label: string; icon: string }[] = [
+  { key: 'invoices',    label: 'فواتير المتاجر', icon: '🧾' },
+  { key: 'commissions', label: 'العمولات',        icon: '💼' },
+  { key: 'bonuses',     label: 'البونص',           icon: '🎁' },
+  { key: 'reports',     label: 'التقارير',         icon: '📊' },
 ];
 
 const INV_FILTERS  = [['','الكل'],['unpaid','غير مدفوع'],['partial','جزئي'],['paid','مدفوع'],['void','ملغي']];
@@ -182,35 +214,96 @@ export default function BillingPage() {
 
       {/* ── KPIs ── */}
       {summary && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <KpiCard
-            label="إجمالي المدفوعات"
-            value={`${fmt(summary.invoices.total_paid)} ر.س`}
-            sub={`${summary.invoices.count} فاتورة`}
-            color="bg-green-500/10 border-green-500/20 text-green-300"
-          />
-          <KpiCard
-            label="غير مدفوع"
-            value={`${fmt(summary.invoices.total_unpaid)} ر.س`}
-            color="bg-red-500/10 border-red-500/20 text-red-300"
-          />
-          <KpiCard
-            label="إجمالي العمولات"
-            value={`${fmt(summary.commissions.total)} ر.س`}
-            sub={`مدفوع: ${fmt(summary.commissions.paid)}`}
-            color="bg-blue-500/10 border-blue-500/20 text-blue-300"
-          />
-          <KpiCard
-            label="إجمالي البونص"
-            value={`${fmt(summary.bonuses.total)} ر.س`}
-            color="bg-purple-500/10 border-purple-500/20 text-purple-300"
-          />
-          <KpiCard
-            label="صافي الإيراد"
-            value={`${fmt(summary.net_revenue)} ر.س`}
-            sub="بعد العمولات والبونص"
-            color="bg-amber-500/10 border-amber-500/20 text-amber-300"
-          />
+        <div className="space-y-3 mb-6">
+
+          {/* Row 1: الأرقام الرئيسية */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard
+              label="إجمالي المحصّل"
+              value={`${fmt(summary.invoices.total_paid)} ر.س`}
+              sub={`${summary.invoices.count_paid} فاتورة مدفوعة`}
+              icon="✅"
+              gradient="bg-gradient-to-br from-green-900/40 to-green-800/10 text-green-300"
+              border="border-green-500/25"
+              badge={{ text: `${summary.invoices.collection_rate}% تحصيل`, cls: 'bg-green-500/20 text-green-300' }}
+            />
+            <KpiCard
+              label="غير المحصّل"
+              value={`${fmt(summary.invoices.total_unpaid)} ر.س`}
+              sub={`${summary.invoices.count_unpaid + summary.invoices.count_partial} فاتورة معلقة`}
+              icon="⚠️"
+              gradient="bg-gradient-to-br from-red-900/40 to-red-800/10 text-red-300"
+              border="border-red-500/25"
+            />
+            <KpiCard
+              label="صافي الإيراد"
+              value={`${fmt(summary.net_revenue)} ر.س`}
+              sub={`هامش الربح ${summary.profit_margin}%`}
+              icon="📈"
+              gradient={`bg-gradient-to-br ${summary.net_revenue >= 0 ? 'from-amber-900/40 to-amber-800/10 text-amber-300' : 'from-red-900/40 to-red-800/10 text-red-300'}`}
+              border={summary.net_revenue >= 0 ? 'border-amber-500/25' : 'border-red-500/25'}
+              badge={{ text: summary.net_revenue >= 0 ? 'ربح' : 'خسارة', cls: summary.net_revenue >= 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300' }}
+            />
+            <KpiCard
+              label="إجمالي الالتزامات"
+              value={`${fmt(summary.expenses)} ر.س`}
+              sub={`عمولات + بونص`}
+              icon="💸"
+              gradient="bg-gradient-to-br from-orange-900/40 to-orange-800/10 text-orange-300"
+              border="border-orange-500/25"
+            />
+          </div>
+
+          {/* Row 2: إحصائيات ثانوية + شريط التحصيل */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+            {/* شريط التحصيل */}
+            <div className="lg:col-span-1 bg-purple-950/40 rounded-2xl border border-purple-500/20 p-4 space-y-3">
+              <p className="text-purple-300 text-sm font-semibold">نسب الأداء</p>
+              <ProgressBar
+                label="نسبة التحصيل"
+                value={summary.invoices.collection_rate}
+                color="bg-gradient-to-r from-green-500 to-emerald-400"
+              />
+              <ProgressBar
+                label="نسبة دفع العمولات"
+                value={summary.commissions.total > 0 ? Math.round((summary.commissions.paid / summary.commissions.total) * 100) : 0}
+                color="bg-gradient-to-r from-blue-500 to-cyan-400"
+              />
+              <ProgressBar
+                label="نسبة دفع البونص"
+                value={summary.bonuses.total > 0 ? Math.round((summary.bonuses.paid / summary.bonuses.total) * 100) : 0}
+                color="bg-gradient-to-r from-purple-500 to-violet-400"
+              />
+            </div>
+
+            {/* إحصائيات الفواتير */}
+            <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 p-4">
+              <p className="text-purple-300 text-sm font-semibold mb-3">إحصائيات الفواتير</p>
+              <div className="grid grid-cols-2 gap-2">
+                <MiniStat label="إجمالي الفواتير" value={`${summary.invoices.count}`} cls="bg-purple-900/30 border-purple-500/20 text-purple-300" />
+                <MiniStat label="متوسط الفاتورة" value={`${fmt(summary.invoices.avg_invoice)} ر.س`} cls="bg-purple-900/30 border-purple-500/20 text-purple-300" />
+                <MiniStat label="مدفوعة" value={summary.invoices.count_paid} cls="bg-green-900/20 border-green-500/20 text-green-300" />
+                <MiniStat label="غير مدفوعة" value={summary.invoices.count_unpaid} cls="bg-red-900/20 border-red-500/20 text-red-300" />
+                <MiniStat label="جزئية" value={summary.invoices.count_partial} cls="bg-yellow-900/20 border-yellow-500/20 text-yellow-300" />
+                <MiniStat label="ملغية" value={summary.invoices.count_void} cls="bg-gray-900/30 border-gray-500/20 text-gray-400" />
+              </div>
+            </div>
+
+            {/* إحصائيات العمولات والبونص */}
+            <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 p-4">
+              <p className="text-purple-300 text-sm font-semibold mb-3">العمولات والبونص</p>
+              <div className="grid grid-cols-2 gap-2">
+                <MiniStat label="إجمالي العمولات" value={`${fmt(summary.commissions.total)} ر.س`} cls="bg-blue-900/20 border-blue-500/20 text-blue-300" />
+                <MiniStat label="عمولات مدفوعة" value={`${fmt(summary.commissions.paid)} ر.س`} cls="bg-green-900/20 border-green-500/20 text-green-300" />
+                <MiniStat label="عمولات معلقة" value={`${fmt(summary.commissions.pending)} ر.س`} cls="bg-yellow-900/20 border-yellow-500/20 text-yellow-300" />
+                <MiniStat label="موظفون" value={`${summary.commissions.unique_employees} موظف`} cls="bg-purple-900/30 border-purple-500/20 text-purple-300" />
+                <MiniStat label="إجمالي البونص" value={`${fmt(summary.bonuses.total)} ر.س`} cls="bg-violet-900/20 border-violet-500/20 text-violet-300" />
+                <MiniStat label="بونص مدفوع" value={`${fmt(summary.bonuses.paid)} ر.س`} cls="bg-green-900/20 border-green-500/20 text-green-300" />
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
 
@@ -220,13 +313,19 @@ export default function BillingPage() {
           <button
             key={t.key}
             onClick={() => { setTab(t.key); setStatusFilter(''); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
               tab === t.key
                 ? 'bg-purple-600 text-white shadow'
                 : 'text-purple-400 hover:text-white hover:bg-purple-500/20'
             }`}
           >
-            {t.label}
+            <span>{t.icon}</span>{t.label}
+            {t.key === 'invoices' && summary && summary.invoices.count_unpaid > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">{summary.invoices.count_unpaid}</span>
+            )}
+            {t.key === 'commissions' && summary && summary.commissions.pending > 0 && (
+              <span className="bg-yellow-500 text-black text-xs rounded-full px-1.5 font-bold">{fmt(summary.commissions.pending)}</span>
+            )}
           </button>
         ))}
       </div>

@@ -1,9 +1,28 @@
 export interface Summary {
   period: string;
-  invoices: { count: number; total_paid: number; total_unpaid: number; total_void: number };
-  commissions: { total: number; paid: number; pending: number };
-  bonuses: { total: number };
+  invoices: {
+    count: number;
+    count_paid: number;
+    count_unpaid: number;
+    count_partial: number;
+    count_void: number;
+    total_paid: number;
+    total_unpaid: number;
+    total_void: number;
+    avg_invoice: number;
+    collection_rate: number;
+  };
+  commissions: {
+    total: number;
+    paid: number;
+    pending: number;
+    approved: number;
+    unique_employees: number;
+  };
+  bonuses: { total: number; paid: number };
+  expenses: number;
   net_revenue: number;
+  profit_margin: number;
 }
 
 export interface Invoice {
