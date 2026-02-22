@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       .select(`
         id, employee_id, period, base_salary, deductions, additions,
         net_salary, status, notes, created_at, approved_at, paid_at,
-        employee:admin_users(id, name, username, role, avatar)
+        employee:admin_users(id, name, username, role, avatar, bank_name, bank_iban, bank_account_name, bank_account_number)
       `)
       .eq('period', period)
       .order('created_at', { ascending: true });

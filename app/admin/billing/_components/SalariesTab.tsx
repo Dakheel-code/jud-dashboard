@@ -17,7 +17,13 @@ export interface Salary {
   created_at: string;
   approved_at: string | null;
   paid_at: string | null;
-  employee: { id: string; name: string; username: string; role: string; avatar?: string } | null;
+  employee: {
+    id: string; name: string; username: string; role: string; avatar?: string;
+    bank_name?: string | null;
+    bank_iban?: string | null;
+    bank_account_name?: string | null;
+    bank_account_number?: string | null;
+  } | null;
 }
 
 interface EditRow {
@@ -113,7 +119,7 @@ export default function SalariesTab({ salaries, updatingId, onPatch, onGenerate 
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-purple-500/20 text-purple-400/70 text-xs">
-              {['الموظف', 'الدور', 'الأساسي', 'الخصومات', 'الإضافات', 'الصافي', 'الحالة', 'إجراء'].map(h => (
+              {['الموظف', 'الدور', 'الأساسي', 'الخصومات', 'الإضافات', 'الصافي', 'البنك', 'الحالة', 'إجراء'].map(h => (
                 <th key={h} className="text-right px-4 py-3 font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -185,6 +191,27 @@ export default function SalariesTab({ salaries, updatingId, onPatch, onGenerate 
                   {/* الصافي */}
                   <td className="px-4 py-3 font-mono font-bold text-amber-300 whitespace-nowrap">
                     {fmt(s.net_salary)} ر.س
+                  </td>
+
+                  {/* البيانات البنكية */}
+                  <td className="px-4 py-3">
+                    {s.employee?.bank_name || s.employee?.bank_iban ? (
+                      <div className="min-w-0">
+                        <p className="text-blue-300 text-xs font-medium whitespace-nowrap">{s.employee.bank_name || '—'}</p>
+                        {s.employee.bank_iban && (
+                          <p className="text-blue-400/50 text-xs font-mono mt-0.5 whitespace-nowrap">
+                            {s.employee.bank_iban.length > 12
+                              ? s.employee.bank_iban.slice(0, 6) + '••••' + s.employee.bank_iban.slice(-4)
+                              : s.employee.bank_iban}
+                          </p>
+                        )}
+                        {s.employee.bank_account_name && (
+                          <p className="text-blue-400/40 text-xs mt-0.5 whitespace-nowrap">{s.employee.bank_account_name}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-purple-400/30 text-xs">غير محدد</span>
+                    )}
                   </td>
 
                   {/* الحالة */}
