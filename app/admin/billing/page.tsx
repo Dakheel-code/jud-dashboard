@@ -6,6 +6,7 @@ import InvoicesTab from './_components/InvoicesTab';
 import CommissionsTab from './_components/CommissionsTab';
 import BonusesTab from './_components/BonusesTab';
 import ReportsTab from './_components/ReportsTab';
+import SalariesTab, { Salary } from './_components/SalariesTab';
 
 function fmt(n: number) {
   return Number(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -74,12 +75,13 @@ function MiniStat({ label, value, cls }: { label: string; value: string | number
   );
 }
 
-type TabKey = 'invoices' | 'commissions' | 'bonuses' | 'reports';
+type TabKey = 'invoices' | 'commissions' | 'bonuses' | 'salaries' | 'reports';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'invoices',    label: 'فواتير المتاجر', icon: '🧾' },
   { key: 'commissions', label: 'العمولات',        icon: '💼' },
   { key: 'bonuses',     label: 'البونص',           icon: '🎁' },
+  { key: 'salaries',    label: 'الرواتب',          icon: '💰' },
   { key: 'reports',     label: 'التقارير',         icon: '📊' },
 ];
 
@@ -93,8 +95,10 @@ export default function BillingPage() {
   const [invoices, setInvoices]         = useState<Invoice[]>([]);
   const [commissions, setCommissions]   = useState<Commission[]>([]);
   const [bonuses, setBonuses]           = useState<Bonus[]>([]);
+  const [salaries, setSalaries]         = useState<Salary[]>([]);
   const [loading, setLoading]           = useState(true);
   const [generating, setGenerating]     = useState(false);
+  const [genSalaries, setGenSalaries]   = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [updatingId, setUpdatingId]     = useState<string | null>(null);
 
@@ -126,11 +130,18 @@ export default function BillingPage() {
     if (r.ok) { const d = await r.json(); setBonuses(d.bonuses || []); }
   }, [period, statusFilter]);
 
+  const fetchSalaries = useCallback(async () => {
+    const p = new URLSearchParams({ period });
+    if (statusFilter) p.set('status', statusFilter);
+    const r = await fetch(`/api/billing/salaries?${p}`);
+    if (r.ok) { const d = await r.json(); setSalaries(d.salaries || []); }
+  }, [period, statusFilter]);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchSummary(), fetchInvoices(), fetchCommissions(), fetchBonuses()]);
+    await Promise.all([fetchSummary(), fetchInvoices(), fetchCommissions(), fetchBonuses(), fetchSalaries()]);
     setLoading(false);
-  }, [fetchSummary, fetchInvoices, fetchCommissions, fetchBonuses]);
+  }, [fetchSummary, fetchInvoices, fetchCommissions, fetchBonuses, fetchSalaries]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -166,6 +177,26 @@ export default function BillingPage() {
     setUpdatingId(null); fetchAll();
   };
 
+  const patchSalary = async (id: string, data: { status?: string; deductions?: number; additions?: number; notes?: string }) => {
+    setUpdatingId(id);
+    await fetch('/api/billing/salaries', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...data }) });
+    setUpdatingId(null); fetchSalaries();
+  };
+
+  const handleGenerateSalaries = async () => {
+    setGenSalaries(true);
+    try {
+      const r = await fetch('/api/billing/salaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period }),
+      });
+      const d = await r.json();
+      alert(`تم توليد ${d.generated} راتب، تخطي ${d.skipped} (موجود مسبقاً)`);
+      fetchSalaries();
+    } finally { setGenSalaries(false); }
+  };
+
   const activeFilters = tab === 'invoices' ? INV_FILTERS : PAY_FILTERS;
 
   return (
@@ -197,17 +228,16 @@ export default function BillingPage() {
             disabled={generating}
             className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2"
           >
-            {generating ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-            )}
+            {generating ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> : '⚡'}
             توليد الفواتير
+          </button>
+          <button
+            onClick={handleGenerateSalaries}
+            disabled={genSalaries}
+            className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {genSalaries ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> : '💰'}
+            توليد الرواتب
           </button>
         </div>
       </div>
@@ -331,7 +361,7 @@ export default function BillingPage() {
       </div>
 
       {/* ── Status Filter ── */}
-      {tab !== 'reports' && (
+      {tab !== 'reports' && tab !== 'salaries' && (
         <div className="flex gap-2 mb-4 flex-wrap">
           {activeFilters.map(([val, lbl]) => (
             <button
@@ -376,6 +406,14 @@ export default function BillingPage() {
               bonuses={bonuses}
               updatingId={updatingId}
               onPatch={patchBonus}
+            />
+          )}
+          {tab === 'salaries' && (
+            <SalariesTab
+              salaries={salaries}
+              updatingId={updatingId}
+              onPatch={patchSalary}
+              onGenerate={handleGenerateSalaries}
             />
           )}
           {tab === 'reports' && summary && (
