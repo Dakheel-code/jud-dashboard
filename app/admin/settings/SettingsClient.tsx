@@ -70,6 +70,28 @@ function SettingsPageContent() {
   const [isAdAccountsCollapsed, setIsAdAccountsCollapsed] = useState(true);
   const [isWhatsappCollapsed, setIsWhatsappCollapsed] = useState(true);
   const [isSlackCollapsed, setIsSlackCollapsed] = useState(true);
+  const [isNotifCollapsed, setIsNotifCollapsed] = useState(true);
+
+  // إعدادات الإشعارات
+  const NOTIF_DEFAULTS = {
+    tasks_assigned: true, tasks_reassigned: true, tasks_completed: true,
+    tasks_overdue: true, tasks_help_request: true, tasks_help_response: true,
+    tasks_mention: true, tasks_comment: true,
+    announcements_normal: true, announcements_urgent: true, announcements_scheduled: true,
+    attendance_checkin: true, attendance_checkout: true, attendance_leave_request: true,
+    attendance_leave_approved: true, attendance_leave_rejected: true,
+    billing_invoice_generated: true, billing_salary_generated: true, billing_payment_due: true,
+    stores_new: true, stores_completed: true, stores_milestone: true,
+    system_login: false, system_updates: true, system_errors: true,
+    channel_inapp: true, channel_email: false, channel_slack: false,
+    sound_enabled: true, sound_volume: 80, badge_enabled: true,
+    popup_enabled: true, popup_duration: 5,
+    quiet_hours_enabled: false, quiet_hours_start: '22:00', quiet_hours_end: '08:00',
+    digest_enabled: false, digest_frequency: 'daily',
+  };
+  const [notifSettings, setNotifSettings] = useState<Record<string, any>>(NOTIF_DEFAULTS);
+  const [savingNotif, setSavingNotif] = useState(false);
+  const [notifSaved, setNotifSaved] = useState(false);
 
   // إعدادات تخصيص لوحة التحكم
   const [dashboardWidgets, setDashboardWidgets] = useState<Record<string, { enabled: boolean; order: number; label: string }>>({
@@ -85,6 +107,41 @@ function SettingsPageContent() {
     smart_insights: { enabled: true, order: 10, label: 'الرؤى الذكية' },
   });
   const [savingDashboard, setSavingDashboard] = useState(false);
+
+  const setNotif = (key: string, val: boolean | number | string) =>
+    setNotifSettings(prev => ({ ...prev, [key]: val }));
+
+  const saveNotifSettings = async () => {
+    const stored = localStorage.getItem('admin_user');
+    if (!stored) return;
+    let userId: string | null = null;
+    try { userId = JSON.parse(stored)?.id || null; } catch {}
+    if (!userId) return;
+    setSavingNotif(true);
+    try {
+      await fetch('/api/notification-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, settings: notifSettings }),
+      });
+      setNotifSaved(true);
+      setTimeout(() => setNotifSaved(false), 3000);
+    } catch {}
+    setSavingNotif(false);
+  };
+
+  const loadNotifSettings = async () => {
+    const stored = localStorage.getItem('admin_user');
+    if (!stored) return;
+    let userId: string | null = null;
+    try { userId = JSON.parse(stored)?.id || null; } catch {}
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/notification-settings?user_id=${userId}`);
+      const data = await res.json();
+      setNotifSettings({ ...NOTIF_DEFAULTS, ...data.settings });
+    } catch {}
+  };
 
   const applyFormatting = (prefix: string, suffix: string) => {
     const textarea = templateTextareaRef.current;
@@ -1316,6 +1373,163 @@ function SettingsPageContent() {
         </div>
 
         {/* Slack Section */}
+        {/* ===== قسم إعدادات الإشعارات ===== */}
+        <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
+          <button
+            onClick={() => { setIsNotifCollapsed(!isNotifCollapsed); if (isNotifCollapsed) loadNotifSettings(); }}
+            className="w-full p-6 flex items-center gap-4 hover:bg-purple-500/5 transition-all"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div className="flex-1 text-right">
+              <h3 className="text-white font-semibold text-lg">إعدادات الإشعارات</h3>
+              <p className="text-purple-400/60 text-sm">تحكم كامل بكل أنواع الإشعارات وقنوات الإرسال</p>
+            </div>
+            <svg className={`w-5 h-5 text-purple-400 transition-transform duration-300 ${isNotifCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isNotifCollapsed ? 'max-h-0' : 'max-h-[4000px]'}`}>
+            <div className="px-6 pb-6 pt-2 space-y-4" dir="rtl">
+
+              {/* أزرار تفعيل/إيقاف الكل */}
+              <div className="flex gap-2 mb-2">
+                <button onClick={() => setNotifSettings(prev => Object.fromEntries(Object.entries(prev).map(([k,v]) => [k, typeof v === 'boolean' ? true : v])))} className="px-3 py-1.5 text-xs bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg border border-purple-500/30 transition-all">تفعيل الكل</button>
+                <button onClick={() => setNotifSettings(prev => Object.fromEntries(Object.entries(prev).map(([k,v]) => [k, typeof v === 'boolean' ? false : v])))} className="px-3 py-1.5 text-xs bg-purple-900/30 hover:bg-purple-900/50 text-purple-400 rounded-lg border border-purple-500/20 transition-all">إيقاف الكل</button>
+              </div>
+
+              {/* مساعد Toggle */}
+              {([
+                ['📡 قنوات الإرسال', [
+                  ['channel_inapp','داخل التطبيق','إشعارات في نافذة الجرس'],
+                  ['channel_email','البريد الإلكتروني','إرسال إشعارات على الإيميل'],
+                  ['channel_slack','Slack','إرسال إشعارات لقناة Slack'],
+                ]],
+                ['✅ المهام', [
+                  ['tasks_assigned','تعيين مهمة جديدة','عند تعيين مهمة لك'],
+                  ['tasks_reassigned','إعادة تعيين مهمة','عند نقل مهمة من موظف لآخر'],
+                  ['tasks_completed','إتمام مهمة','عند إنجاز مهمة مسندة لك'],
+                  ['tasks_overdue','مهام متأخرة','تنبيه عند تجاوز موعد التسليم'],
+                  ['tasks_help_request','طلب مساعدة','عند طلب أحد المساعدة في مهمة'],
+                  ['tasks_help_response','رد على طلب مساعدة','عند الرد على طلب مساعدتك'],
+                  ['tasks_mention','الإشارة إليك','عند ذكر اسمك في تعليق'],
+                  ['tasks_comment','تعليقات المهام','عند إضافة تعليق على مهمة تتابعها'],
+                ]],
+                ['📢 التعاميم', [
+                  ['announcements_normal','تعاميم عادية','التعاميم الاعتيادية'],
+                  ['announcements_urgent','تعاميم عاجلة','التعاميم ذات الأولوية العالية'],
+                  ['announcements_scheduled','تعاميم مجدولة','التعاميم المبرمجة مسبقاً'],
+                ]],
+                ['🕐 الحضور والإجازات', [
+                  ['attendance_checkin','تسجيل حضور','تأكيد تسجيل الحضور'],
+                  ['attendance_checkout','تسجيل انصراف','تأكيد تسجيل الانصراف'],
+                  ['attendance_leave_request','طلب إجازة جديد','عند تقديم طلب إجازة'],
+                  ['attendance_leave_approved','موافقة على الإجازة','عند الموافقة على طلب إجازتك'],
+                  ['attendance_leave_rejected','رفض الإجازة','عند رفض طلب إجازتك'],
+                ]],
+                ['💰 الفوترة والرواتب', [
+                  ['billing_invoice_generated','توليد فاتورة','عند إنشاء فاتورة شهرية جديدة'],
+                  ['billing_salary_generated','توليد الراتب','عند إنشاء كشف الراتب الشهري'],
+                  ['billing_payment_due','تذكير الدفع','عند اقتراب موعد استحقاق الدفع'],
+                ]],
+                ['🏪 المتاجر', [
+                  ['stores_new','متجر جديد','عند إضافة متجر جديد للنظام'],
+                  ['stores_completed','إتمام المتجر','عند اكتمال إعداد المتجر'],
+                  ['stores_milestone','إنجاز مرحلة','عند الوصول لنقطة تقدم مهمة'],
+                ]],
+                ['⚙️ النظام', [
+                  ['system_login','تسجيل دخول جديد','عند تسجيل الدخول من جهاز جديد'],
+                  ['system_updates','تحديثات النظام','عند إصدار تحديث جديد'],
+                  ['system_errors','أخطاء النظام','عند حدوث خطأ يستوجب الانتباه'],
+                ]],
+              ] as [string, [string,string,string][]][]).map(([sectionTitle, rows]) => (
+                <div key={sectionTitle} className="bg-purple-900/20 rounded-xl border border-purple-500/10 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-purple-500/10">
+                    <span className="text-white text-sm font-semibold">{sectionTitle}</span>
+                  </div>
+                  <div className="divide-y divide-purple-500/10">
+                    {rows.map(([key, label, desc]) => (
+                      <div key={key} className="flex items-center justify-between gap-4 px-4 py-3">
+                        <div>
+                          <p className="text-white text-sm">{label}</p>
+                          <p className="text-purple-400/50 text-xs">{desc}</p>
+                        </div>
+                        <button
+                          onClick={() => setNotif(key, !notifSettings[key])}
+                          className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${
+                            notifSettings[key] ? 'bg-purple-600' : 'bg-purple-900/50 border border-purple-500/30'
+                          }`}
+                        >
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                            notifSettings[key] ? 'right-0.5' : 'left-0.5'
+                          }`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* الصوت والمظهر */}
+              <div className="bg-purple-900/20 rounded-xl border border-purple-500/10 overflow-hidden">
+                <div className="px-4 py-3 border-b border-purple-500/10">
+                  <span className="text-white text-sm font-semibold">🔔 الصوت والمظهر</span>
+                </div>
+                <div className="divide-y divide-purple-500/10">
+                  {[['sound_enabled','تفعيل الصوت','تشغيل صوت عند وصول إشعار'],['badge_enabled','شارة العدد','إظهار عدد الإشعارات غير المقروءة'],['popup_enabled','نافذة منبثقة','إظهار نافذة صغيرة عند وصول إشعار']].map(([key,label,desc]) => (
+                    <div key={key} className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div><p className="text-white text-sm">{label}</p><p className="text-purple-400/50 text-xs">{desc}</p></div>
+                      <button onClick={() => setNotif(key, !notifSettings[key])} className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${notifSettings[key] ? 'bg-purple-600' : 'bg-purple-900/50 border border-purple-500/30'}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${notifSettings[key] ? 'right-0.5' : 'left-0.5'}`} />
+                      </button>
+                    </div>
+                  ))}
+                  {notifSettings.sound_enabled && (
+                    <div className="flex items-center justify-between gap-4 px-4 py-3">
+                      <div><p className="text-white text-sm">مستوى الصوت</p><p className="text-purple-400/50 text-xs">{notifSettings.sound_volume}%</p></div>
+                      <input type="range" min={0} max={100} value={notifSettings.sound_volume} onChange={e => setNotif('sound_volume', Number(e.target.value))} className="w-28 accent-purple-500" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ساعات الهدوء */}
+              <div className="bg-purple-900/20 rounded-xl border border-purple-500/10 overflow-hidden">
+                <div className="px-4 py-3 border-b border-purple-500/10 flex items-center justify-between">
+                  <span className="text-white text-sm font-semibold">🌙 ساعات الهدوء</span>
+                  <button onClick={() => setNotif('quiet_hours_enabled', !notifSettings.quiet_hours_enabled)} className={`relative w-10 h-5 rounded-full transition-all flex-shrink-0 ${notifSettings.quiet_hours_enabled ? 'bg-purple-600' : 'bg-purple-900/50 border border-purple-500/30'}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${notifSettings.quiet_hours_enabled ? 'right-0.5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+                {notifSettings.quiet_hours_enabled && (
+                  <div className="grid grid-cols-2 gap-4 p-4">
+                    <div><label className="text-purple-400/60 text-xs mb-1 block">من الساعة</label><input type="time" value={notifSettings.quiet_hours_start} onChange={e => setNotif('quiet_hours_start', e.target.value)} className="w-full bg-purple-900/30 border border-purple-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                    <div><label className="text-purple-400/60 text-xs mb-1 block">إلى الساعة</label><input type="time" value={notifSettings.quiet_hours_end} onChange={e => setNotif('quiet_hours_end', e.target.value)} className="w-full bg-purple-900/30 border border-purple-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500" /></div>
+                  </div>
+                )}
+              </div>
+
+              {/* زر الحفظ */}
+              <button
+                onClick={saveNotifSettings}
+                disabled={savingNotif}
+                className={`w-full py-3 rounded-xl font-semibold text-white transition-all flex items-center justify-center gap-2 ${
+                  notifSaved ? 'bg-green-600' : 'bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500'
+                } disabled:opacity-60`}
+              >
+                {savingNotif ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />جاري الحفظ...</>) :
+                 notifSaved ? (<><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>تم الحفظ</>) :
+                 'حفظ إعدادات الإشعارات'}
+              </button>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ===== قسم Slack ===== */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden mb-6">
           {/* Header - Clickable */}
           <button
