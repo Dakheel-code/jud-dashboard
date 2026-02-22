@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useBranding } from '@/contexts/BrandingContext';
 import { Summary, Invoice, Commission, Bonus } from './_components/types';
 import InvoicesTab from './_components/InvoicesTab';
 import CommissionsTab from './_components/CommissionsTab';
@@ -89,6 +91,7 @@ const INV_FILTERS  = [['','الكل'],['unpaid','غير مدفوع'],['partial',
 const PAY_FILTERS  = [['','الكل'],['pending','معلق'],['approved','موافق'],['paid','مدفوع'],['canceled','ملغي']];
 
 export default function BillingPage() {
+  const { branding } = useBranding();
   const [tab, setTab]                   = useState<TabKey>('invoices');
   const [period, setPeriod]             = useState(currentPeriod());
   const [summary, setSummary]           = useState<Summary | null>(null);
@@ -200,33 +203,42 @@ export default function BillingPage() {
   const activeFilters = tab === 'invoices' ? INV_FILTERS : PAY_FILTERS;
 
   return (
-    <div className="min-h-screen bg-[#0a0118] p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden" dir="rtl">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-            </svg>
-            الفوترة
-          </h1>
-          <p className="text-purple-400/60 text-sm mt-0.5">إدارة الفواتير والعمولات والبونص</p>
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <img
+            src={branding.logo || '/logo.png'}
+            alt={branding.companyName || 'Logo'}
+            className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
+          />
+          <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent" />
+          <div>
+            <h1
+              className="text-xl sm:text-3xl text-white mb-1 uppercase"
+              style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}
+            >
+              الفوترة
+            </h1>
+            <p className="text-purple-300/80 text-xs sm:text-sm">إدارة الفواتير والعمولات والبونص والرواتب</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={period}
             onChange={e => { setPeriod(e.target.value); setStatusFilter(''); }}
-            className="px-3 py-2 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl text-sm focus:outline-none focus:border-purple-400"
+            className="px-3 py-2 bg-purple-900/50 border border-purple-500/30 text-white rounded-xl text-sm focus:outline-none focus:border-purple-400"
           >
             {periodOptions.map(p => (
-              <option key={p} value={p} className="bg-[#1a0a2e]">{periodLabel(p)}</option>
+              <option key={p} value={p} className="bg-slate-900">{periodLabel(p)}</option>
             ))}
           </select>
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
           >
             {generating ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> : '⚡'}
             توليد الفواتير
@@ -234,11 +246,20 @@ export default function BillingPage() {
           <button
             onClick={handleGenerateSalaries}
             disabled={genSalaries}
-            className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2"
+            className="flex items-center gap-2 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
           >
             {genSalaries ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> : '💰'}
             توليد الرواتب
           </button>
+          <Link
+            href="/admin"
+            className="p-2.5 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 hover:bg-purple-500/10 rounded-xl transition-all"
+            title="لوحة التحكم"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
         </div>
       </div>
 
@@ -426,6 +447,7 @@ export default function BillingPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
