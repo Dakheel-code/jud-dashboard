@@ -71,24 +71,31 @@ export async function POST(
       usersToNotify = targetUsers?.map((t: any) => t.user_id) || [];
     }
 
-    // حذف سجلات القراءة القديمة وإعادة إنشائها (لدعم إعادة النشر)
+    // حذف سجلات القديمة وإعادة إنشائها (لدعم إعادة النشر)
     await supabase.from('announcement_reads').delete().eq('announcement_id', id);
+    await supabase.from('announcement_recipients').delete().eq('announcement_id', id);
 
-    // إنشاء سجلات القراءة الجديدة
     if (usersToNotify.length > 0) {
+      const now = new Date().toISOString();
+
+      // الجدول القديم
       const readRecords = usersToNotify.map(userId => ({
         announcement_id: id,
         user_id: userId,
         read_at: null
       }));
-
-      const { error: readsError } = await supabase
-        .from('announcement_reads')
+      await supabase.from('announcement_reads')
         .upsert(readRecords, { onConflict: 'announcement_id,user_id', ignoreDuplicates: false });
 
-      if (readsError) {
-        console.error('reads error:', readsError);
-      }
+      // الجدول الجديد (يستخدمه UrgentAnnouncementModal والإشعارات)
+      const recipientRecords = usersToNotify.map(userId => ({
+        announcement_id: id,
+        user_id: userId,
+        delivered_at: now,
+        read_at: null
+      }));
+      await supabase.from('announcement_recipients')
+        .upsert(recipientRecords, { onConflict: 'announcement_id,user_id', ignoreDuplicates: false });
     }
 
     // تحديث وقت الإرسال (sent_at هو المؤشر الوحيد للإرسال)
