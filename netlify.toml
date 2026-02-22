@@ -27,6 +27,3 @@
 # توليد الفواتير الشهرية تلقائياً أول كل شهر الساعة 6 صباحاً
 [functions]
   directory = "netlify/functions"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
