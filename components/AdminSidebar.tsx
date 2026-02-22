@@ -222,7 +222,8 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState(0);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
-  const toggleMenu = (href: string) => setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }));
+  const toggleMenu = (href: string) =>
+    setOpenMenus(prev => ({ ...prev, [href]: !prev[href] }));
 
   // دالة لتحميل بيانات المستخدم من localStorage
   const loadUserFromStorage = () => {
@@ -450,13 +451,13 @@ export default function AdminSidebar({ isOpen, onClose, isCollapsed, onToggleCol
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-2 pt-4">
+          <nav className="flex-1 overflow-y-auto scrollbar-hide px-2 pt-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {menuItems.map((item, index) => {
               const isActive = checkActive(item.href);
               const isAttendance = item.href === '/admin/attendance';
               const showBadge = isAttendance && pendingLeaveRequests > 0;
               const hasChildren = item.children && item.children.length > 0;
-              const isMenuOpen = openMenus[item.href] || (hasChildren && item.children!.some(c => checkActive(c.href)));
+              const isMenuOpen = openMenus[item.href] === true;
 
               return (
                 <div key={index}>
