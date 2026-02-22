@@ -212,7 +212,7 @@ function AnnouncementsContent() {
         alert(data.message);
         fetchAnnouncements();
       } else {
-        alert(data.error || 'فشل في إرسال التعميم');
+        alert((data.error || 'فشل في إرسال التعميم') + (data.detail ? '\n' + data.detail : '') + (data.code ? '\nCode: ' + data.code : ''));
       }
     } catch (error) {
       alert('حدث خطأ');
