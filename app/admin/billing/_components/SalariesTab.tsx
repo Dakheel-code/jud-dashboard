@@ -1,8 +1,119 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { PAY_STATUS, fmt } from './types';
 import { Badge } from './Badge';
+
+/* ── نافذة البيانات البنكية ─────────────────────────────────── */
+interface BankEmployee {
+  name: string;
+  bank_name?: string | null;
+  bank_iban?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
+}
+
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+  return (
+    <button
+      onClick={copy}
+      title="نسخ"
+      className={`p-1 rounded-lg transition-all ${
+        copied
+          ? 'bg-green-500/20 text-green-400'
+          : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-white'
+      }`}
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function BankModal({ emp, onClose }: { emp: BankEmployee; onClose: () => void }) {
+  const rows = [
+    { icon: '🏦', label: 'اسم البنك',          value: emp.bank_name,           mono: false },
+    { icon: '👤', label: 'اسم صاحب الحساب',    value: emp.bank_account_name,   mono: false },
+    { icon: '💳', label: 'رقم الآيبان (IBAN)', value: emp.bank_iban,           mono: true  },
+    { icon: '🔢', label: 'رقم الحساب',         value: emp.bank_account_number, mono: true  },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#130828] border border-blue-500/30 rounded-2xl w-full max-w-md shadow-2xl shadow-blue-900/30"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-blue-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-lg">🏦</div>
+            <div>
+              <p className="text-white font-semibold">{emp.name}</p>
+              <p className="text-blue-400/60 text-xs">البيانات البنكية</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-white transition-all flex items-center justify-center"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-3">
+          {rows.map(row => (
+            <div key={row.label} className="flex items-center gap-3 bg-purple-900/20 rounded-xl px-4 py-3 border border-purple-500/10">
+              <span className="text-xl flex-shrink-0">{row.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-purple-400/60 text-xs mb-0.5">{row.label}</p>
+                {row.value ? (
+                  <p className={`text-white text-sm break-all ${row.mono ? 'font-mono' : 'font-medium'}`}>
+                    {row.value}
+                  </p>
+                ) : (
+                  <p className="text-purple-400/30 text-xs">غير محدد</p>
+                )}
+              </div>
+              {row.value && <CopyBtn text={row.value} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5">
+          <button
+            onClick={onClose}
+            className="w-full py-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 rounded-xl text-sm transition-all"
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export interface Salary {
   id: string;
@@ -55,7 +166,8 @@ const ROLE_NAMES: Record<string, string> = {
 };
 
 export default function SalariesTab({ salaries, updatingId, onPatch, onGenerate }: Props) {
-  const [editRow, setEditRow] = useState<EditRow | null>(null);
+  const [editRow, setEditRow]       = useState<EditRow | null>(null);
+  const [bankModal, setBankModal]   = useState<BankEmployee | null>(null);
 
   const startEdit = (s: Salary) => {
     setEditRow({
@@ -196,19 +308,24 @@ export default function SalariesTab({ salaries, updatingId, onPatch, onGenerate 
                   {/* البيانات البنكية */}
                   <td className="px-4 py-3">
                     {s.employee?.bank_name || s.employee?.bank_iban ? (
-                      <div className="min-w-0">
-                        <p className="text-blue-300 text-xs font-medium whitespace-nowrap">{s.employee.bank_name || '—'}</p>
+                      <button
+                        onClick={() => setBankModal(s.employee!)}
+                        className="group text-right hover:bg-blue-500/10 rounded-xl px-2 py-1 transition-all border border-transparent hover:border-blue-500/20"
+                      >
+                        <p className="text-blue-300 text-xs font-medium whitespace-nowrap group-hover:text-blue-200 flex items-center gap-1">
+                          {s.employee.bank_name || '—'}
+                          <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </p>
                         {s.employee.bank_iban && (
                           <p className="text-blue-400/50 text-xs font-mono mt-0.5 whitespace-nowrap">
-                            {s.employee.bank_iban.length > 12
-                              ? s.employee.bank_iban.slice(0, 6) + '••••' + s.employee.bank_iban.slice(-4)
+                            {s.employee.bank_iban.length > 10
+                              ? s.employee.bank_iban.slice(0, 4) + '••••' + s.employee.bank_iban.slice(-4)
                               : s.employee.bank_iban}
                           </p>
                         )}
-                        {s.employee.bank_account_name && (
-                          <p className="text-blue-400/40 text-xs mt-0.5 whitespace-nowrap">{s.employee.bank_account_name}</p>
-                        )}
-                      </div>
+                      </button>
                     ) : (
                       <span className="text-purple-400/30 text-xs">غير محدد</span>
                     )}
@@ -275,6 +392,9 @@ export default function SalariesTab({ salaries, updatingId, onPatch, onGenerate 
           </tbody>
         </table>
       </div>
+
+      {/* ── نافذة البيانات البنكية ── */}
+      {bankModal && <BankModal emp={bankModal} onClose={() => setBankModal(null)} />}
     </div>
   );
 }
