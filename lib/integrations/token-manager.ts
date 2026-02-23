@@ -59,12 +59,12 @@ export async function getValidAccessToken(
   const now = new Date();
   const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
-  // إذا التوكن صالح
-  if (expiresAt && expiresAt > fiveMinutesFromNow) {
+  // إذا التوكن صالح وليس needs_reauth — أرجعه مباشرة
+  if (record.status !== 'needs_reauth' && expiresAt && expiresAt > fiveMinutesFromNow) {
     return decrypt(record.access_token_enc);
   }
 
-  // التوكن منتهي أو قارب على الانتهاء - نحتاج تجديد
+  // التوكن منتهي أو needs_reauth — نحاول التجديد بـ refresh_token
   if (!record.refresh_token_enc) {
     // لا يوجد refresh token - نحتاج إعادة ربط
     await supabase
@@ -76,6 +76,7 @@ export async function getValidAccessToken(
 
   try {
     const refreshTokenDecrypted = decrypt(record.refresh_token_enc);
+    console.log(`[token-manager] Attempting refresh for ${platform}, store: ${storeId}`);
     let newTokens;
 
     // تجديد التوكن حسب المنصة
@@ -86,6 +87,7 @@ export async function getValidAccessToken(
           clientId: process.env.SNAPCHAT_CLIENT_ID!,
           clientSecret: process.env.SNAPCHAT_CLIENT_SECRET!,
         });
+        console.log(`[token-manager] Snapchat refresh success, expires_in: ${newTokens.expires_in}`);
         break;
       // TODO: إضافة باقي المنصات
       default:
