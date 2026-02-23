@@ -36,6 +36,7 @@ export default function IntegrationsClient() {
     meta: { status: 'disconnected' },
     google: { status: 'disconnected' },
   });
+  const [storeUUID, setStoreUUID] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
@@ -49,7 +50,10 @@ export default function IntegrationsClient() {
     try {
       const response = await fetch(`/api/integrations/status?storeId=${storeId}`);
       const data = await response.json();
-      if (data.success) setPlatforms(data.platforms);
+      if (data.success) {
+        setPlatforms(data.platforms);
+        if (data.storeUUID) setStoreUUID(data.storeUUID);
+      }
     } catch (error) { console.error('Failed to fetch status:', error); }
     finally { setLoading(false); }
   };
@@ -60,10 +64,12 @@ export default function IntegrationsClient() {
     if (platformParam && stepParam === 'select-account') openSelectAccountModal(platformParam);
   }, [platformParam, stepParam]);
 
+  const effectiveId = storeUUID || storeId;
+
   const handleConnect = (platform: string) => {
     if (platform === 'snapchat') { window.location.href = `/admin/store/${storeId}?connect=snapchat`; return; }
-    if (platform === 'tiktok') { window.location.href = `/api/tiktok/auth?store_id=${storeId}`; return; }
-    window.location.href = `/api/integrations/${platform}/start?storeId=${storeId}`;
+    if (platform === 'tiktok') { window.location.href = `/api/tiktok/auth?store_id=${effectiveId}`; return; }
+    window.location.href = `/api/integrations/${platform}/start?storeId=${effectiveId}`;
   };
 
   const openSelectAccountModal = async (platform: string) => {
@@ -73,7 +79,7 @@ export default function IntegrationsClient() {
     setAdAccounts([]);
     setSelectedAccount('');
     try {
-      const response = await fetch(`/api/integrations/${platform}/ad-accounts?storeId=${storeId}`);
+      const response = await fetch(`/api/integrations/${platform}/ad-accounts?storeId=${effectiveId}`);
       const data = await response.json();
       if (data.success) {
         setAdAccounts(data.accounts);
@@ -92,7 +98,7 @@ export default function IntegrationsClient() {
       const response = await fetch(`/api/integrations/${currentPlatform}/select-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, ad_account_id: account.ad_account_id, ad_account_name: account.ad_account_name, organization_id: account.organization_id }),
+        body: JSON.stringify({ storeId: effectiveId, ad_account_id: account.ad_account_id, ad_account_name: account.ad_account_name, organization_id: account.organization_id }),
       });
       const data = await response.json();
       if (data.success) { setShowSelectModal(false); fetchStatus(); window.location.href = `/admin/store/${storeId}`; }
@@ -104,7 +110,7 @@ export default function IntegrationsClient() {
   const handleDisconnect = async (platform: string) => {
     if (!confirm('هل أنت متأكد من فصل الربط؟')) return;
     try {
-      const response = await fetch(`/api/integrations/${platform}/disconnect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId }) });
+      const response = await fetch(`/api/integrations/${platform}/disconnect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId: effectiveId }) });
       const data = await response.json();
       if (data.success) fetchStatus(); else alert('فشل في فصل الربط');
     } catch (error) { console.error('Failed to disconnect:', error); alert('حدث خطأ'); }

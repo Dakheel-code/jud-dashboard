@@ -30,11 +30,20 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // تحويل storeId من store_url إلى UUID إذا لزم
+    let resolvedId = storeId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores').select('id').eq('store_url', storeId).single();
+      if (storeRow?.id) resolvedId = storeRow.id;
+    }
+
     // جلب حالة جميع المنصات للمتجر
     const { data: accounts, error } = await supabase
       .from('ad_platform_accounts')
       .select('platform, status, ad_account_id, ad_account_name, organization_id, last_connected_at, error_message')
-      .eq('store_id', storeId);
+      .eq('store_id', resolvedId);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch status' }, { status: 500 });
@@ -61,6 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      storeUUID: resolvedId,
       platforms,
     });
   } catch (error) {
