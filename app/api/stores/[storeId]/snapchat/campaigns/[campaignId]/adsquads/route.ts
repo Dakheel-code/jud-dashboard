@@ -53,13 +53,24 @@ export async function GET(
   { params }: { params: { storeId: string; campaignId: string } }
 ) {
   try {
-    const { storeId, campaignId } = params;
+    let { storeId, campaignId } = params;
     const range = request.nextUrl.searchParams.get('range') || '7d';
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+
+    // تحويل storeId من store_url إلى UUID إذا لزم الأمر
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('store_url', storeId)
+        .single();
+      if (storeRow?.id) storeId = storeRow.id;
+    }
 
     const { data: integration } = await supabase
       .from('ad_platform_accounts')
