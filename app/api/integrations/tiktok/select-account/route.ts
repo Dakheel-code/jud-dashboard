@@ -59,10 +59,16 @@ export async function POST(req: NextRequest) {
     // ── 3. تشفير التوكن ────────────────────────────────
     const encToken = encrypt(conn.access_token);
 
-    // ── 4. upsert في ad_platform_accounts ──────────────
-    const { error: upsertErr } = await supabase
+    // ── 4. حذف السجل القديم إن وُجد ثم إدراج جديد ──────
+    await supabase
       .from('ad_platform_accounts')
-      .upsert({
+      .delete()
+      .eq('store_id', resolvedId)
+      .eq('platform', 'tiktok');
+
+    const { error: insertErr } = await supabase
+      .from('ad_platform_accounts')
+      .insert({
         store_id: resolvedId,
         platform: 'tiktok',
         ad_account_id,
@@ -73,10 +79,10 @@ export async function POST(req: NextRequest) {
         token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         last_connected_at: new Date().toISOString(),
         error_message: null,
-      }, { onConflict: 'store_id,platform' });
+      });
 
-    if (upsertErr) {
-      return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 });
+    if (insertErr) {
+      return NextResponse.json({ success: false, error: insertErr.message, debug: { resolvedId } }, { status: 500 });
     }
 
     // ── 5. جلب store_url للتوجيه ───────────────────────
