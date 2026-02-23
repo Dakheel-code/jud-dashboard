@@ -1,11 +1,11 @@
 /**
  * GET /api/integrations/tiktok/ad-accounts?storeId=...
  * جلب الحسابات الإعلانية المتاحة من TikTok
+ * التوكن يُجلب من tiktok_connections (يُحفظ في الـ callback)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decrypt } from '@/lib/encryption';
 import { getAuthorizedAdvertisers, getAdvertiserInfo } from '@/lib/tiktok';
 
 export const dynamic = 'force-dynamic';
@@ -27,32 +27,46 @@ export async function GET(req: NextRequest) {
     if (row?.id) resolvedId = row.id;
   }
 
-  // جلب التوكن من ad_platform_accounts
-  const { data: integration } = await supabase
-    .from('ad_platform_accounts')
-    .select('access_token_enc')
+  // جلب التوكن من tiktok_connections (يُحفظ مباشرة في الـ callback)
+  const { data: conn, error: connErr } = await supabase
+    .from('tiktok_connections')
+    .select('access_token, advertiser_id')
     .eq('store_id', resolvedId)
-    .eq('platform', 'tiktok')
+    .eq('is_active', true)
+    .order('connected_at', { ascending: false })
+    .limit(1)
     .single();
 
-  if (!integration?.access_token_enc) {
-    return NextResponse.json({ error: 'Not connected', needsReauth: true }, { status: 401 });
+  if (connErr || !conn?.access_token) {
+    return NextResponse.json({
+      error: 'لا يوجد ربط نشط لـ TikTok. يرجى الربط أولاً.',
+      needsReauth: true,
+      debug: { resolvedId, connErr: connErr?.message }
+    }, { status: 401 });
   }
 
-  const accessToken = decrypt(integration.access_token_enc);
+  const accessToken = conn.access_token;
 
   try {
     // جلب المعلنين المفوضين
     const authRes = await getAuthorizedAdvertisers(accessToken);
 
     if (authRes.code !== 0) {
-      return NextResponse.json({ error: authRes.message || 'Failed to fetch advertisers', needsReauth: true }, { status: 401 });
+      return NextResponse.json({
+        error: authRes.message || 'فشل في جلب الحسابات الإعلانية',
+        needsReauth: true,
+        tiktokCode: authRes.code
+      }, { status: 401 });
     }
 
     const advertisers = authRes.data?.list || [];
 
     if (advertisers.length === 0) {
-      return NextResponse.json({ success: true, accounts: [] });
+      // إذا لم يرجع قائمة، استخدم advertiser_id المحفوظ في الـ connection
+      return NextResponse.json({
+        success: true,
+        accounts: [{ ad_account_id: conn.advertiser_id, ad_account_name: conn.advertiser_id }]
+      });
     }
 
     // جلب تفاصيل المعلنين (الاسم والعملة)

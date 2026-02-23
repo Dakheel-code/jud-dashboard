@@ -1,19 +1,25 @@
 /**
  * POST /api/integrations/tiktok/select-account
- * حفظ الحساب الإعلاني المختار للمتجر
+ * حفظ الحساب الإعلاني المختار للمتجر في ad_platform_accounts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { encrypt } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 
+function resolveUuid(id: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { storeId, ad_account_id, ad_account_name, access_token_enc } = await req.json();
+    const body = await req.json();
+    const { storeId, ad_account_id, ad_account_name } = body;
 
     if (!storeId || !ad_account_id || !ad_account_name) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'storeId, ad_account_id, ad_account_name مطلوبة' }, { status: 400 });
     }
 
     const supabase = createClient(
@@ -21,101 +27,68 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // تحويل storeId من store_url إلى UUID إذا لزم
-    let resolvedStoreId = storeId;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
-    if (!isUuid) {
-      const { data: storeRow } = await supabase
+    // ── 1. تحويل storeId إلى UUID ──────────────────────
+    let resolvedId = storeId;
+    if (!resolveUuid(storeId)) {
+      const { data: row, error: rowErr } = await supabase
         .from('stores').select('id').eq('store_url', storeId).single();
-      if (!storeRow?.id) {
-        return NextResponse.json({ success: false, error: `Store not found for: ${storeId}` }, { status: 404 });
+      if (rowErr || !row?.id) {
+        return NextResponse.json({ success: false, error: `المتجر غير موجود: ${storeId}` }, { status: 404 });
       }
-      resolvedStoreId = storeRow.id;
+      resolvedId = row.id;
     }
 
-    // جلب السجل الحالي أولاً
-    const { data: existing } = await supabase
+    // ── 2. جلب التوكن من tiktok_connections ────────────
+    const { data: conn, error: connErr } = await supabase
+      .from('tiktok_connections')
+      .select('access_token')
+      .eq('store_id', resolvedId)
+      .eq('is_active', true)
+      .order('connected_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (connErr || !conn?.access_token) {
+      return NextResponse.json({
+        success: false,
+        error: 'لم يُعثر على التوكن. يرجى إعادة الربط مع TikTok.',
+        debug: { resolvedId, connErr: connErr?.message }
+      }, { status: 400 });
+    }
+
+    // ── 3. تشفير التوكن ────────────────────────────────
+    const encToken = encrypt(conn.access_token);
+
+    // ── 4. upsert في ad_platform_accounts ──────────────
+    const { error: upsertErr } = await supabase
       .from('ad_platform_accounts')
-      .select('id, access_token_enc')
-      .eq('store_id', resolvedStoreId)
-      .eq('platform', 'tiktok')
-      .single();
+      .upsert({
+        store_id: resolvedId,
+        platform: 'tiktok',
+        ad_account_id,
+        ad_account_name,
+        access_token_enc: encToken,
+        status: 'connected',
+        scopes: [],
+        token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        last_connected_at: new Date().toISOString(),
+        error_message: null,
+      }, { onConflict: 'store_id,platform' });
 
-    if (existing) {
-      // تحديث السجل الموجود
-      const { error } = await supabase
-        .from('ad_platform_accounts')
-        .update({
-          ad_account_id,
-          ad_account_name,
-          status: 'connected',
-          last_connected_at: new Date().toISOString(),
-          error_message: null,
-        })
-        .eq('id', existing.id);
-
-      if (error) throw new Error(error.message);
-    } else {
-      // إنشاء سجل جديد — نحتاج التوكن من tiktok_connections
-      const { data: conn } = await supabase
-        .from('tiktok_connections')
-        .select('access_token, advertiser_id')
-        .eq('store_id', resolvedStoreId)
-        .eq('advertiser_id', ad_account_id)
-        .single();
-
-      // إذا لم يجد بـ advertiser_id المختار، جرّب أي سجل نشط
-      const { data: connFallback } = !conn ? await supabase
-        .from('tiktok_connections')
-        .select('access_token')
-        .eq('store_id', resolvedStoreId)
-        .eq('is_active', true)
-        .order('connected_at', { ascending: false })
-        .limit(1)
-        .single() : { data: null };
-
-      const tokenValue = conn?.access_token || connFallback?.access_token;
-
-      if (!tokenValue) {
-        return NextResponse.json({
-          success: false,
-          error: 'Token not found. Please reconnect TikTok.',
-          debug: { resolvedStoreId, originalStoreId: storeId }
-        }, { status: 400 });
-      }
-
-      // تشفير التوكن للحفظ في ad_platform_accounts
-      const { encrypt } = await import('@/lib/encryption');
-      const { error } = await supabase
-        .from('ad_platform_accounts')
-        .insert({
-          store_id: resolvedStoreId,
-          platform: 'tiktok',
-          ad_account_id,
-          ad_account_name,
-          access_token_enc: encrypt(tokenValue),
-          status: 'connected',
-          scopes: [],
-          token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          last_connected_at: new Date().toISOString(),
-        });
-
-      if (error) throw new Error(error.message);
+    if (upsertErr) {
+      return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 });
     }
 
-    // جلب store_url للتوجيه
+    // ── 5. جلب store_url للتوجيه ───────────────────────
     const { data: store } = await supabase
-      .from('stores')
-      .select('store_url')
-      .eq('id', resolvedStoreId)
-      .single();
+      .from('stores').select('store_url').eq('id', resolvedId).single();
 
     return NextResponse.json({
       success: true,
-      message: 'تم ربط الحساب الإعلاني بنجاح',
-      redirect: `/admin/store/${store?.store_url || storeId}`,
+      redirect: `/admin/store/${store?.store_url || resolvedId}`,
     });
+
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message, stack: err.stack?.slice(0, 300) }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
