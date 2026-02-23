@@ -21,7 +21,7 @@ export async function GET() {
         title: 'مدير بأداء منخفض',
         description: 'خالد عبدالله - نسبة إنجاز 35% فقط',
         priority: 'high',
-        link: '/admin/team?filter=low'
+        link: '/admin/users?filter=low'
       },
       {
         id: '2',
@@ -37,7 +37,7 @@ export async function GET() {
         title: 'توزيع غير متوازن',
         description: 'أحمد محمد لديه 8 متاجر - يحتاج إعادة توزيع',
         priority: 'medium',
-        link: '/admin/team'
+        link: '/admin/users'
       },
       {
         id: '4',
@@ -45,7 +45,7 @@ export async function GET() {
         title: '12 مهمة متأخرة',
         description: 'مهام متأخرة تحتاج متابعة من المدراء',
         priority: 'high',
-        link: '/admin/tasks?filter=overdue'
+        link: '/admin/task-management?filter=overdue'
       },
       {
         id: '5',
@@ -53,7 +53,7 @@ export async function GET() {
         title: 'مدير غير نشط',
         description: 'سلطان فهد - لم ينجز أي مهمة منذ 3 أيام',
         priority: 'medium',
-        link: '/admin/team'
+        link: '/admin/users'
       }
     ],
     top_stores: [
@@ -146,7 +146,7 @@ export async function GET() {
         title: '3 مدراء بأداء منخفض',
         description: 'نسبة إنجازهم أقل من 50% هذا الأسبوع',
         action: 'عرض المدراء',
-        link: '/admin/team?filter=low'
+        link: '/admin/users?filter=low'
       },
       {
         id: '2',
@@ -170,7 +170,7 @@ export async function GET() {
         title: 'توزيع غير متوازن',
         description: 'أحمد محمد لديه 8 متاجر بينما خالد لديه 1 فقط',
         action: 'إعادة التوزيع',
-        link: '/admin/team'
+        link: '/admin/users'
       }
     ],
     last_updated: new Date().toISOString()
