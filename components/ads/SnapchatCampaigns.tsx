@@ -34,11 +34,16 @@ function AdSquadsRow({ storeId, campaign, range }: { storeId: string; campaign: 
   const [adsLoading, setAdsLoading] = useState<string | null>(null);
   const [previewAd, setPreviewAd] = useState<Ad | null>(null);
 
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
   useEffect(() => {
     fetch(`/api/stores/${storeId}/snapchat/campaigns/${campaign.campaign_id}/adsquads?range=${range}`)
       .then(r => r.json())
-      .then(d => { if (d.success) setSquads(d.ad_squads || []); })
-      .catch(() => {})
+      .then(d => {
+        setDebugInfo(d);
+        if (d.success) setSquads(d.ad_squads || []);
+      })
+      .catch(e => setDebugInfo({ error: String(e) }))
       .finally(() => setLoading(false));
   }, [storeId, campaign.campaign_id, range]);
 
@@ -72,7 +77,14 @@ function AdSquadsRow({ storeId, campaign, range }: { storeId: string; campaign: 
                 جاري تحميل المجموعات...
               </div>
             ) : squads.length === 0 ? (
-              <div className="px-6 py-4 text-purple-400/60 text-sm">لا توجد مجموعات إعلانية لهذه الحملة</div>
+              <div className="px-6 py-4 text-sm">
+                <p className="text-purple-400/60">لا توجد مجموعات إعلانية لهذه الحملة</p>
+                {debugInfo && (
+                  <pre className="mt-2 text-[10px] text-yellow-400/70 bg-black/30 rounded p-2 overflow-x-auto max-w-full">
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                )}
+              </div>
             ) : (
               <div className="divide-y divide-purple-500/10">
                 {squads.map(sq => (

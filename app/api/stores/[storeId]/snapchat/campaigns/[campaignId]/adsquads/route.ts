@@ -83,17 +83,38 @@ export async function GET(
     const endTime = toSnapEndTime(end);
     const conversionRate = (integration.currency || 'USD') === 'USD' ? USD_TO_SAR : 1;
 
-    // جلب Ad Squads عبر adaccounts (المسار الصحيح في Snapchat API)
-    const squadsUrl = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?limit=100`;
-    const squadsRes = await fetch(squadsUrl, { headers });
-    if (!squadsRes.ok) {
-      const errText = await squadsRes.text().catch(() => '');
-      return NextResponse.json({ success: false, error: 'Failed to fetch ad squads', detail: errText }, { status: squadsRes.status });
+    // محاولة 1: جلب Ad Squads مباشرة بـ campaign_ids filter
+    const squadsUrl1 = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?campaign_id=${campaignId}&limit=100`;
+    const squadsRes1 = await fetch(squadsUrl1, { headers });
+    const squadsData1 = squadsRes1.ok ? await squadsRes1.json() : null;
+    let rawSquads = squadsData1?.adsquads || [];
+
+    // محاولة 2: إذا لم تنجح المحاولة الأولى، جلب الكل وفلترة
+    if (rawSquads.length === 0) {
+      const squadsUrl2 = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?limit=200`;
+      const squadsRes2 = await fetch(squadsUrl2, { headers });
+      if (squadsRes2.ok) {
+        const squadsData2 = await squadsRes2.json();
+        const allSquads = squadsData2?.adsquads || [];
+        // فلترة بـ campaign_id
+        rawSquads = allSquads.filter((s: any) =>
+          s.adsquad?.campaign_id === campaignId
+        );
+        // إذا لا يزال فارغاً، أرجع كل المجموعات مع debug
+        if (rawSquads.length === 0 && allSquads.length > 0) {
+          return NextResponse.json({
+            success: true,
+            ad_squads: [],
+            debug: {
+              campaignId,
+              totalSquads: allSquads.length,
+              sampleCampaignIds: allSquads.slice(0, 5).map((s: any) => s.adsquad?.campaign_id),
+              note: 'No squads matched campaignId filter'
+            }
+          });
+        }
+      }
     }
-    const squadsData = await squadsRes.json();
-    // فلترة المجموعات التابعة لهذه الحملة فقط
-    const allSquads = squadsData.adsquads || [];
-    const rawSquads = allSquads.filter((s: any) => s.adsquad?.campaign_id === campaignId);
 
     const squads = rawSquads.map((s: any) => ({
       id: s.adsquad?.id,
