@@ -82,7 +82,21 @@ export async function GET(
       .single();
 
     if (!integration?.ad_account_id) {
-      return NextResponse.json({ success: false, error: 'No connected Snapchat account' }, { status: 400 });
+      // جلب كل سجلات snapchat لمعرفة ما هو موجود
+      const { data: allSnap } = await supabase
+        .from('ad_platform_accounts')
+        .select('store_id, platform, ad_account_id')
+        .eq('platform', 'snapchat')
+        .limit(5);
+      return NextResponse.json({
+        success: false,
+        error: 'No connected Snapchat account',
+        debug: {
+          receivedStoreId: storeId,
+          isUuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId),
+          snapchatRecordsInDB: allSnap?.map(r => ({ store_id: r.store_id, has_account: !!r.ad_account_id })) || []
+        }
+      }, { status: 400 });
     }
 
     const accessToken = await getValidAccessToken(storeId, 'snapchat');
