@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeAuthCode } from '@/lib/tiktok';
-import { saveTokens } from '@/lib/integrations/token-manager';
-import { encrypt } from '@/lib/encryption';
 import { createClient } from '@supabase/supabase-js';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jud-dashboard.netlify.app';
@@ -41,14 +39,13 @@ export async function GET(req: NextRequest) {
       if (storeRow?.id) resolvedStoreId = storeRow.id;
     }
 
-    // حفظ التوكن في tiktok_connections (مشفر) لكل advertiser
-    const encToken = encrypt(access_token);
+    // حفظ التوكن في tiktok_connections (نص عادي — هيكل الجدول الأصلي)
     await supabase.from('tiktok_connections').upsert(
       advertiser_ids.map((id: string) => ({
         store_id: resolvedStoreId,
         app_id: process.env.TIKTOK_APP_ID!,
         advertiser_id: id,
-        access_token_enc: encToken,
+        access_token,
         is_active: true,
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

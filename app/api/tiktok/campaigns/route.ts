@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCampaigns } from '@/lib/tiktok';
+import { decrypt } from '@/lib/encryption';
 
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createClient(url, key);
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const storeId = req.nextUrl.searchParams.get('store_id');
@@ -16,23 +13,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'store_id مطلوب' }, { status: 400 });
   }
 
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   try {
-    const supabase = getSupabase();
-
-    // جلب الربط النشط
-    const { data: connections, error: connErr } = await supabase
-      .from('tiktok_connections')
-      .select('advertiser_id, access_token')
-      .eq('store_id', storeId)
-      .eq('is_active', true)
-      .limit(1)
-      .single();
-
-    if (connErr || !connections) {
-      return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط' }, { status: 404 });
+    // تحويل storeId إلى UUID إذا لزم
+    let resolvedStoreId = storeId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: row } = await supabase.from('stores').select('id').eq('store_url', storeId).single();
+      if (row?.id) resolvedStoreId = row.id;
     }
 
-    const { advertiser_id, access_token } = connections;
+    // جلب الحساب الإعلاني المختار من ad_platform_accounts
+    const { data: integration } = await supabase
+      .from('ad_platform_accounts')
+      .select('ad_account_id, access_token_enc')
+      .eq('store_id', resolvedStoreId)
+      .eq('platform', 'tiktok')
+      .eq('status', 'connected')
+      .single();
+
+    if (!integration?.ad_account_id || !integration?.access_token_enc) {
+      return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط لـ TikTok' }, { status: 404 });
+    }
+
+    const advertiser_id = integration.ad_account_id;
+    const access_token = decrypt(integration.access_token_enc);
+
+    if (!access_token) {
+      return NextResponse.json({ connected: false, error: 'انتهت صلاحية التوكن' }, { status: 401 });
+    }
 
     // التحقق من الكاش (آخر ساعة) إذا لم يطلب sync
     if (!sync) {

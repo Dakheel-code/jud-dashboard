@@ -59,13 +59,24 @@ export async function POST(req: NextRequest) {
       // إنشاء سجل جديد — نحتاج التوكن من tiktok_connections
       const { data: conn } = await supabase
         .from('tiktok_connections')
-        .select('access_token_enc')
+        .select('access_token, advertiser_id')
         .eq('store_id', resolvedStoreId)
-        .order('connected_at', { ascending: false })
-        .limit(1)
+        .eq('advertiser_id', ad_account_id)
         .single();
 
-      if (!conn?.access_token_enc) {
+      // إذا لم يجد بـ advertiser_id المختار، جرّب أي سجل نشط
+      const { data: connFallback } = !conn ? await supabase
+        .from('tiktok_connections')
+        .select('access_token')
+        .eq('store_id', resolvedStoreId)
+        .eq('is_active', true)
+        .order('connected_at', { ascending: false })
+        .limit(1)
+        .single() : { data: null };
+
+      const tokenValue = conn?.access_token || connFallback?.access_token;
+
+      if (!tokenValue) {
         return NextResponse.json({
           success: false,
           error: 'Token not found. Please reconnect TikTok.',
@@ -73,6 +84,8 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
+      // تشفير التوكن للحفظ في ad_platform_accounts
+      const { encrypt } = await import('@/lib/encryption');
       const { error } = await supabase
         .from('ad_platform_accounts')
         .insert({
@@ -80,7 +93,7 @@ export async function POST(req: NextRequest) {
           platform: 'tiktok',
           ad_account_id,
           ad_account_name,
-          access_token_enc: conn.access_token_enc,
+          access_token_enc: encrypt(tokenValue),
           status: 'connected',
           scopes: [],
           token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
