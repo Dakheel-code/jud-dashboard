@@ -155,14 +155,19 @@ export async function saveTokens(
   if (tokens.externalUserId) upsertData.external_user_id = tokens.externalUserId;
   if (tokens.externalDisplayName) upsertData.external_display_name = tokens.externalDisplayName;
 
+  // حذف السجل القديم ثم إدراج جديد (لتجنب مشكلة constraint name في upsert)
+  await supabase
+    .from('ad_platform_accounts')
+    .delete()
+    .eq('store_id', storeId)
+    .eq('platform', platform);
+
   const { error } = await supabase
     .from('ad_platform_accounts')
-    .upsert(upsertData, {
-      onConflict: 'store_id,platform',
-    });
+    .insert(upsertData);
 
   if (error) {
-    throw new Error('Failed to save tokens');
+    throw new Error('Failed to save tokens: ' + error.message);
   }
 }
 
