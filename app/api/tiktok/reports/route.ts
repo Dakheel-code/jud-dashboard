@@ -80,10 +80,10 @@ export async function GET(req: NextRequest) {
     const totals = rows.reduce(
       (acc, row) => {
         const m = row.metrics;
-        acc.spend       += parseFloat(String(m.spend       ?? 0));
-        acc.impressions += parseInt(String(m.impressions   ?? 0), 10);
-        acc.clicks      += parseInt(String(m.clicks        ?? 0), 10);
-        acc.conversions += parseInt(String(m.conversions   ?? 0), 10);
+        acc.spend       += parseFloat(String(m.spend            ?? 0));
+        acc.impressions += parseInt(String(m.impressions        ?? 0), 10);
+        acc.clicks      += parseInt(String(m.clicks             ?? 0), 10);
+        acc.conversions += parseFloat(String(m.complete_payment ?? 0));
         return acc;
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0 }

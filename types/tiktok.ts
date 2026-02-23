@@ -91,6 +91,9 @@ export interface TikTokReportMetrics {
   conversions: number;
   cost_per_conversion: number;
   conversion_rate: number;
+  complete_payment: number;
+  cost_per_complete_payment: number;
+  complete_payment_rate: number;
 }
 
 // صف التقرير
