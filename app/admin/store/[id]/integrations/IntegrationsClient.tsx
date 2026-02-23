@@ -62,6 +62,7 @@ export default function IntegrationsClient() {
 
   const handleConnect = (platform: string) => {
     if (platform === 'snapchat') { window.location.href = `/admin/store/${storeId}?connect=snapchat`; return; }
+    if (platform === 'tiktok') { window.location.href = `/api/tiktok/auth?store_id=${storeId}`; return; }
     window.location.href = `/api/integrations/${platform}/start?storeId=${storeId}`;
   };
 
@@ -124,7 +125,7 @@ export default function IntegrationsClient() {
 
   const platformsConfig = [
     { key: 'snapchat', name: 'Snapchat Ads', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/30', textColor: 'text-yellow-400', disabled: false },
-    { key: 'tiktok',   name: 'TikTok for Business', bgColor: 'bg-gray-800/50', borderColor: 'border-gray-600/30', textColor: 'text-white', disabled: true },
+    { key: 'tiktok',   name: 'TikTok for Business', bgColor: 'bg-pink-500/10', borderColor: 'border-pink-500/30', textColor: 'text-pink-400', disabled: false },
     { key: 'meta',     name: 'Meta (Facebook/Instagram)', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', textColor: 'text-blue-400', disabled: true },
     { key: 'google',   name: 'Google Ads', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', textColor: 'text-green-400', disabled: true },
   ];
