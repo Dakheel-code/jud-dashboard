@@ -83,13 +83,17 @@ export async function GET(
     const endTime = toSnapEndTime(end);
     const conversionRate = (integration.currency || 'USD') === 'USD' ? USD_TO_SAR : 1;
 
-    // جلب Ad Squads
-    const squadsRes = await fetch(`${SNAPCHAT_API_URL}/campaigns/${campaignId}/adsquads`, { headers });
+    // جلب Ad Squads عبر adaccounts (المسار الصحيح في Snapchat API)
+    const squadsUrl = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?limit=100`;
+    const squadsRes = await fetch(squadsUrl, { headers });
     if (!squadsRes.ok) {
-      return NextResponse.json({ success: false, error: 'Failed to fetch ad squads' }, { status: squadsRes.status });
+      const errText = await squadsRes.text().catch(() => '');
+      return NextResponse.json({ success: false, error: 'Failed to fetch ad squads', detail: errText }, { status: squadsRes.status });
     }
     const squadsData = await squadsRes.json();
-    const rawSquads = squadsData.adsquads || [];
+    // فلترة المجموعات التابعة لهذه الحملة فقط
+    const allSquads = squadsData.adsquads || [];
+    const rawSquads = allSquads.filter((s: any) => s.adsquad?.campaign_id === campaignId);
 
     const squads = rawSquads.map((s: any) => ({
       id: s.adsquad?.id,
