@@ -209,25 +209,27 @@ export async function updateSelectedAdAccount(
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase
+  // حذف السجل القديم ثم إدراج جديد لضمان الحفظ دائماً
+  await supabase
     .from('ad_platform_accounts')
-    .update({
+    .delete()
+    .eq('store_id', storeId)
+    .eq('platform', platform);
+
+  const { error } = await supabase
+    .from('ad_platform_accounts')
+    .insert({
+      store_id: storeId,
+      platform,
       ad_account_id: adAccount.id,
       ad_account_name: adAccount.name,
       organization_id: adAccount.organizationId || null,
       status: 'connected',
       last_connected_at: new Date().toISOString(),
       error_message: null,
-    })
-    .eq('store_id', storeId)
-    .eq('platform', platform)
-    .select('id');
+    });
 
   if (error) {
-    throw new Error('Failed to update ad account');
-  }
-
-  if (!data || data.length === 0) {
-    throw new Error('Ad platform token record not found. Please re-connect the platform.');
+    throw new Error('Failed to save ad account: ' + error.message);
   }
 }

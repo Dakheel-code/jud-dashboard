@@ -146,32 +146,34 @@ export async function POST(request: NextRequest) {
 
     const source = sourceRecords[0];
 
-    // نسخ السجل للمتجر الجديد (upsert)
-    const { error: upsertError } = await supabase
+    // حذف السجل القديم ثم إدراج جديد (لتجنب مشكلة constraint name في upsert)
+    await supabase
       .from('ad_platform_accounts')
-      .upsert(
-        {
-          store_id: storeId,
-          platform: 'snapchat',
-          status: 'connected',
-          external_user_id: source.external_user_id,
-          external_display_name: source.external_display_name,
-          organization_id: source.organization_id,
-          ad_account_id: source.ad_account_id,
-          ad_account_name: source.ad_account_name,
-          scopes: source.scopes,
-          access_token_enc: source.access_token_enc,
-          refresh_token_enc: source.refresh_token_enc,
-          token_expires_at: source.token_expires_at,
-          last_connected_at: new Date().toISOString(),
-          error_message: null,
-        },
-        { onConflict: 'store_id,platform' }
-      );
+      .delete()
+      .eq('store_id', storeId)
+      .eq('platform', 'snapchat');
 
-    if (upsertError) {
+    const { error: insertError } = await supabase
+      .from('ad_platform_accounts')
+      .insert({
+        store_id: storeId,
+        platform: 'snapchat',
+        status: 'connected',
+        external_user_id: source.external_user_id,
+        organization_id: source.organization_id,
+        ad_account_id: source.ad_account_id,
+        ad_account_name: source.ad_account_name,
+        scopes: source.scopes,
+        access_token_enc: source.access_token_enc,
+        refresh_token_enc: source.refresh_token_enc,
+        token_expires_at: source.token_expires_at,
+        last_connected_at: new Date().toISOString(),
+        error_message: null,
+      });
+
+    if (insertError) {
       return NextResponse.json(
-        { error: 'Failed to attach account: ' + upsertError.message },
+        { error: 'Failed to attach account: ' + insertError.message },
         { status: 500 }
       );
     }
