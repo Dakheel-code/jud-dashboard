@@ -40,10 +40,19 @@ export async function GET(request: NextRequest) {
     }
 
     // جلب حالة جميع المنصات للمتجر
-    const { data: accounts, error } = await supabase
-      .from('ad_platform_accounts')
-      .select('platform, status, ad_account_id, ad_account_name, organization_id, last_connected_at, error_message')
-      .eq('store_id', resolvedId);
+    const [{ data: accounts, error }, { data: metaConn }] = await Promise.all([
+      supabase
+        .from('ad_platform_accounts')
+        .select('platform, status, ad_account_id, ad_account_name, organization_id, last_connected_at, error_message')
+        .eq('store_id', resolvedId),
+      supabase
+        .from('store_meta_connections')
+        .select('ad_account_id, ad_account_name, status, last_sync_at')
+        .eq('store_id', resolvedId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+    ]);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch status' }, { status: 500 });
@@ -67,6 +76,17 @@ export async function GET(request: NextRequest) {
         error_message: acc.error_message,
       };
     });
+
+    // دمج حالة Meta من store_meta_connections
+    if (metaConn?.ad_account_id) {
+      const metaStatus = metaConn.status === 'active' || metaConn.status === 'connected' ? 'connected' : metaConn.status || 'connected';
+      platforms['meta'] = {
+        status: metaStatus,
+        ad_account_id: metaConn.ad_account_id,
+        ad_account_name: metaConn.ad_account_name,
+        last_connected_at: metaConn.last_sync_at,
+      };
+    }
 
     return NextResponse.json({
       success: true,

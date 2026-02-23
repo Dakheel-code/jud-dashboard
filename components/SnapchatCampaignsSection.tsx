@@ -364,7 +364,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   // المنصات المتصلة
   const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
   const metaConnected = !!metaConn?.ad_account_id && (metaConn?.status === 'active' || metaConn?.status === 'connected');
-  const connectedCount = [snapConnected, metaConnected, googleAdsConnected].filter(Boolean).length;
+  const tiktokConnected = directIntegrations?.tiktok?.status === 'connected' && !!directIntegrations?.tiktok?.ad_account_id;
+  const connectedCount = [snapConnected, metaConnected, googleAdsConnected, tiktokConnected].filter(Boolean).length;
 
   // بناء صفوف الجدول
   const rows: PlatformRow[] = ALL_PLATFORMS.map(key => {
@@ -389,6 +390,13 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       key, name: cfg.name, icon: cfg.icon,
       connected: googleAdsConnected,
       accountName: googleAdsAccountName,
+      spend: 0, sales: 0, orders: 0, roas: 0, loading: false,
+    };
+    // tiktok
+    if (key === 'tiktok') return {
+      key, name: cfg.name, icon: cfg.icon,
+      connected: tiktokConnected,
+      accountName: directIntegrations?.tiktok?.ad_account_name,
       spend: 0, sales: 0, orders: 0, roas: 0, loading: false,
     };
     return { key, name: cfg.name, icon: cfg.icon, connected: false, spend: 0, sales: 0, orders: 0, roas: 0, loading: false };
