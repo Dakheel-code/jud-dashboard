@@ -37,9 +37,12 @@ function AdSquadsRow({ storeId, campaign, range }: { storeId: string; campaign: 
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`/api/stores/${storeId}/snapchat/campaigns/${campaign.campaign_id}/adsquads?range=${range}`)
+    const url = `/api/stores/${storeId}/snapchat/campaigns/${campaign.campaign_id}/adsquads?range=${range}`;
+    console.log('[AdSquadsRow] fetching:', url);
+    fetch(url)
       .then(r => r.json())
       .then(d => {
+        console.log('[AdSquadsRow] response:', d);
         setDebugInfo(d);
         if (d.success) setSquads(d.ad_squads || []);
       })
