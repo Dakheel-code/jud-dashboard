@@ -263,6 +263,7 @@ export default function SnapchatCampaigns({ storeId, range }: Props) {
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
@@ -319,9 +320,12 @@ export default function SnapchatCampaigns({ storeId, range }: Props) {
     setExpandedCampaign(prev => prev === campaignId ? null : campaignId);
   };
 
-  const filtered = campaigns.filter(c =>
-    c.campaign_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = campaigns
+    .filter(c => c.campaign_name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => b.campaign_id.localeCompare(a.campaign_id));
+
+  const PAGE = 10;
+  const visible = showAll ? filtered : filtered.slice(0, PAGE);
 
   const summaryCards = summary ? [
     { label: 'الصرف', value: fmtSAR(summary.spend), cls: 'from-orange-500/20 to-orange-600/10 border-orange-500/20' },
@@ -411,7 +415,7 @@ export default function SnapchatCampaigns({ storeId, range }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(c => (
+                {visible.map(c => (
                   <>
                     <tr
                       key={c.campaign_id}
@@ -473,6 +477,27 @@ export default function SnapchatCampaigns({ storeId, range }: Props) {
                 ))}
               </tbody>
             </table>
+            {/* زر المزيد */}
+            {!showAll && filtered.length > PAGE && (
+              <div className="p-4 border-t border-purple-500/20 text-center">
+                <button
+                  onClick={() => setShowAll(true)}
+                  className="px-5 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30 text-sm transition-colors"
+                >
+                  عرض المزيد ({filtered.length - PAGE} حملة إضافية)
+                </button>
+              </div>
+            )}
+            {showAll && filtered.length > PAGE && (
+              <div className="p-4 border-t border-purple-500/20 text-center">
+                <button
+                  onClick={() => setShowAll(false)}
+                  className="px-5 py-2 rounded-lg bg-purple-900/30 text-purple-400 hover:bg-purple-900/50 border border-purple-500/20 text-sm transition-colors"
+                >
+                  عرض أقل
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
