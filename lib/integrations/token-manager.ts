@@ -104,7 +104,8 @@ export async function getValidAccessToken(
         status: 'connected',
         error_message: null,
       })
-      .eq('id', record.id);
+      .eq('store_id', storeId)
+      .eq('platform', platform);
 
     return newTokens.access_token;
   } catch (err) {
@@ -116,7 +117,8 @@ export async function getValidAccessToken(
         status: 'needs_reauth',
         error_message: err instanceof Error ? err.message : 'Token refresh failed',
       })
-      .eq('id', record.id);
+      .eq('store_id', storeId)
+      .eq('platform', platform);
 
     return null;
   }

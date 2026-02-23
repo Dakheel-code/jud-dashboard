@@ -387,7 +387,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const snapDataFetchedRef = useRef(false);
   useEffect(() => {
     if (!storeId || snapDataFetchedRef.current) return;
-    const snapConn = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
+    const st = internalIntegrations?.snapchat?.status;
+    const snapConn = (st === 'connected' || st === 'needs_reauth') && !!internalIntegrations?.snapchat?.ad_account_id;
     if (!snapConn) return;
     snapDataFetchedRef.current = true;
     fetchSnap(datePreset);
@@ -422,7 +423,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const totalRoas   = totalSpend > 0 ? totalSales / totalSpend : 0;
 
   // المنصات المتصلة
-  const snapConnected = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
+  const snapStatus = internalIntegrations?.snapchat?.status;
+  const snapConnected = (snapStatus === 'connected' || snapStatus === 'needs_reauth') && !!internalIntegrations?.snapchat?.ad_account_id;
   const metaConnected = !!metaConn?.ad_account_id && (metaConn?.status === 'active' || metaConn?.status === 'connected');
   const tiktokConnected = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
   const connectedCount = [snapConnected, metaConnected, googleAdsConnected, tiktokConnected].filter(Boolean).length;

@@ -127,7 +127,8 @@ export async function refreshToken({
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to refresh token: ${response.status}`);
+    console.error('[Snapchat refreshToken] failed:', response.status, errorText);
+    throw new Error(`Failed to refresh token: ${response.status} - ${errorText}`);
   }
 
   return response.json();
