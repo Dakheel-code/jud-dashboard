@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Announcement {
   id: string;
@@ -16,10 +16,11 @@ interface Announcement {
 
 export default function UrgentAnnouncementModal() {
   const [urgentAnnouncement, setUrgentAnnouncement] = useState<Announcement | null>(null);
-  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
+  const acknowledgedIdsRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(true);
+  const currentAnnouncementRef = useRef<Announcement | null>(null);
 
-  const getUserId = useCallback((): string | null => {
+  const getUserId = (): string | null => {
     try {
       const userStr = localStorage.getItem('admin_user');
       if (!userStr) return null;
@@ -28,72 +29,64 @@ export default function UrgentAnnouncementModal() {
     } catch {
       return null;
     }
-  }, []);
+  };
 
-  const fetchUrgentAnnouncement = useCallback(async () => {
+  const fetchUrgentAnnouncement = async () => {
     const userId = getUserId();
     if (!userId) return;
 
     try {
-      const timestamp = Date.now();
-      const response = await fetch(`/api/announcements/my?user_id=${userId}&t=${timestamp}`, {
+      const response = await fetch(`/api/announcements/my?user_id=${userId}&t=${Date.now()}`, {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 'Cache-Control': 'no-cache, no-store' }
       });
-      if (!response.ok) return;
+      if (!response.ok || !isMountedRef.current) return;
       
       const data = await response.json();
-      if (!isMountedRef.current) return;
+      const announcements: Announcement[] = data.announcements || [];
 
-      const announcements = data.announcements || [];
       const unreadUrgent = announcements.find(
-        (a: Announcement) => a.type === 'urgent' && !a.read_at && !acknowledgedIds.has(a.id)
+        (a) => a.type === 'urgent' && !a.read_at && !acknowledgedIdsRef.current.has(a.id)
       );
-      
-      if (unreadUrgent && !urgentAnnouncement) {
+
+      if (unreadUrgent && !currentAnnouncementRef.current) {
+        currentAnnouncementRef.current = unreadUrgent;
         setUrgentAnnouncement(unreadUrgent);
       }
-    } catch (error) {
-    }
-  }, [getUserId, acknowledgedIds, urgentAnnouncement]);
+    } catch {}
+  };
 
-  const markAsRead = useCallback(async (announcementId: string) => {
+  const markAsRead = async (announcementId: string) => {
     const userId = getUserId();
     if (!userId) return;
-
     try {
       await fetch(`/api/announcements/${announcementId}/read`, {
         method: 'POST',
-        cache: 'no-store',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId })
       });
-    } catch (error) {
-    }
-  }, [getUserId]);
+    } catch {}
+  };
 
-  const handleAcknowledge = useCallback(async () => {
+  const handleAcknowledge = async () => {
     if (!urgentAnnouncement) return;
-    
     const id = urgentAnnouncement.id;
-    setAcknowledgedIds(prev => new Set(prev).add(id));
+    acknowledgedIdsRef.current.add(id);
+    currentAnnouncementRef.current = null;
     setUrgentAnnouncement(null);
     await markAsRead(id);
-  }, [urgentAnnouncement, markAsRead]);
+  };
 
   useEffect(() => {
     isMountedRef.current = true;
     fetchUrgentAnnouncement();
-    
-    const interval = setInterval(fetchUrgentAnnouncement, 120000);
+    const interval = setInterval(fetchUrgentAnnouncement, 15000);
     return () => {
       isMountedRef.current = false;
       clearInterval(interval);
     };
-  }, [fetchUrgentAnnouncement]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!urgentAnnouncement) return null;
 
