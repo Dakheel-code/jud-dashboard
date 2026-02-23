@@ -222,11 +222,20 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapAllCampaigns, setSnapAllCampaigns] = useState<any[]>([]);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
-  const snapFetchedRef = useRef(false);
-  const tiktokFetchedRef = useRef(false);
-  const directIntRef = useRef(directIntegrations);
+  // جلب حالة المنصات بشكل مستقل من الخارج
+  const [internalIntegrations, setInternalIntegrations] = useState<Record<string, any>>(directIntegrations || {});
   useEffect(() => {
-    directIntRef.current = directIntegrations;
+    if (!storeId) return;
+    fetch(`/api/integrations/status?storeId=${storeId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.success && d.platforms) setInternalIntegrations(d.platforms); })
+      .catch(() => {});
+  }, [storeId]);
+  // دمج directIntegrations الخارجي إذا وصل متأخراً
+  useEffect(() => {
+    if (directIntegrations && Object.keys(directIntegrations).length > 0) {
+      setInternalIntegrations(prev => ({ ...prev, ...directIntegrations }));
+    }
   }, [directIntegrations]);
 
   // ─── Google Ads Connection State ──────────────────────
@@ -378,14 +387,14 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     finally { setTiktokLoading(false); }
   }, [storeId]);
 
-  // جلب البيانات عند وصول directIntegrations أو تغيير الفترة
+  // جلب البيانات عند وصول internalIntegrations أو تغيير الفترة
   useEffect(() => {
     if (!storeId) return;
-    const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
-    const tiktokConn = directIntegrations?.tiktok?.status === 'connected' && !!directIntegrations?.tiktok?.ad_account_id;
-    if (snapConnected) fetchSnap(datePreset);
+    const snapConn = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
+    const tiktokConn = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
+    if (snapConn) fetchSnap(datePreset);
     if (tiktokConn) fetchTikTok(datePreset);
-  }, [directIntegrations, storeId, datePreset]);
+  }, [internalIntegrations, storeId, datePreset]);
 
   // حساب الإجماليات
   const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0) + (tiktokData?.spend  || 0);
@@ -394,9 +403,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const totalRoas   = totalSpend > 0 ? totalSales / totalSpend : 0;
 
   // المنصات المتصلة
-  const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
+  const snapConnected = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
   const metaConnected = !!metaConn?.ad_account_id && (metaConn?.status === 'active' || metaConn?.status === 'connected');
-  const tiktokConnected = directIntegrations?.tiktok?.status === 'connected' && !!directIntegrations?.tiktok?.ad_account_id;
+  const tiktokConnected = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
   const connectedCount = [snapConnected, metaConnected, googleAdsConnected, tiktokConnected].filter(Boolean).length;
 
   // بناء صفوف الجدول
@@ -405,7 +414,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     if (key === 'snapchat') return {
       key, name: cfg.name, icon: cfg.icon,
       connected: snapConnected,
-      accountName: directIntegrations?.snapchat?.ad_account_name,
+      accountName: internalIntegrations?.snapchat?.ad_account_name,
       spend: snapData?.spend || 0, sales: snapData?.sales || 0,
       orders: snapData?.orders || 0, roas: snapData?.roas || 0,
       loading: snapLoading,
@@ -413,7 +422,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     if (key === 'meta') return {
       key, name: cfg.name, icon: cfg.icon,
       connected: metaConnected,
-      accountName: directIntegrations?.meta?.ad_account_name,
+      accountName: internalIntegrations?.meta?.ad_account_name,
       spend: metaData?.spend || 0, sales: metaData?.sales || 0,
       orders: metaData?.orders || 0, roas: metaData?.roas || 0,
       loading: false,
@@ -428,7 +437,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     if (key === 'tiktok') return {
       key, name: cfg.name, icon: cfg.icon,
       connected: tiktokConnected,
-      accountName: directIntegrations?.tiktok?.ad_account_name,
+      accountName: internalIntegrations?.tiktok?.ad_account_name,
       spend: tiktokData?.spend || 0,
       sales: tiktokData?.sales || 0,
       orders: tiktokData?.orders || 0,
