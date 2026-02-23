@@ -17,10 +17,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-interface AdSquad {
-  id: string; name: string; status: string;
-}
-
 interface Props {
   storeId: string;
   campaign: Campaign;
