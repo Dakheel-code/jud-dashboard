@@ -87,6 +87,6 @@ export async function POST(req: NextRequest) {
       redirect: `/admin/store/${store?.store_url || storeId}`,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message, stack: err.stack?.slice(0, 300) }, { status: 500 });
   }
 }

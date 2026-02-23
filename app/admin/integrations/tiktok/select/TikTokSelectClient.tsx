@@ -18,6 +18,7 @@ function TikTokSelectContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [accounts, setAccounts] = useState<AdAccount[]>([]);
   const [selected, setSelected] = useState<AdAccount | null>(null);
   const [search, setSearch] = useState('');
@@ -59,13 +60,14 @@ function TikTokSelectContent() {
         }),
       });
       const data = await res.json();
+      setDebugInfo(data);
       if (data.success) {
         router.push(data.redirect || `/admin/store/${storeId}?tiktok=connected`);
       } else {
         setError(data.error || 'فشل في حفظ الحساب');
       }
-    } catch {
-      setError('خطأ في الاتصال');
+    } catch (e: any) {
+      setError('خطأ في الاتصال: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -163,6 +165,13 @@ function TikTokSelectContent() {
                 </button>
               ))}
             </div>
+
+            {/* Debug */}
+            {debugInfo && !debugInfo.success && (
+              <pre className="mb-4 text-[10px] text-red-300 bg-red-900/20 rounded p-2 overflow-x-auto">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            )}
 
             {/* Buttons */}
             <div className="flex gap-3">
