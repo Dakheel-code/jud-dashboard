@@ -21,11 +21,23 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    // تحويل storeId من store_url إلى UUID إذا لزم
+    let resolvedStoreId = storeId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores').select('id').eq('store_url', storeId).single();
+      if (!storeRow?.id) {
+        return NextResponse.json({ success: false, error: `Store not found for: ${storeId}` }, { status: 404 });
+      }
+      resolvedStoreId = storeRow.id;
+    }
+
     // جلب السجل الحالي أولاً
     const { data: existing } = await supabase
       .from('ad_platform_accounts')
       .select('id, access_token_enc')
-      .eq('store_id', storeId)
+      .eq('store_id', resolvedStoreId)
       .eq('platform', 'tiktok')
       .single();
 
@@ -48,19 +60,23 @@ export async function POST(req: NextRequest) {
       const { data: conn } = await supabase
         .from('tiktok_connections')
         .select('access_token_enc')
-        .eq('store_id', storeId)
+        .eq('store_id', resolvedStoreId)
         .order('connected_at', { ascending: false })
         .limit(1)
         .single();
 
       if (!conn?.access_token_enc) {
-        return NextResponse.json({ success: false, error: 'Token not found. Please reconnect TikTok.' }, { status: 400 });
+        return NextResponse.json({
+          success: false,
+          error: 'Token not found. Please reconnect TikTok.',
+          debug: { resolvedStoreId, originalStoreId: storeId }
+        }, { status: 400 });
       }
 
       const { error } = await supabase
         .from('ad_platform_accounts')
         .insert({
-          store_id: storeId,
+          store_id: resolvedStoreId,
           platform: 'tiktok',
           ad_account_id,
           ad_account_name,
@@ -78,7 +94,7 @@ export async function POST(req: NextRequest) {
     const { data: store } = await supabase
       .from('stores')
       .select('store_url')
-      .eq('id', storeId)
+      .eq('id', resolvedStoreId)
       .single();
 
     return NextResponse.json({

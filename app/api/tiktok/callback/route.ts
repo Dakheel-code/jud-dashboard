@@ -27,26 +27,28 @@ export async function GET(req: NextRequest) {
 
     const { access_token, advertiser_ids } = tokenRes.data;
 
-    // حفظ التوكن في ad_platform_accounts (نفس جدول Snapchat)
-    // TikTok لا يُرجع expires_in — نضع 30 يوم افتراضي
-    const THIRTY_DAYS = 30 * 24 * 60 * 60;
-    await saveTokens(storeId, 'tiktok', {
-      accessToken: access_token,
-      expiresIn: THIRTY_DAYS,
-      externalUserId: advertiser_ids?.[0] || undefined,
-    });
-
-    // حفظ قائمة advertiser_ids في جدول مساعد للاختيار لاحقاً
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // تحويل storeId من store_url إلى UUID إذا لزم
+    let resolvedStoreId = storeId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: storeRow } = await supabase
+        .from('stores').select('id').eq('store_url', storeId).single();
+      if (storeRow?.id) resolvedStoreId = storeRow.id;
+    }
+
+    // حفظ التوكن في tiktok_connections (مشفر) لكل advertiser
+    const encToken = encrypt(access_token);
     await supabase.from('tiktok_connections').upsert(
       advertiser_ids.map((id: string) => ({
-        store_id: storeId,
+        store_id: resolvedStoreId,
         app_id: process.env.TIKTOK_APP_ID!,
         advertiser_id: id,
-        access_token_enc: encrypt(access_token),
+        access_token_enc: encToken,
         is_active: true,
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -54,9 +56,9 @@ export async function GET(req: NextRequest) {
       { onConflict: 'store_id,advertiser_id' }
     );
 
-    // إعادة لصفحة اختيار الحساب الإعلاني
+    // إعادة لصفحة اختيار الحساب الإعلاني مع UUID
     return NextResponse.redirect(
-      `${APP_URL}/admin/integrations/tiktok/select?storeId=${storeId}`
+      `${APP_URL}/admin/integrations/tiktok/select?storeId=${resolvedStoreId}`
     );
   } catch (error: any) {
     console.error('[TikTok Callback]', error);
