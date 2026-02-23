@@ -62,7 +62,10 @@ function TikTokSelectContent() {
       const data = await res.json();
       setDebugInfo(data);
       if (data.success) {
-        router.push(data.redirect || `/admin/store/${storeId}?tiktok=connected`);
+        // data.redirect = /admin/store/{store_url}
+        // نُضيف /integrations للعودة لصفحة الربط مع إظهار حالة "متصل"
+        const base = data.redirect || `/admin/store/${storeId}`;
+        router.push(`${base}/integrations?tiktok=connected`);
       } else {
         setError(data.error || 'فشل في حفظ الحساب');
       }
