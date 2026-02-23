@@ -1,180 +1,88 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useBranding } from '@/contexts/BrandingContext';
 import dynamic from 'next/dynamic';
 
-const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean; externalPreset?: string; onSummaryLoaded?: (s: any) => void }>(
-  () => import('@/components/MetaAdsCard'), { ssr: false }
+const SnapchatCampaigns = dynamic(
+  () => import('@/components/ads/SnapchatCampaigns'),
+  { ssr: false, loading: () => <LoadingSpinner /> }
+);
+const MetaAdsCard = dynamic(
+  () => import('@/components/MetaAdsCard'),
+  { ssr: false, loading: () => <LoadingSpinner /> }
+);
+const TikTokCampaigns = dynamic(
+  () => import('@/components/TikTokCampaigns'),
+  { ssr: false, loading: () => <LoadingSpinner /> }
+);
+const GoogleAdsCampaigns = dynamic(
+  () => import('@/components/GoogleAdsCampaigns'),
+  { ssr: false, loading: () => <LoadingSpinner /> }
 );
 
-const TikTokCampaigns = dynamic<{ storeId: string }>(
-  () => import('@/components/TikTokCampaigns'), { ssr: false }
-);
-
-const GoogleAdsCampaigns = dynamic<{ storeId: string }>(
-  () => import('@/components/GoogleAdsCampaigns'), { ssr: false }
-);
-
-interface Store {
-  id: string;
-  store_name: string;
-  store_url: string;
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center py-16">
+      <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+    </div>
+  );
 }
 
-interface SnapchatStatus {
-  connected: boolean;
-  needs_reauth: boolean;
-  ad_account_selected: boolean;
-  ad_account_name: string | null;
-  ad_account_id: string | null;
-}
+interface Store { id: string; store_name: string; store_url: string; }
 
-interface Campaign {
-  campaign_id: string;
-  campaign_name: string;
-  status: string;
-  spend: number;
-  impressions: number;
-  swipes: number;
-  orders: number;
-  sales: number;
-  cpa: number;
-  roas: number;
-}
+type Platform = 'snapchat' | 'meta' | 'tiktok' | 'google';
+type Range = 'today' | 'yesterday' | '7d' | '30d' | '90d';
 
-interface CampaignsData {
-  success: boolean;
-  summary: {
-    spend: number;
-    impressions: number;
-    swipes: number;
-    orders: number;
-    sales: number;
-    roas: number;
-    cpa: number;
-  };
-  campaigns_with_stats: Campaign[];
-  campaigns?: Campaign[];
-}
+const PLATFORMS: { key: Platform; label: string; color: string }[] = [
+  { key: 'snapchat', label: '👻 Snapchat', color: 'yellow' },
+  { key: 'meta', label: '📘 Meta Ads', color: 'blue' },
+  { key: 'tiktok', label: '🎵 TikTok', color: 'pink' },
+  { key: 'google', label: '🔍 Google Ads', color: 'green' },
+];
+
+const RANGES: { key: Range; label: string }[] = [
+  { key: 'today', label: 'اليوم' },
+  { key: 'yesterday', label: 'أمس' },
+  { key: '7d', label: '7 أيام' },
+  { key: '30d', label: '30 يوم' },
+  { key: '90d', label: '90 يوم' },
+];
 
 function CampaignsContent() {
   const { branding } = useBranding();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const urlStoreId = searchParams.get('storeId');
 
-  // States
   const [stores, setStores] = useState<Store[]>([]);
   const [loadingStores, setLoadingStores] = useState(true);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [storeSearch, setStoreSearch] = useState('');
   const [showStoreDropdown, setShowStoreDropdown] = useState(false);
-
-  const [snapchatStatus, setSnapchatStatus] = useState<SnapchatStatus | null>(null);
-  const [loadingStatus, setLoadingStatus] = useState(false);
-
-  const [campaignsData, setCampaignsData] = useState<CampaignsData | null>(null);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
-  const [campaignsError, setCampaignsError] = useState<string | null>(null);
-
-  const [activePlatform, setActivePlatform] = useState<'snapchat' | 'meta' | 'tiktok' | 'google'>('snapchat');
-  const [range, setRange] = useState<'today' | 'yesterday' | '7d' | '30d' | '90d'>('7d');
-  const [metaConnected, setMetaConnected] = useState<boolean | null>(null);
-  const [campaignSearch, setCampaignSearch] = useState('');
-  const [visibleCampaigns, setVisibleCampaigns] = useState(5);
-  
-  // التحكم في الحملات
-  const [updatingCampaign, setUpdatingCampaign] = useState<string | null>(null);
-  const [showBudgetModal, setShowBudgetModal] = useState<string | null>(null);
-  const [budgetValue, setBudgetValue] = useState('');
-  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activePlatform, setActivePlatform] = useState<Platform>('snapchat');
+  const [range, setRange] = useState<Range>('7d');
 
   // Load stores
   useEffect(() => {
-    fetchStores();
+    fetch('/api/admin/stores')
+      .then(r => r.json())
+      .then(d => { if (d.stores) setStores(d.stores); })
+      .catch(() => {})
+      .finally(() => setLoadingStores(false));
   }, []);
 
-  // Load from localStorage or URL
+  // Restore selected store from URL or localStorage
   useEffect(() => {
+    const urlStoreId = searchParams.get('storeId');
     if (urlStoreId) {
       setSelectedStoreId(urlStoreId);
       localStorage.setItem('lastSelectedStoreId', urlStoreId);
     } else {
-      const lastStore = localStorage.getItem('lastSelectedStoreId');
-      if (lastStore) {
-        setSelectedStoreId(lastStore);
-      }
+      const saved = localStorage.getItem('lastSelectedStoreId');
+      if (saved) setSelectedStoreId(saved);
     }
-  }, [urlStoreId]);
-
-  // Fetch status and campaigns when store changes
-  useEffect(() => {
-    if (selectedStoreId) {
-      fetchSnapchatStatus();
-      fetchCampaigns();
-      fetchMetaStatus();
-    }
-  }, [selectedStoreId, range]);
-
-  const fetchMetaStatus = async () => {
-    if (!selectedStoreId) return;
-    try {
-      const res = await fetch(`/api/meta/connection?storeId=${selectedStoreId}`);
-      if (res.ok) {
-        const d = await res.json();
-        setMetaConnected(!!(d.connection?.ad_account_id));
-      } else {
-        setMetaConnected(false);
-      }
-    } catch { setMetaConnected(false); }
-  };
-
-  const fetchStores = async () => {
-    try {
-      const response = await fetch('/api/admin/stores');
-      const result = await response.json();
-      if (result.stores) {
-        setStores(result.stores);
-      }
-    } catch (err) {
-    } finally {
-      setLoadingStores(false);
-    }
-  };
-
-  const fetchSnapchatStatus = async () => {
-    if (!selectedStoreId) return;
-    setLoadingStatus(true);
-    try {
-      const response = await fetch(`/api/stores/${selectedStoreId}/snapchat/status`);
-      const result = await response.json();
-      setSnapchatStatus(result);
-    } catch (err) {
-    } finally {
-      setLoadingStatus(false);
-    }
-  };
-
-  const fetchCampaigns = async () => {
-    if (!selectedStoreId) return;
-    setLoadingCampaigns(true);
-    setCampaignsError(null);
-    try {
-      const response = await fetch(`/api/stores/${selectedStoreId}/snapchat/campaigns?range=${range}`);
-      const result = await response.json();
-      if (result.success) {
-        setCampaignsData(result);
-      } else {
-        setCampaignsError(result.error || 'Failed to fetch campaigns');
-      }
-    } catch (err) {
-      setCampaignsError('Network error');
-    } finally {
-      setLoadingCampaigns(false);
-    }
-  };
+  }, [searchParams]);
 
   const handleStoreSelect = (store: Store) => {
     setSelectedStoreId(store.id);
@@ -184,619 +92,149 @@ function CampaignsContent() {
     router.push(`/admin/campaigns?storeId=${store.id}`);
   };
 
-  // إيقاف/استئناف الحملة
-  const toggleCampaignStatus = async (campaignId: string, currentStatus: string) => {
-    if (!selectedStoreId) return;
-    
-    setUpdatingCampaign(campaignId);
-    setActionMessage(null);
-    
-    try {
-      const action = currentStatus === 'ACTIVE' ? 'pause' : 'resume';
-      const response = await fetch(`/api/admin/campaigns/${campaignId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: selectedStoreId, action })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setActionMessage({ type: 'success', text: result.message });
-        // تحديث الحملات
-        fetchCampaigns();
-      } else {
-        setActionMessage({ type: 'error', text: result.error || 'فشل في تحديث الحملة' });
-      }
-    } catch (err) {
-      setActionMessage({ type: 'error', text: 'خطأ في الاتصال' });
-    } finally {
-      setUpdatingCampaign(null);
-      setTimeout(() => setActionMessage(null), 3000);
-    }
-  };
-
-  // تحديث ميزانية الحملة
-  const updateCampaignBudget = async () => {
-    if (!selectedStoreId || !showBudgetModal || !budgetValue) return;
-    
-    setUpdatingCampaign(showBudgetModal);
-    setActionMessage(null);
-    
-    try {
-      // تحويل الميزانية إلى micro (× 1,000,000)
-      const budgetMicro = parseFloat(budgetValue) * 1000000;
-      
-      const response = await fetch(`/api/admin/campaigns/${showBudgetModal}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId: selectedStoreId, daily_budget_micro: budgetMicro })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setActionMessage({ type: 'success', text: 'تم تحديث الميزانية بنجاح' });
-        setShowBudgetModal(null);
-        setBudgetValue('');
-        fetchCampaigns();
-      } else {
-        setActionMessage({ type: 'error', text: result.error || 'فشل في تحديث الميزانية' });
-      }
-    } catch (err) {
-      setActionMessage({ type: 'error', text: 'خطأ في الاتصال' });
-    } finally {
-      setUpdatingCampaign(null);
-      setTimeout(() => setActionMessage(null), 3000);
-    }
-  };
-
   const selectedStore = stores.find(s => s.id === selectedStoreId);
-  const filteredStores = stores.filter(s => 
+  const filteredStores = stores.filter(s =>
     s.store_name.toLowerCase().includes(storeSearch.toLowerCase()) ||
     s.store_url.toLowerCase().includes(storeSearch.toLowerCase())
   );
 
-  const filteredCampaigns = (campaignsData?.campaigns_with_stats ?? campaignsData?.campaigns ?? []).filter(c =>
-    c.campaign_name.toLowerCase().includes(campaignSearch.toLowerCase())
-  );
-
   return (
-    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8 relative overflow-hidden">
-<div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[#0a0118] pb-20 lg:pb-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <img src={branding.logo || '/logo.png'} alt={branding.companyName || 'Logo'} className="w-14 h-14 sm:w-20 sm:h-20 object-contain" />
-            <div className="h-12 sm:h-16 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent"></div>
-            <div>
-              <h1 className="text-xl sm:text-3xl text-white mb-1 uppercase" style={{ fontFamily: "'Codec Pro', sans-serif", fontWeight: 900 }}>
-                الحملات الإعلانية
-              </h1>
-              <p className="text-purple-300/80 text-xs sm:text-sm">إدارة ومتابعة الحملات الإعلانية</p>
-            </div>
+        <div className="flex items-center gap-4 mb-8">
+          {branding.logo && (
+            <img src={branding.logo} alt="" className="w-14 h-14 object-contain" />
+          )}
+          <div className="h-12 w-px bg-gradient-to-b from-transparent via-purple-400/50 to-transparent" />
+          <div>
+            <h1 className="text-2xl text-white font-black">الحملات الإعلانية</h1>
+            <p className="text-purple-300/60 text-sm mt-0.5">إدارة ومتابعة الحملات الإعلانية</p>
           </div>
         </div>
 
         {/* Store Selector */}
-        <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4 mb-6 relative z-[9999]">
-          <div className="relative">
-            <label className="block text-sm text-purple-300 mb-2">اختر المتجر</label>
+        <div className="bg-purple-950/40 rounded-2xl border border-purple-500/20 p-4 mb-6 relative z-50">
+          <label className="block text-xs text-purple-400 mb-2">المتجر</label>
+          <div className="relative inline-block w-full md:w-auto">
             <button
-              onClick={() => setShowStoreDropdown(!showStoreDropdown)}
+              onClick={() => setShowStoreDropdown(v => !v)}
               className="w-full md:w-96 px-4 py-3 rounded-xl bg-purple-900/30 border border-purple-500/30 text-white text-right flex items-center justify-between hover:bg-purple-900/50 transition-colors"
             >
               {loadingStores ? (
-                <span className="text-purple-400">جاري التحميل...</span>
+                <span className="text-purple-400 text-sm">جاري التحميل...</span>
               ) : selectedStore ? (
-                <div>
+                <span>
                   <span className="font-medium">{selectedStore.store_name}</span>
                   <span className="text-purple-400 text-sm mr-2">({selectedStore.store_url})</span>
-                </div>
+                </span>
               ) : (
-                <span className="text-purple-400">اختر متجر...</span>
+                <span className="text-purple-400 text-sm">اختر متجر...</span>
               )}
-              <svg className={`w-5 h-5 text-purple-400 transition-transform ${showStoreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 text-purple-400 transition-transform shrink-0 mr-2 ${showStoreDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
             {showStoreDropdown && (
-              <div className="absolute z-[9999] mt-2 w-full md:w-96 bg-[#1a0a2e] border border-purple-500/30 rounded-xl shadow-2xl max-h-80 overflow-hidden">
+              <div className="absolute z-50 mt-1 w-full md:w-96 bg-[#1a0a2e] border border-purple-500/30 rounded-xl shadow-2xl overflow-hidden">
                 <div className="p-2 border-b border-purple-500/20">
                   <input
                     type="text"
                     value={storeSearch}
-                    onChange={(e) => setStoreSearch(e.target.value)}
+                    onChange={e => setStoreSearch(e.target.value)}
                     placeholder="بحث..."
-                    className="w-full px-3 py-2 rounded-lg bg-purple-900/30 border border-purple-500/20 text-white placeholder-purple-400 text-sm"
                     autoFocus
+                    className="w-full px-3 py-2 rounded-lg bg-purple-900/30 border border-purple-500/20 text-white placeholder-purple-400 text-sm focus:outline-none"
                   />
                 </div>
-                <div className="max-h-60 overflow-y-auto">
+                <div className="max-h-64 overflow-y-auto">
                   {filteredStores.length === 0 ? (
                     <div className="p-4 text-center text-purple-400 text-sm">لا توجد نتائج</div>
-                  ) : (
-                    filteredStores.map(store => (
-                      <button
-                        key={store.id}
-                        onClick={() => handleStoreSelect(store)}
-                        className={`w-full px-4 py-3 text-right hover:bg-purple-800/50 transition-colors ${
-                          store.id === selectedStoreId ? 'bg-purple-800/30' : ''
-                        }`}
-                      >
-                        <div className="font-medium text-white">{store.store_name}</div>
-                        <div className="text-sm text-purple-400">{store.store_url}</div>
-                      </button>
-                    ))
-                  )}
+                  ) : filteredStores.map(store => (
+                    <button
+                      key={store.id}
+                      onClick={() => handleStoreSelect(store)}
+                      className={`w-full px-4 py-3 text-right hover:bg-purple-800/40 transition-colors ${store.id === selectedStoreId ? 'bg-purple-800/30' : ''}`}
+                    >
+                      <div className="font-medium text-white text-sm">{store.store_name}</div>
+                      <div className="text-xs text-purple-400 mt-0.5">{store.store_url}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        
-        {/* Platform Tabs */}
         {selectedStoreId && (
-          <div className="flex items-center gap-2 mb-6">
-            <button
-              onClick={() => setActivePlatform('snapchat')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                activePlatform === 'snapchat'
-                  ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300'
-                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-yellow-500/30'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 512 512" fill="currentColor"><path d="M496.926,366.6c-3.373-9.176-9.8-14.086-17.112-18.153-1.376-.806-2.641-1.451-3.72-1.947-2.182-1.128-4.414-2.22-6.634-3.373-22.8-12.09-40.609-27.341-52.959-45.42a102.889,102.889,0,0,1-9.089-16.269c-1.054-2.766-.992-4.377-.065-5.954a11.249,11.249,0,0,1,3.088-2.818c2.766-1.8,5.669-3.373,8.2-4.7,4.7-2.5,8.5-4.5,10.9-5.954,7.287-4.477,12.5-9.4,15.5-14.629a24.166,24.166,0,0,0,1.863-22.031c-4.328-12.266-17.9-19.263-28.263-19.263a35.007,35.007,0,0,0-9.834,1.376c-.124.037-.236.074-.347.111,0-1.451.024-2.915.024-4.377,0-22.92-2.508-46.152-10.9-67.615C378.538,91.727,341.063,56.7,286.741,50.6a118.907,118.907,0,0,0-12.293-.621h-36.9a118.907,118.907,0,0,0-12.293.621c-54.31,6.1-91.785,41.127-110.839,84.168-8.4,21.463-10.9,44.7-10.9,67.615,0,1.462.012,2.926.024,4.377-.111-.037-.223-.074-.347-.111a35.007,35.007,0,0,0-9.834-1.376c-10.362,0-23.935,7-28.263,19.263a24.166,24.166,0,0,0,1.863,22.031c3,5.233,8.213,10.152,15.5,14.629,2.4,1.451,6.2,3.46,10.9,5.954,2.52,1.327,5.418,2.9,8.181,4.7a11.3,11.3,0,0,1,3.088,2.818c.927,1.576.989,3.187-.065,5.954a102.889,102.889,0,0,1-9.089,16.269c-12.35,18.079-30.161,33.33-52.959,45.42-2.22,1.153-4.452,2.245-6.634,3.373-1.079.5-2.344,1.141-3.72,1.947-7.312,4.067-13.739,8.977-17.112,18.153-3.6,9.834-1.044,20.882,7.6,32.838a71.2,71.2,0,0,0,33.787,19.016c4.278.2,8.7-.161,13.168-.533,3.9-.322,7.9-.657,11.778-.657a53.666,53.666,0,0,1,9.725.806c.682,1.054,1.376,2.182,2.108,3.4,4.7,7.823,11.168,18.54,24.077,29.2,13.8,11.4,32.018,21.041,57.271,28.489a12.478,12.478,0,0,1,3.633,1.54c3.088,4.278,8.083,7.947,15.259,11.242,8.362,3.844,18.8,6.746,31.1,8.635a245.762,245.762,0,0,0,37.238,2.817c12.8,0,25.371-.918,37.238-2.817,12.3-1.889,22.738-4.791,31.1-8.635,7.176-3.3,12.171-6.964,15.259-11.242a12.478,12.478,0,0,1,3.633-1.54c25.253-7.448,43.469-17.087,57.271-28.489,12.909-10.659,19.375-21.376,24.077-29.2.732-1.215,1.426-2.344,2.108-3.4a53.666,53.666,0,0,1,9.725-.806c3.881,0,7.874.335,11.778.657,4.464.372,8.89.732,13.168.533a71.2,71.2,0,0,0,33.787-19.016C497.97,387.482,500.528,376.434,496.926,366.6Z"/></svg>
-              Snapchat
-            </button>
-            <button
-              onClick={() => setActivePlatform('meta')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                activePlatform === 'meta'
-                  ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-indigo-500/30'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
-              Meta Ads
-            </button>
-            <button
-              onClick={() => setActivePlatform('tiktok')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                activePlatform === 'tiktok'
-                  ? 'bg-white/15 border-white/30 text-white'
-                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-white/20'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.73a8.19 8.19 0 004.76 1.52v-3.4a4.85 4.85 0 01-1-.16z"/></svg>
-              TikTok
-            </button>
-            <button
-              onClick={() => setActivePlatform('google')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
-                activePlatform === 'google'
-                  ? 'bg-green-500/20 border-green-500/40 text-green-300'
-                  : 'bg-purple-900/20 border-purple-500/20 text-purple-400/60 hover:border-green-500/30'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              Google Ads
-            </button>
-          </div>
-        )}
-
-        {/* Store Content */}
-        {selectedStoreId && (
-          <div className="space-y-6">
-            {/* Snapchat Status Card */}
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-yellow-400" viewBox="0 0 512 512" fill="currentColor">
-                      <path d="M496.926,366.6c-3.373-9.176-9.8-14.086-17.112-18.153..."/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-bold">Snapchat Ads</h3>
-                    {loadingStatus ? (
-                      <p className="text-yellow-400 text-sm">جاري التحقق...</p>
-                    ) : snapchatStatus?.connected ? (
-                      <p className="text-green-400 text-sm">✓ مرتبط: {snapchatStatus.ad_account_name}</p>
-                    ) : snapchatStatus?.needs_reauth ? (
-                      <p className="text-orange-400 text-sm">⚠️ يحتاج إعادة ربط</p>
-                    ) : (
-                      <p className="text-gray-400 text-sm">غير مرتبط</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {snapchatStatus?.connected ? (
-                    <>
-                      <button
-                        onClick={() => router.push(`/admin/integrations/snapchat/select?storeId=${selectedStoreId}`)}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                      >
-                        تغيير الحساب
-                      </button>
-                      <button
-                        onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${selectedStoreId}&force=true`}
-                        className="px-3 py-1.5 text-xs rounded-lg bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors"
-                      >
-                        إعادة الربط
-                      </button>
-                    </>
-                  ) : snapchatStatus?.needs_reauth ? (
-                    <button
-                      onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${selectedStoreId}&force=true`}
-                      className="px-4 py-2 rounded-lg bg-orange-500 text-white font-bold hover:bg-orange-400 transition-colors"
-                    >
-                      🔄 إعادة الربط
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => window.location.href = `/api/integrations/snapchat/start?storeId=${selectedStoreId}`}
-                      className="px-4 py-2 rounded-lg bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors"
-                    >
-                      🔗 ربط Snapchat
-                    </button>
-                  )}
-                </div>
+          <>
+            {/* Platform + Range Tabs */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              {/* Platforms */}
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActivePlatform(key)}
+                    className={`px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                      activePlatform === key
+                        ? 'bg-purple-500/30 border-purple-400/50 text-white'
+                        : 'bg-purple-900/20 border-purple-500/20 text-purple-400/70 hover:border-purple-500/40 hover:text-purple-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
+
+              {/* Range (only for Snapchat) */}
+              {activePlatform === 'snapchat' && (
+                <div className="flex gap-1.5 bg-purple-900/30 rounded-xl p-1 border border-purple-500/20">
+                  {RANGES.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setRange(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        range === key
+                          ? 'bg-purple-500/40 text-white'
+                          : 'text-purple-400/70 hover:text-purple-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Filters */}
-            {snapchatStatus?.connected && (
-              <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 p-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Range */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-purple-300">الفترة:</span>
-                    {[
-                      { value: 'today', label: 'اليوم' },
-                      { value: 'yesterday', label: 'أمس' },
-                      { value: '7d', label: '7 أيام' },
-                      { value: '30d', label: '30 يوم' },
-                      { value: '90d', label: '90 يوم' },
-                    ].map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => { setRange(option.value as 'today' | 'yesterday' | '7d' | '30d' | '90d'); }}
-                        className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                          range === option.value
-                            ? 'bg-purple-500 text-white font-bold'
-                            : 'bg-purple-900/30 text-purple-300 hover:bg-purple-800/50'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Search */}
-                  <div className="flex-1 min-w-[200px]">
-                    <input
-                      type="text"
-                      value={campaignSearch}
-                      onChange={(e) => setCampaignSearch(e.target.value)}
-                      placeholder="بحث في الحملات..."
-                      className="w-full px-3 py-2 rounded-lg bg-purple-900/30 border border-purple-500/20 text-white placeholder-purple-400 text-sm"
-                    />
-                  </div>
-
-                  {/* Refresh */}
-                  <button
-                    onClick={fetchCampaigns}
-                    disabled={loadingCampaigns}
-                    className="px-4 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors disabled:opacity-50"
-                  >
-                    {loadingCampaigns ? '⏳' : '🔄'} تحديث
-                  </button>
-                </div>
-              </div>
+            {/* Platform Content */}
+            {activePlatform === 'snapchat' && (
+              <SnapchatCampaigns storeId={selectedStoreId} range={range} />
             )}
-
-            {/* Summary Cards */}
-            {snapchatStatus?.connected && campaignsData?.summary && (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 rounded-xl p-4 border border-orange-500/20">
-                  <p className="text-xs text-orange-400 mb-1">الصرف</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.spend || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
-                  <p className="text-xs text-orange-400/70">ر.س</p>
-                </div>
-                <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
-                  <p className="text-xs text-blue-400 mb-1">الظهور</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.impressions || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-xl p-4 border border-cyan-500/20">
-                  <p className="text-xs text-cyan-400 mb-1">الضغطات</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.swipes || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl p-4 border border-green-500/20">
-                  <p className="text-xs text-green-400 mb-1">الطلبات</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.orders || 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl p-4 border border-emerald-500/20">
-                  <p className="text-xs text-emerald-400 mb-1">المبيعات</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.sales || 0).toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</p>
-                  <p className="text-xs text-emerald-400/70">ر.س</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
-                  <p className="text-xs text-purple-400 mb-1">ROAS</p>
-                  <p className={`text-xl font-bold ${(campaignsData.summary.roas || 0) < 1 ? 'text-red-400' : 'text-white'}`}>
-                    {(campaignsData.summary.roas || 0).toFixed(2)}x
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-pink-500/20 to-pink-600/10 rounded-xl p-4 border border-pink-500/20">
-                  <p className="text-xs text-pink-400 mb-1">CPA</p>
-                  <p className="text-xl font-bold text-white">{(campaignsData.summary.cpa || 0).toFixed(0)}</p>
-                  <p className="text-xs text-pink-400/70">ر.س</p>
-                </div>
-              </div>
-            )}
-
-            {/* Campaigns Table */}
-            {snapchatStatus?.connected && (
-              <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 overflow-hidden">
-                <div className="p-4 border-b border-purple-500/20">
-                  <h3 className="text-lg font-bold text-white">الحملات ({filteredCampaigns.length})</h3>
-                </div>
-
-                {loadingCampaigns ? (
-                  <div className="p-8 text-center">
-                    <div className="w-10 h-10 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-purple-400">جاري تحميل الحملات...</p>
-                  </div>
-                ) : campaignsError ? (
-                  <div className="p-8 text-center">
-                    <span className="text-3xl mb-4 block">⚠️</span>
-                    <p className="text-red-400">{campaignsError}</p>
-                  </div>
-                ) : filteredCampaigns.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <span className="text-3xl mb-4 block">📭</span>
-                    <p className="text-purple-400">لا توجد حملات في هذه الفترة</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-purple-400 text-xs border-b border-purple-500/20 bg-purple-900/20">
-                            <th className="text-right py-3 px-4">الحملة</th>
-                            <th className="text-center py-3 px-2">الحالة</th>
-                            <th className="text-center py-3 px-2">الصرف</th>
-                            <th className="text-center py-3 px-2">الظهور</th>
-                            <th className="text-center py-3 px-2">الضغطات</th>
-                            <th className="text-center py-3 px-2">الطلبات</th>
-                            <th className="text-center py-3 px-2">المبيعات</th>
-                            <th className="text-center py-3 px-2">ROAS</th>
-                            <th className="text-center py-3 px-2">الإجراءات</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredCampaigns.slice(0, visibleCampaigns).map((campaign) => (
-                            <tr key={campaign.campaign_id} className="border-t border-purple-500/10 text-white hover:bg-purple-900/20">
-                              <td className="py-3 px-4 text-right">
-                                <div className="truncate max-w-[200px]" title={campaign.campaign_name}>
-                                  {campaign.campaign_name}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  campaign.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                                  campaign.status === 'PAUSED' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-gray-500/20 text-gray-400'
-                                }`}>
-                                  {campaign.status === 'ACTIVE' ? 'نشط' : campaign.status === 'PAUSED' ? 'متوقف' : campaign.status}
-                                </span>
-                              </td>
-                              <td className="py-3 px-2 text-center text-orange-400">
-                                {campaign.spend > 0 ? campaign.spend.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                {campaign.impressions > 0 ? campaign.impressions.toLocaleString('en-US') : '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                {campaign.swipes > 0 ? campaign.swipes.toLocaleString('en-US') : '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center text-green-400">
-                                {campaign.orders > 0 ? campaign.orders.toLocaleString('en-US') : '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center text-emerald-400">
-                                {campaign.sales > 0 ? campaign.sales.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '-'}
-                              </td>
-                              <td className={`py-3 px-2 text-center ${campaign.roas < 1 ? 'text-red-400' : 'text-purple-400'}`}>
-                                {campaign.roas > 0 ? `${campaign.roas.toFixed(2)}x` : '-'}
-                              </td>
-                              <td className="py-3 px-2 text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  {/* زر إيقاف/استئناف */}
-                                  <button
-                                    onClick={() => toggleCampaignStatus(campaign.campaign_id, campaign.status)}
-                                    disabled={updatingCampaign === campaign.campaign_id}
-                                    className={`p-1.5 rounded-lg transition-colors ${
-                                      campaign.status === 'ACTIVE' 
-                                        ? 'text-yellow-400 hover:bg-yellow-500/20' 
-                                        : 'text-green-400 hover:bg-green-500/20'
-                                    } disabled:opacity-50`}
-                                    title={campaign.status === 'ACTIVE' ? 'إيقاف الحملة' : 'استئناف الحملة'}
-                                  >
-                                    {updatingCampaign === campaign.campaign_id ? (
-                                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                      </svg>
-                                    ) : campaign.status === 'ACTIVE' ? (
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                    ) : (
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                  {/* زر تعديل الميزانية */}
-                                  <button
-                                    onClick={() => setShowBudgetModal(campaign.campaign_id)}
-                                    className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-colors"
-                                    title="تعديل الميزانية"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* زر المزيد */}
-                    {filteredCampaigns.length > visibleCampaigns && (
-                      <div className="p-4 text-center border-t border-purple-500/20">
-                        <button
-                          onClick={() => setVisibleCampaigns(prev => prev + 5)}
-                          className="px-6 py-2 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors text-sm"
-                        >
-                          عرض المزيد ({filteredCampaigns.length - visibleCampaigns} حملة متبقية)
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Meta Ads Tab */}
             {activePlatform === 'meta' && (
-              metaConnected === null ? (
-                <div className="flex items-center justify-center py-12 gap-3">
-                  <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-purple-400/60">جاري التحقق...</span>
-                </div>
-              ) : metaConnected ? (
-                <MetaAdsCard
-                  storeId={selectedStoreId!}
-                  embedded
-                  externalPreset={range === '7d' ? 'last_7d' : range === '30d' ? 'last_30d' : range === '90d' ? 'last_90d' : range}
-                />
-              ) : (
-                <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-8 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-indigo-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
-                  </div>
-                  <h3 className="text-white font-bold text-lg mb-2">Meta Ads</h3>
-                  <p className="text-indigo-300/70 text-sm mb-6">لم يتم ربط Meta Ads لهذا المتجر بعد</p>
-                  <a
-                    href={`/api/meta/connect?storeId=${selectedStoreId}`}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.04c-5.5 0-10 4.49-10 10.02 0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 008.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg>
-                    ربط Meta Ads
-                  </a>
-                </div>
-              )
+              <MetaAdsCard storeId={selectedStoreId} embedded />
             )}
-
-            {/* TikTok Tab */}
-            {activePlatform === 'tiktok' && selectedStoreId && (
+            {activePlatform === 'tiktok' && (
               <TikTokCampaigns storeId={selectedStoreId} />
             )}
-
-            {/* Google Ads Tab */}
-            {activePlatform === 'google' && selectedStoreId && (
+            {activePlatform === 'google' && (
               <GoogleAdsCampaigns storeId={selectedStoreId} />
             )}
-          </div>
+          </>
         )}
 
-      {/* رسالة الإشعار */}
-      {actionMessage && (
-        <div className={`fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:w-96 p-4 rounded-xl shadow-lg z-50 ${
-          actionMessage.type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
-        } text-white`}>
-          <div className="flex items-center gap-3">
-            {actionMessage.type === 'success' ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        {!selectedStoreId && !loadingStores && (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-purple-400/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            )}
-            <span>{actionMessage.text}</span>
-          </div>
-        </div>
-      )}
-
-      {/* نافذة تعديل الميزانية */}
-      {showBudgetModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a0a2e] border border-purple-500/30 rounded-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">تعديل الميزانية اليومية</h3>
-              <button
-                onClick={() => { setShowBudgetModal(null); setBudgetValue(''); }}
-                className="text-purple-400 hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-purple-300 mb-2">الميزانية اليومية (ر.س)</label>
-                <input
-                  type="number"
-                  value={budgetValue}
-                  onChange={(e) => setBudgetValue(e.target.value)}
-                  placeholder="أدخل الميزانية اليومية"
-                  className="w-full px-4 py-3 bg-purple-900/30 border border-purple-500/30 text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-400 outline-none"
-                  min="0"
-                  step="1"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={updateCampaignBudget}
-                  disabled={!budgetValue || updatingCampaign === showBudgetModal}
-                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white rounded-xl font-medium hover:from-purple-500 hover:to-fuchsia-500 transition-all disabled:opacity-50"
-                >
-                  {updatingCampaign === showBudgetModal ? 'جاري التحديث...' : 'حفظ'}
-                </button>
-                <button
-                  onClick={() => { setShowBudgetModal(null); setBudgetValue(''); }}
-                  className="px-6 py-3 border border-purple-500/30 text-purple-300 rounded-xl hover:bg-purple-500/10 transition-all"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </div>
+            <p className="text-purple-400/60 text-lg">اختر متجراً لعرض الحملات الإعلانية</p>
           </div>
-        </div>
-      )}
-      </div>
-    </div>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <div className="p-6 flex items-center justify-center min-h-[50vh]">
-      <div className="text-center">
-        <div className="w-12 h-12 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-purple-400">جاري التحميل...</p>
+        )}
       </div>
     </div>
   );
@@ -804,7 +242,11 @@ function LoadingFallback() {
 
 export default function CampaignsClient() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0118] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+      </div>
+    }>
       <CampaignsContent />
     </Suspense>
   );
