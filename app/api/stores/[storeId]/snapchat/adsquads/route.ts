@@ -84,45 +84,19 @@ export async function GET(
     const endTime = toSnapEndTime(end);
     const conversionRate = (integration.currency || 'USD') === 'USD' ? USD_TO_SAR : 1;
 
-    // جلب Ad Squads — محاولة مع campaign_id filter أولاً
-    let rawSquads: any[] = [];
-
-    if (campaignId) {
-      const url1 = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?campaign_id=${campaignId}&limit=100`;
-      const res1 = await fetch(url1, { headers });
-      if (res1.ok) {
-        const data1 = await res1.json();
-        rawSquads = data1?.adsquads || [];
-      }
+    // جلب كل Ad Squads ثم فلترة يدوية — Snapchat لا يدعم campaign_id كـ query filter
+    const url = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?limit=200`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      return NextResponse.json({ success: false, error: 'Failed to fetch ad squads' }, { status: res.status });
     }
+    const data = await res.json();
+    const allSquads: any[] = data?.adsquads || [];
 
-    // إذا لم تنجح، جلب الكل وفلترة
-    if (rawSquads.length === 0) {
-      const url2 = `${SNAPCHAT_API_URL}/adaccounts/${integration.ad_account_id}/adsquads?limit=200`;
-      const res2 = await fetch(url2, { headers });
-      if (res2.ok) {
-        const data2 = await res2.json();
-        const all = data2?.adsquads || [];
-        rawSquads = campaignId
-          ? all.filter((s: any) => s.adsquad?.campaign_id === campaignId)
-          : all;
-
-        if (rawSquads.length === 0 && all.length > 0) {
-          return NextResponse.json({
-            success: true,
-            ad_squads: [],
-            debug: {
-              campaignId,
-              totalInAccount: all.length,
-              sampleIds: all.slice(0, 3).map((s: any) => ({
-                squad_id: s.adsquad?.id,
-                campaign_id: s.adsquad?.campaign_id,
-              })),
-            }
-          });
-        }
-      }
-    }
+    // فلترة بـ campaign_id
+    const rawSquads = campaignId
+      ? allSquads.filter((s: any) => s.adsquad?.campaign_id === campaignId)
+      : allSquads;
 
     const squads = rawSquads.map((s: any) => ({
       id: s.adsquad?.id,
