@@ -6,7 +6,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jud-dashboard.netlif
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
   return createClient(url, key);
 }
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   if (!authCode || !storeId) {
     return NextResponse.redirect(
-      `${APP_URL}/admin/stores/${storeId || ''}?tiktok=error&reason=missing_params`
+      `${APP_URL}/admin/campaigns?tiktok=error&reason=missing_params`
     );
   }
 
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (tokenRes.code !== 0) {
       console.error('[TikTok Callback] خطأ في التوكن:', tokenRes.message);
       return NextResponse.redirect(
-        `${APP_URL}/admin/stores/${storeId}?tiktok=error&reason=${encodeURIComponent(tokenRes.message)}`
+        `${APP_URL}/admin/campaigns?tiktok=error&reason=${encodeURIComponent(tokenRes.message)}`
       );
     }
 
@@ -71,11 +71,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.redirect(`${APP_URL}/admin/stores/${storeId}?tiktok=connected`);
+    return NextResponse.redirect(`${APP_URL}/admin/campaigns?tiktok=connected&storeId=${storeId}`);
   } catch (error: any) {
     console.error('[TikTok Callback] خطأ غير متوقع:', error);
     return NextResponse.redirect(
-      `${APP_URL}/admin/stores/${storeId}?tiktok=error&reason=server_error`
+      `${APP_URL}/admin/campaigns?tiktok=error&reason=server_error`
     );
   }
 }
