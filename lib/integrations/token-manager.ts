@@ -59,12 +59,12 @@ export async function getValidAccessToken(
   const now = new Date();
   const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
-  // إذا التوكن صالح وليس needs_reauth — أرجعه مباشرة
-  if (record.status !== 'needs_reauth' && expiresAt && expiresAt > fiveMinutesFromNow) {
+  // إذا التوكن صالح — أرجعه مباشرة بغض النظر عن status
+  if (expiresAt && expiresAt > fiveMinutesFromNow) {
     return decrypt(record.access_token_enc);
   }
 
-  // التوكن منتهي أو needs_reauth — نحاول التجديد بـ refresh_token
+  // التوكن منتهي — نحاول التجديد بـ refresh_token
   if (!record.refresh_token_enc) {
     // لا يوجد refresh token - نحتاج إعادة ربط
     await supabase
