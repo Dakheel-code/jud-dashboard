@@ -243,9 +243,12 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     fetch(`/api/google-ads/status?store_id=${storeId}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.connected) {
+        if (d?.connected && (d?.connections ?? []).length > 0) {
           setGoogleAdsConnected(true);
-          setGoogleAdsAccountName(d.connections?.[0]?.customer_name || d.connections?.[0]?.customer_id);
+          setGoogleAdsAccountName(d.connections[0]?.customer_name || d.connections[0]?.customer_id);
+        } else {
+          setGoogleAdsConnected(false);
+          setGoogleAdsAccountName(undefined);
         }
       })
       .catch(() => {});

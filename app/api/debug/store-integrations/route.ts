@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (data?.id) resolvedId = data.id;
   }
 
-  const [{ data: platforms }, { data: tiktokConn }, { data: snapConn }] = await Promise.all([
+  const [{ data: platforms }, { data: tiktokConn }, { data: snapConn }, { data: googleConn }] = await Promise.all([
     supabase.from('ad_platform_accounts')
       .select('platform, status, ad_account_id, ad_account_name, access_token_enc')
       .eq('store_id', resolvedId),
@@ -32,7 +32,17 @@ export async function GET(req: NextRequest) {
       .eq('store_id', resolvedId)
       .eq('platform', 'snapchat')
       .single(),
+    supabase.from('google_ads_connections')
+      .select('store_id, customer_id, customer_name, is_active')
+      .eq('store_id', resolvedId),
   ]);
+
+  // جلب كل سجلات google_ads_connections بدون فلتر لكشف المشكلة
+  const { data: allGoogleConn } = await supabase
+    .from('google_ads_connections')
+    .select('store_id, customer_id, customer_name, is_active')
+    .eq('is_active', true)
+    .limit(10);
 
   return NextResponse.json({
     resolvedId,
@@ -55,5 +65,7 @@ export async function GET(req: NextRequest) {
       has_refresh_token: !!snapConn.refresh_token_enc,
       token_expires_at: snapConn.token_expires_at,
     } : null,
+    google_ads_for_store: googleConn ?? [],
+    google_ads_all_active: allGoogleConn ?? [],
   });
 }

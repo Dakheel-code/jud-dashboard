@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('google_ads_connections')
-      .select('customer_id, customer_name, connected_at')
+      .select('store_id, customer_id, customer_name, connected_at')
       .eq('store_id', store_id)
       .eq('is_active', true);
 
