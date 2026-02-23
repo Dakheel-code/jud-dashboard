@@ -10,12 +10,16 @@ const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.TOKEN_ENCRYPTION_KEY;
+  const key = process.env.TOKEN_ENCRYPTION_KEY
+           || process.env.META_TOKEN_ENCRYPTION_KEY;
   if (!key) {
     throw new Error('TOKEN_ENCRYPTION_KEY environment variable is not set');
   }
-  // المفتاح يجب أن يكون 32 bytes (256 bits) base64 encoded
-  return Buffer.from(key, 'base64');
+  // نقبل مفتاح نصي عادي (32+ حرف) أو base64
+  const buf = Buffer.from(key, 'utf8');
+  if (buf.length >= 32) return buf.subarray(0, 32);
+  // إذا أقصر من 32 — نمدّه بـ SHA-256
+  return crypto.createHash('sha256').update(key).digest();
 }
 
 /**
