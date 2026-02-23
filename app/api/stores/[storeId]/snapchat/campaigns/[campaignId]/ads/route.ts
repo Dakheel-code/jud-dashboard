@@ -1,192 +1,136 @@
 /**
- * GET /api/stores/[storeId]/snapchat/campaigns/[campaignId]/ads
- * 
- * جلب الإعلانات الفرعية (Ads) لحملة معينة مع الصور/الفيديوهات
+ * GET /api/stores/[storeId]/snapchat/campaigns/[campaignId]/ads?squadId=XXX
+ * جلب إعلانات squad محدد مع creatives بشكل parallel
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getValidAccessToken } from '@/lib/integrations/token-manager';
 import { createClient } from '@supabase/supabase-js';
+import { decrypt } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 
-const SNAPCHAT_API_URL = 'https://adsapi.snapchat.com/v1';
+const SNAP = 'https://adsapi.snapchat.com/v1';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { storeId: string; campaignId: string } }
 ) {
   try {
-    const { storeId, campaignId } = params;
+    let { storeId } = params;
+    const squadId = request.nextUrl.searchParams.get('squadId') || '';
 
-
-    // جلب معلومات الحساب الإعلاني من Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ success: false, error: 'Missing Supabase config' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'DB not configured' }, { status: 503 });
     }
-
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب بيانات الربط
+    // تحويل storeId إلى UUID إذا لزم
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: row } = await supabase.from('stores').select('id').eq('store_url', storeId).single();
+      if (row?.id) storeId = row.id;
+    }
+
     const { data: integration } = await supabase
       .from('ad_platform_accounts')
-      .select('ad_account_id')
+      .select('*')
       .eq('store_id', storeId)
       .eq('platform', 'snapchat')
-      .eq('status', 'connected')
       .single();
 
-    if (!integration?.ad_account_id) {
+    if (!integration?.access_token_enc) {
       return NextResponse.json({ success: false, error: 'No connected Snapchat account' }, { status: 400 });
     }
 
-    // جلب توكن صالح
-    const accessToken = await getValidAccessToken(storeId, 'snapchat');
+    const accessToken = decrypt(integration.access_token_enc);
     if (!accessToken) {
-      return NextResponse.json({ success: false, error: 'Token expired', needs_reauth: true }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Token decrypt failed' }, { status: 401 });
     }
 
-    const headers = { Authorization: `Bearer ${accessToken}` };
+    const h = { Authorization: `Bearer ${accessToken}` };
 
-    // 1. جلب Ad Squads للحملة
-    const adSquadsUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}/adsquads`;
-    
-    const adSquadsResponse = await fetch(adSquadsUrl, { headers });
-    if (!adSquadsResponse.ok) {
-      const errorData = await adSquadsResponse.json().catch(() => ({}));
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Failed to fetch ad squads',
-        details: errorData
-      }, { status: adSquadsResponse.status });
+    // جلب الإعلانات مباشرة من الـ squad المحدد
+    const targetSquadId = squadId;
+    if (!targetSquadId) {
+      return NextResponse.json({ success: false, error: 'squadId required' }, { status: 400 });
     }
 
-    const adSquadsData = await adSquadsResponse.json();
-    const adSquads = adSquadsData.adsquads || [];
+    const adsRes = await fetch(`${SNAP}/adsquads/${targetSquadId}/ads`, { headers: h });
+    if (!adsRes.ok) {
+      return NextResponse.json({ success: false, error: 'Failed to fetch ads' }, { status: adsRes.status });
+    }
+    const adsData = await adsRes.json();
+    const rawAds: any[] = (adsData.ads || []).map((w: any) => w.ad).filter(Boolean);
 
-    // 2. جلب الإعلانات لكل Ad Squad
-    const allAds: any[] = [];
-    
-    for (const squad of adSquads) {
-      const squadId = squad.adsquad?.id;
-      if (!squadId) continue;
+    // جلب كل الـ creatives بشكل parallel
+    const creativeIds = [...new Set(rawAds.map((a: any) => a.creative_id).filter(Boolean))];
+    const creativeMap: Record<string, any> = {};
 
-      const adsUrl = `${SNAPCHAT_API_URL}/adsquads/${squadId}/ads`;
-      
-      const adsResponse = await fetch(adsUrl, { headers });
-      if (adsResponse.ok) {
-        const adsData = await adsResponse.json();
-        const ads = adsData.ads || [];
-        
-        for (const adWrapper of ads) {
-          const ad = adWrapper.ad;
-          if (!ad) continue;
-
-          // جلب Creative للحصول على الصورة/الفيديو
-          let mediaUrl = null;
-          let mediaType = null;
-          let thumbnailUrl = null;
-
-          if (ad.creative_id) {
-            try {
-              const creativeUrl = `${SNAPCHAT_API_URL}/creatives/${ad.creative_id}`;
-              const creativeResponse = await fetch(creativeUrl, { headers });
-              
-              if (creativeResponse.ok) {
-                const creativeData = await creativeResponse.json();
-                const creative = creativeData.creatives?.[0]?.creative;
-                
-                
-                if (creative) {
-                  // أولاً: جرب preview_creative (غالباً يحتوي على صورة مصغرة)
-                  if (creative.preview_creative) {
-                    thumbnailUrl = creative.preview_creative;
-                  }
-                  
-                  // ثانياً: جرب preview_media_url
-                  if (!thumbnailUrl && creative.preview_media_url) {
-                    thumbnailUrl = creative.preview_media_url;
-                  }
-                  
-                  // ثالثاً: جلب الميديا من top_snap_media_id
-                  if (creative.top_snap_media_id) {
-                    const mediaId = creative.top_snap_media_id;
-                    const mediaInfoUrl = `${SNAPCHAT_API_URL}/media/${mediaId}`;
-                    const mediaResponse = await fetch(mediaInfoUrl, { headers });
-                    
-                    if (mediaResponse.ok) {
-                      const mediaData = await mediaResponse.json();
-                      const media = mediaData.media?.[0]?.media;
-                      
-                      
-                      if (media) {
-                        mediaType = media.type; // VIDEO or IMAGE
-                        mediaUrl = media.download_link || media.media_url;
-                        
-                        // جلب thumbnail من الميديا
-                        if (media.thumbnail_url) {
-                          thumbnailUrl = media.thumbnail_url;
-                        } else if (media.image_url) {
-                          thumbnailUrl = media.image_url;
-                        }
-                        
-                        // للفيديو: جرب جلب thumbnail من preview
-                        if (mediaType === 'VIDEO' && !thumbnailUrl) {
-                          // جرب الحصول على preview من creative
-                          thumbnailUrl = creative.preview_creative || creative.preview_media_url || null;
-                        }
-                      }
-                    }
-                  }
-                  
-                  // رابعاً: جرب web_view_properties
-                  if (!thumbnailUrl && creative.web_view_properties?.url) {
-                    // لا نستخدم الـ URL مباشرة لكن نسجله
-                  }
-                  
-                  // خامساً: للصور، استخدم media_url مباشرة كـ thumbnail
-                  if (!thumbnailUrl && mediaType === 'IMAGE' && mediaUrl) {
-                    thumbnailUrl = mediaUrl;
-                  }
-                }
-              }
-            } catch (err) {
-            }
+    await Promise.all(
+      creativeIds.map(async (cid) => {
+        try {
+          const res = await fetch(`${SNAP}/creatives/${cid}`, { headers: h });
+          if (res.ok) {
+            const data = await res.json();
+            const c = data.creatives?.[0]?.creative;
+            if (c) creativeMap[cid] = c;
           }
+        } catch {}
+      })
+    );
 
-          allAds.push({
-            id: ad.id,
-            name: ad.name,
-            status: ad.status,
-            type: ad.type,
-            ad_squad_id: squadId,
-            ad_squad_name: squad.adsquad?.name,
-            creative_id: ad.creative_id,
-            media_url: mediaUrl,
-            media_type: mediaType,
-            thumbnail_url: thumbnailUrl,
-            created_at: ad.created_at,
-            updated_at: ad.updated_at,
-          });
-        }
-      }
-    }
+    // جلب الـ media للـ creatives التي تحتوي top_snap_media_id — بشكل parallel
+    const mediaIds = [...new Set(
+      Object.values(creativeMap)
+        .map((c: any) => c.top_snap_media_id)
+        .filter(Boolean)
+    )];
+    const mediaMap: Record<string, any> = {};
 
-    return NextResponse.json({
-      success: true,
-      campaign_id: campaignId,
-      ad_squads_count: adSquads.length,
-      ads_count: allAds.length,
-      ads: allAds,
+    await Promise.all(
+      mediaIds.map(async (mid) => {
+        try {
+          const res = await fetch(`${SNAP}/media/${mid}`, { headers: h });
+          if (res.ok) {
+            const data = await res.json();
+            const m = data.media?.[0]?.media;
+            if (m) mediaMap[mid] = m;
+          }
+        } catch {}
+      })
+    );
+
+    // بناء النتيجة
+    const ads = rawAds.map((ad: any) => {
+      const creative = ad.creative_id ? creativeMap[ad.creative_id] : null;
+      const media = creative?.top_snap_media_id ? mediaMap[creative.top_snap_media_id] : null;
+
+      const thumbnailUrl =
+        creative?.preview_creative ||
+        creative?.preview_media_url ||
+        media?.thumbnail_url ||
+        media?.image_url ||
+        (media?.type === 'IMAGE' ? (media?.download_link || media?.media_url) : null) ||
+        null;
+
+      return {
+        id: ad.id,
+        name: ad.name,
+        status: ad.status,
+        type: ad.type,
+        ad_squad_id: targetSquadId,
+        creative_id: ad.creative_id,
+        media_url: media?.download_link || media?.media_url || null,
+        media_type: media?.type || null,
+        thumbnail_url: thumbnailUrl,
+      };
     });
 
+    return NextResponse.json({ success: true, ads });
+
   } catch (error: any) {
-    return NextResponse.json({
-      success: false,
-      error: error.message || 'Internal server error',
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

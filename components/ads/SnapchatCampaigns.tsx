@@ -53,11 +53,10 @@ function AdSquadsRow({ storeId, campaign, range }: { storeId: string; campaign: 
     if (adsMap[squadId]) { setExpandedSquad(squadId); return; }
     setAdsLoading(squadId);
     try {
-      const r = await fetch(`/api/stores/${storeId}/snapchat/campaigns/${campaign.campaign_id}/ads`);
+      const r = await fetch(`/api/stores/${storeId}/snapchat/campaigns/${campaign.campaign_id}/ads?squadId=${squadId}`);
       const d = await r.json();
       if (d.success) {
-        const filtered = (d.ads || []).filter((a: Ad) => a.ad_squad_id === squadId);
-        setAdsMap(prev => ({ ...prev, [squadId]: filtered }));
+        setAdsMap(prev => ({ ...prev, [squadId]: d.ads || [] }));
       }
     } catch {}
     finally { setAdsLoading(null); setExpandedSquad(squadId); }
