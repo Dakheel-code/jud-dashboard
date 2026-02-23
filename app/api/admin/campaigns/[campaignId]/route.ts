@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getValidAccessToken } from '@/lib/integrations/token-manager';
 import { createClient } from '@supabase/supabase-js';
+import { decrypt } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +28,34 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'Campaign ID required' }, { status: 400 });
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ success: false, error: 'DB not configured' }, { status: 503 });
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // جلب توكن صالح
-    const accessToken = await getValidAccessToken(storeId, 'snapchat');
+    // تحويل storeId إلى UUID إذا لزم
+    let resolvedStoreId = storeId;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    if (!isUuid) {
+      const { data: row } = await supabase.from('stores').select('id').eq('store_url', storeId).single();
+      if (row?.id) resolvedStoreId = row.id;
+    }
+
+    // جلب التوكن مباشرة من قاعدة البيانات
+    const { data: integration } = await supabase
+      .from('ad_platform_accounts')
+      .select('*')
+      .eq('store_id', resolvedStoreId)
+      .eq('platform', 'snapchat')
+      .single();
+
+    if (!integration?.access_token_enc) {
+      return NextResponse.json({ success: false, error: 'No connected Snapchat account' }, { status: 400 });
+    }
+
+    const accessToken = decrypt(integration.access_token_enc);
     if (!accessToken) {
       return NextResponse.json({ success: false, error: 'Token expired', needs_reauth: true }, { status: 401 });
     }
