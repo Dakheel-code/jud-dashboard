@@ -102,7 +102,15 @@ export async function GET(req: NextRequest) {
         .upsert(cacheRows, { onConflict: 'store_id,campaign_id' });
     }
 
-    return NextResponse.json({ source: 'api', campaigns, total: campaigns.length });
+    // حساب الإجماليات من بيانات الحملات
+    const totals = {
+      spend: campaigns.reduce((s: number, c: any) => s + (c.budget || 0), 0),
+      conversions: 0,
+      revenue: 0,
+      roas: 0,
+    };
+
+    return NextResponse.json({ source: 'api', campaigns, total: campaigns.length, totals });
   } catch (error: any) {
     console.error('[TikTok Campaigns] خطأ غير متوقع:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
