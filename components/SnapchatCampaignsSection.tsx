@@ -307,11 +307,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     }
   }, [searchParams, storeId]);
 
-  // جلب بيانات Snapchat — يستخدم ref لـ directIntegrations لمنع إعادة الإنشاء
+  // جلب بيانات Snapchat
   const fetchSnap = useCallback(async (preset: string) => {
     if (!storeId) return;
-    const snapInt = directIntRef.current?.snapchat;
-    if (!snapInt || snapInt.status !== 'connected' || !snapInt.ad_account_id) return;
 
     snapAbortRef.current?.abort();
     const controller = new AbortController();
@@ -352,8 +350,6 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   // جلب بيانات TikTok من reports API
   const fetchTikTok = useCallback(async (preset: string) => {
     if (!storeId) return;
-    const tiktokInt = directIntRef.current?.tiktok;
-    if (!tiktokInt || tiktokInt.status !== 'connected' || !tiktokInt.ad_account_id) return;
     setTiktokLoading(true);
     try {
       // تحويل preset إلى تواريخ
@@ -382,34 +378,14 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     finally { setTiktokLoading(false); }
   }, [storeId]);
 
-  // جلب Snapchat + TikTok عند أول وصول directIntegrations
+  // جلب البيانات عند وصول directIntegrations أو تغيير الفترة
   useEffect(() => {
     if (!storeId) return;
-    if (!snapFetchedRef.current && directIntegrations?.snapchat?.status === 'connected' && directIntegrations?.snapchat?.ad_account_id) {
-      snapFetchedRef.current = true;
-      fetchSnap(datePreset);
-    }
-    if (!tiktokFetchedRef.current && directIntegrations?.tiktok?.status === 'connected' && directIntegrations?.tiktok?.ad_account_id) {
-      tiktokFetchedRef.current = true;
-      fetchTikTok(datePreset);
-    }
-  }, [directIntegrations, storeId]);
-
-  // عند تغيير الفترة: مسح Snapchat + TikTok وإعادة الجلب
-  useEffect(() => {
-    setSnapData(null);
-    setSnapCampaigns([]);
-    setSnapAllCampaigns([]);
-    setSnapWarning(null);
-    setSnapTime(null);
-    setSnapCoverage(null);
-    setSnapShowAll(false);
-    setTiktokData(null);
-    snapFetchedRef.current = false;
-    tiktokFetchedRef.current = false;
-    fetchSnap(datePreset);
-    fetchTikTok(datePreset);
-  }, [datePreset, fetchSnap, fetchTikTok]);
+    const snapConnected = directIntegrations?.snapchat?.status === 'connected' && !!directIntegrations?.snapchat?.ad_account_id;
+    const tiktokConn = directIntegrations?.tiktok?.status === 'connected' && !!directIntegrations?.tiktok?.ad_account_id;
+    if (snapConnected) fetchSnap(datePreset);
+    if (tiktokConn) fetchTikTok(datePreset);
+  }, [directIntegrations, storeId, datePreset]);
 
   // حساب الإجماليات
   const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0) + (tiktokData?.spend  || 0);
