@@ -222,21 +222,17 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapAllCampaigns, setSnapAllCampaigns] = useState<any[]>([]);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
-  // جلب حالة المنصات بشكل مستقل من الخارج
-  const [internalIntegrations, setInternalIntegrations] = useState<Record<string, any>>(directIntegrations || {});
+  // حالة المنصات — تُجلب مرة واحدة فقط عند تحميل المكون
+  const [internalIntegrations, setInternalIntegrations] = useState<Record<string, any>>({});
+  const intFetchedRef = useRef(false);
   useEffect(() => {
-    if (!storeId) return;
+    if (!storeId || intFetchedRef.current) return;
+    intFetchedRef.current = true;
     fetch(`/api/integrations/status?storeId=${storeId}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.success && d.platforms) setInternalIntegrations(d.platforms); })
       .catch(() => {});
   }, [storeId]);
-  // دمج directIntegrations الخارجي إذا وصل متأخراً
-  useEffect(() => {
-    if (directIntegrations && Object.keys(directIntegrations).length > 0) {
-      setInternalIntegrations(prev => ({ ...prev, ...directIntegrations }));
-    }
-  }, [directIntegrations]);
 
   // ─── Google Ads Connection State ──────────────────────
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
@@ -387,14 +383,37 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     finally { setTiktokLoading(false); }
   }, [storeId]);
 
-  // جلب البيانات عند وصول internalIntegrations أو تغيير الفترة
+  // جلب بيانات Snapchat عند وصول internalIntegrations (مرة واحدة)
+  const snapDataFetchedRef = useRef(false);
   useEffect(() => {
+    if (!storeId || snapDataFetchedRef.current) return;
+    const snapConn = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
+    if (!snapConn) return;
+    snapDataFetchedRef.current = true;
+    fetchSnap(datePreset);
+  }, [internalIntegrations, storeId]);
+
+  // جلب بيانات TikTok عند وصول internalIntegrations (مرة واحدة)
+  const tiktokDataFetchedRef = useRef(false);
+  useEffect(() => {
+    if (!storeId || tiktokDataFetchedRef.current) return;
+    const tiktokConn = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
+    if (!tiktokConn) return;
+    tiktokDataFetchedRef.current = true;
+    fetchTikTok(datePreset);
+  }, [internalIntegrations, storeId]);
+
+  // عند تغيير الفترة فقط — إعادة الجلب
+  const prevDatePreset = useRef(datePreset);
+  useEffect(() => {
+    if (prevDatePreset.current === datePreset) return;
+    prevDatePreset.current = datePreset;
     if (!storeId) return;
     const snapConn = internalIntegrations?.snapchat?.status === 'connected' && !!internalIntegrations?.snapchat?.ad_account_id;
     const tiktokConn = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
     if (snapConn) fetchSnap(datePreset);
     if (tiktokConn) fetchTikTok(datePreset);
-  }, [internalIntegrations, storeId, datePreset]);
+  }, [datePreset, storeId, internalIntegrations]);
 
   // حساب الإجماليات
   const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0) + (tiktokData?.spend  || 0);
