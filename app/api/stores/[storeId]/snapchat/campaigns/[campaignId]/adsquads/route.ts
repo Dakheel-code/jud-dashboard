@@ -56,10 +56,12 @@ export async function GET(
     let { storeId, campaignId } = params;
     const range = request.nextUrl.searchParams.get('range') || '7d';
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // تحويل storeId من store_url إلى UUID إذا لزم الأمر
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
