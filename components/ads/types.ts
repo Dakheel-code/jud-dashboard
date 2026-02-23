@@ -15,6 +15,7 @@ export interface AdSquad {
   id: string;
   name: string;
   status: string;
+  daily_budget_micro?: number;
   spend: number;
   impressions: number;
   swipes: number;

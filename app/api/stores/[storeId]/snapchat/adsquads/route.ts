@@ -128,6 +128,7 @@ export async function GET(
       id: s.adsquad?.id,
       name: s.adsquad?.name || 'Unknown',
       status: s.adsquad?.status || 'UNKNOWN',
+      daily_budget_micro: s.adsquad?.daily_budget_micro || null,
     })).filter((s: any) => s.id);
 
     // جلب إحصائيات

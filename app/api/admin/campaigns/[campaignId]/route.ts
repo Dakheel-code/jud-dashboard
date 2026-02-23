@@ -84,15 +84,25 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'No update data provided' }, { status: 400 });
     }
 
-    // تحديث الحملة عبر Snapchat API
-    const updateUrl = `${SNAPCHAT_API_URL}/campaigns/${campaignId}`;
+    // جلب بيانات الحملة الحالية أولاً (Snapchat يحتاج name في PUT)
+    const getRes = await fetch(`${SNAPCHAT_API_URL}/campaigns/${campaignId}`, { headers });
+    if (!getRes.ok) {
+      return NextResponse.json({ success: false, error: 'Campaign not found' }, { status: 404 });
+    }
+    const getData = await getRes.json();
+    const currentCampaign = getData.campaigns?.[0]?.campaign;
+    if (!currentCampaign) {
+      return NextResponse.json({ success: false, error: 'Campaign data not found' }, { status: 404 });
+    }
 
-    const response = await fetch(updateUrl, {
+    // تحديث الحملة عبر Snapchat API مع name إلزامي
+    const response = await fetch(`${SNAPCHAT_API_URL}/campaigns/${campaignId}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify({
         campaigns: [{
           id: campaignId,
+          name: currentCampaign.name,
           ...updateBody
         }]
       })
@@ -103,7 +113,7 @@ export async function PUT(
     if (!response.ok) {
       return NextResponse.json({
         success: false,
-        error: result.request_status || 'Failed to update campaign',
+        error: result.request_status || result.debug_message || 'Failed to update campaign',
         details: result
       }, { status: response.status });
     }
