@@ -199,6 +199,7 @@ export async function getCampaignReport(
     metrics: JSON.stringify([
       'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',
       'reach', 'complete_payment', 'cost_per_complete_payment', 'complete_payment_rate',
+      'value_per_complete_payment', 'complete_payment_roas',
     ]),
     start_date: startDate,
     end_date: endDate,
@@ -229,6 +230,7 @@ export async function getCampaignSummaryReport(
     metrics: JSON.stringify([
       'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm',
       'reach', 'complete_payment', 'cost_per_complete_payment', 'complete_payment_rate',
+      'value_per_complete_payment', 'complete_payment_roas',
     ]),
     start_date: startDate,
     end_date: endDate,

@@ -80,19 +80,24 @@ export async function GET(req: NextRequest) {
     const totals = rows.reduce(
       (acc, row) => {
         const m = row.metrics;
-        acc.spend       += parseFloat(String(m.spend            ?? 0));
-        acc.impressions += parseInt(String(m.impressions        ?? 0), 10);
-        acc.clicks      += parseInt(String(m.clicks             ?? 0), 10);
-        acc.conversions += parseFloat(String(m.complete_payment ?? 0));
+        const spend       = parseFloat(String(m.spend            ?? 0));
+        const conversions = parseFloat(String(m.complete_payment ?? 0));
+        const valuePerConv = parseFloat(String((m as any).value_per_complete_payment ?? 0));
+        acc.spend       += spend;
+        acc.impressions += parseInt(String(m.impressions ?? 0), 10);
+        acc.clicks      += parseInt(String(m.clicks      ?? 0), 10);
+        acc.conversions += conversions;
+        acc.revenue     += conversions * valuePerConv;
         return acc;
       },
-      { spend: 0, impressions: 0, clicks: 0, conversions: 0 }
+      { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
     );
 
     // حساب المعدلات
     const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
     const cpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
     const cost_per_conversion = totals.conversions > 0 ? totals.spend / totals.conversions : 0;
+    const roas = totals.spend > 0 && totals.revenue > 0 ? totals.revenue / totals.spend : 0;
 
     // حفظ في الكاش
     if (rows.length > 0) {
@@ -122,7 +127,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       report: rows,
-      totals: { ...totals, ctr, cpc, cost_per_conversion },
+      totals: { ...totals, ctr, cpc, cost_per_conversion, roas },
       period: { start_date: startDate, end_date: endDate },
       advertiser_id,
     });

@@ -376,11 +376,13 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       if (d.connected === false) return;
       const spend = d.totals?.spend || 0;
       const conversions = d.totals?.conversions || 0;
+      const revenue = d.totals?.revenue || 0;
+      const roas = revenue > 0 && spend > 0 ? revenue / spend : (d.totals?.roas || 0);
       setTiktokData({
         spend,
-        sales:  spend, // TikTok لا يُرجع revenue مباشرة
+        sales:  revenue,
         orders: conversions,
-        roas:   spend > 0 ? conversions / spend : 0,
+        roas,
       });
     } catch { /* silent */ }
     finally { setTiktokLoading(false); }
@@ -397,11 +399,14 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     fetchSnap(datePreset);
   }, [internalIntegrations, storeId]);
 
-  // جلب بيانات TikTok عند وصول internalIntegrations (مرة واحدة)
+  // جلب بيانات TikTok عند وصول internalIntegrations
   const tiktokDataFetchedRef = useRef(false);
   useEffect(() => {
     if (!storeId || tiktokDataFetchedRef.current) return;
-    const tiktokConn = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
+    const tiktok = internalIntegrations?.tiktok;
+    // انتظر حتى تصل البيانات (ليس فارغاً)
+    if (!tiktok) return;
+    const tiktokConn = tiktok.status === 'connected' && !!tiktok.ad_account_id;
     if (!tiktokConn) return;
     tiktokDataFetchedRef.current = true;
     fetchTikTok(datePreset);
