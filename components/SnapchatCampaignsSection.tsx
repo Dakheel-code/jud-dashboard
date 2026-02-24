@@ -451,7 +451,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     if (key === 'meta') return {
       key, name: cfg.name, icon: cfg.icon,
       connected: metaConnected,
-      accountName: internalIntegrations?.meta?.ad_account_name,
+      accountName: metaConn?.ad_account_name || internalIntegrations?.meta?.ad_account_name,
       spend: metaData?.spend || 0, sales: metaData?.sales || 0,
       orders: metaData?.orders || 0, roas: metaData?.roas || 0,
       loading: false,
@@ -617,8 +617,10 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
                         <p className="text-sm font-semibold text-white">{cfg.name}</p>
                         {row.connected ? (
                           <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                            <p className="text-xs text-green-400/80 truncate max-w-[100px]">متصل</p>
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                            <p className="text-xs text-green-400/80 truncate max-w-[120px]" title={row.accountName || 'متصل'}>
+                              {row.accountName || 'متصل'}
+                            </p>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1">
