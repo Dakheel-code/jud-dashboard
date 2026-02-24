@@ -1,16 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const clientId      = process.env.GOOGLE_ADS_CLIENT_ID       || '';
-  const clientSecret  = process.env.GOOGLE_ADS_CLIENT_SECRET   || '';
-  const refreshToken  = process.env.GOOGLE_ADS_REFRESH_TOKEN   || '';
+export async function GET(req: NextRequest) {
+  const storeId = req.nextUrl.searchParams.get('storeId');
+
+  const clientId       = process.env.GOOGLE_ADS_CLIENT_ID       || '';
+  const clientSecret   = process.env.GOOGLE_ADS_CLIENT_SECRET   || '';
+  const refreshToken   = process.env.GOOGLE_ADS_REFRESH_TOKEN   || '';
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '';
-  const managerId    = process.env.GOOGLE_ADS_MANAGER_ID       || '';
+  const managerId      = process.env.GOOGLE_ADS_MANAGER_ID      || '';
 
   // اختبار جلب access token
-  let tokenResult: any = null;
+  let accessToken = '';
   let tokenError: any = null;
   try {
     const body = new URLSearchParams({
@@ -25,26 +28,64 @@ export async function GET() {
       body: body.toString(),
     });
     const data = await res.json();
-    if (res.ok) {
-      tokenResult = { ok: true, token_prefix: data.access_token?.slice(0, 20) + '...' };
-    } else {
-      tokenError = data;
+    if (res.ok) { accessToken = data.access_token; }
+    else { tokenError = data; }
+  } catch (e: any) { tokenError = e.message; }
+
+  // جلب الربط من قاعدة البيانات
+  let dbConn: any = null;
+  let reportsResult: any = null;
+  let reportsError: any = null;
+
+  if (storeId) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data } = await supabase
+      .from('google_ads_connections')
+      .select('customer_id, manager_id, is_active')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+    dbConn = data;
+
+    // اختبار query مباشر
+    if (accessToken && data?.customer_id) {
+      const end = new Date().toISOString().split('T')[0];
+      const start = new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        'developer-token': developerToken,
+        'Content-Type': 'application/json',
+      };
+      if (managerId) headers['login-customer-id'] = managerId;
+
+      try {
+        const url = `https://googleads.googleapis.com/v18/customers/${data.customer_id}/googleAds:searchStream`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            query: `SELECT metrics.cost_micros, metrics.conversions, metrics.conversions_value, metrics.impressions FROM campaign WHERE segments.date BETWEEN '${start}' AND '${end}' AND campaign.status != 'REMOVED' LIMIT 5`
+          }),
+        });
+        const raw = await res.json();
+        reportsResult = { status: res.status, sample: Array.isArray(raw) ? raw[0]?.results?.slice(0, 2) : raw };
+      } catch (e: any) { reportsError = e.message; }
     }
-  } catch (e: any) {
-    tokenError = e.message;
   }
 
   return NextResponse.json({
     env: {
-      client_id_set:       !!clientId,
-      client_secret_set:   !!clientSecret,
-      refresh_token_set:   !!refreshToken,
+      token_ok:            !!accessToken,
+      token_error:         tokenError,
       developer_token_set: !!developerToken,
       manager_id:          managerId || '(فارغ)',
-      client_id_prefix:    clientId.slice(0, 15) + '...',
-      refresh_token_prefix: refreshToken.slice(0, 20) + '...',
     },
-    token_result: tokenResult,
-    token_error:  tokenError,
+    db_connection: dbConn,
+    reports_result: reportsResult,
+    reports_error:  reportsError,
   });
 }
