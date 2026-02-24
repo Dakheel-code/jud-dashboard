@@ -6,7 +6,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireMetaManage } from '@/lib/meta/guard';
 
 function getSupabase() {
   return createClient(
@@ -16,9 +15,6 @@ function getSupabase() {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = await requireMetaManage();
-  if (!guard.ok) return guard.error!;
-
   let body: { storeId?: string };
   try {
     body = await request.json();
