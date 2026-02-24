@@ -37,15 +37,19 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (connErr || !conn?.ad_account_id) {
-    return NextResponse.json({ summary: null });
+    console.log('[meta/insights-live] no connection found, connErr:', connErr?.message, 'storeId:', storeId);
+    return NextResponse.json({ summary: null, debug: { reason: 'no_connection', connErr: connErr?.message } });
   }
+
+  console.log('[meta/insights-live] found connection, status:', conn.status, 'ad_account_id:', conn.ad_account_id);
 
   try {
     const token   = decryptToken(conn.access_token_encrypted);
     const summary = await fetchInsightsSummary(conn.ad_account_id, token, datePreset);
+    console.log('[meta/insights-live] summary result:', summary ? 'has data' : 'null', 'spend:', summary?.spend);
     return NextResponse.json({ summary });
   } catch (err: any) {
-    console.error('Meta insights-live error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[meta/insights-live] error:', err.message);
+    return NextResponse.json({ error: err.message, summary: null }, { status: 500 });
   }
 }
