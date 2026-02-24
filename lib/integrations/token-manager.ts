@@ -89,26 +89,7 @@ export async function getValidAccessToken(
         });
         console.log(`[token-manager] Snapchat refresh success, expires_in: ${newTokens.expires_in}`);
         break;
-      case 'tiktok': {
-        const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            app_id: process.env.TIKTOK_APP_ID!,
-            secret: process.env.TIKTOK_APP_SECRET!,
-            auth_code: refreshTokenDecrypted,
-            grant_type: 'refresh_token',
-          }),
-        });
-        const tiktokData = await res.json();
-        if (tiktokData.code !== 0) throw new Error(tiktokData.message || 'TikTok refresh failed');
-        newTokens = {
-          access_token: tiktokData.data.access_token,
-          refresh_token: tiktokData.data.refresh_token,
-          expires_in: 86400,
-        };
-        break;
-      }
+      // TODO: إضافة باقي المنصات
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }
@@ -237,19 +218,25 @@ export async function updateSelectedAdAccount(
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
 
-  // UPDATE يحافظ على التوكنات المحفوظة
+  // حذف السجل القديم ثم إدراج جديد لضمان الحفظ دائماً
+  await supabase
+    .from('ad_platform_accounts')
+    .delete()
+    .eq('store_id', storeId)
+    .eq('platform', platform);
+
   const { error } = await supabase
     .from('ad_platform_accounts')
-    .update({
+    .insert({
+      store_id: storeId,
+      platform,
       ad_account_id: adAccount.id,
       ad_account_name: adAccount.name,
       organization_id: adAccount.organizationId || null,
       status: 'connected',
       last_connected_at: new Date().toISOString(),
       error_message: null,
-    })
-    .eq('store_id', storeId)
-    .eq('platform', platform);
+    });
 
   if (error) {
     throw new Error('Failed to save ad account: ' + error.message);

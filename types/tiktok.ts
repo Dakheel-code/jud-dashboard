@@ -26,7 +26,6 @@ export interface TikTokApiResponse<T> {
 // استجابة التوكن
 export interface TikTokTokenResponse {
   access_token: string;
-  refresh_token?: string;
   advertiser_ids: string[];
   scope: string[];
 }
