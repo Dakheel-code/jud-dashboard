@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // جلب حالة جميع المنصات للمتجر
-    const [{ data: accounts, error }, { data: metaConn }] = await Promise.all([
+    const [{ data: accounts, error }, { data: metaConn }, { data: tiktokOld }] = await Promise.all([
       supabase
         .from('ad_platform_accounts')
         .select('platform, status, ad_account_id, ad_account_name, organization_id, last_connected_at, error_message')
@@ -50,6 +50,13 @@ export async function GET(request: NextRequest) {
         .select('ad_account_id, ad_account_name, status, last_sync_at')
         .eq('store_id', resolvedId)
         .order('created_at', { ascending: false })
+        .limit(1)
+        .single(),
+      supabase
+        .from('tiktok_connections')
+        .select('advertiser_id, advertiser_name, connected_at')
+        .eq('store_id', resolvedId)
+        .eq('is_active', true)
         .limit(1)
         .single(),
     ]);
@@ -76,6 +83,16 @@ export async function GET(request: NextRequest) {
         error_message: acc.error_message,
       };
     });
+
+    // دمج حالة TikTok من tiktok_connections إذا لم يكن في ad_platform_accounts
+    if (tiktokOld?.advertiser_id && platforms['tiktok']?.status === 'disconnected') {
+      platforms['tiktok'] = {
+        status: 'connected',
+        ad_account_id: tiktokOld.advertiser_id,
+        ad_account_name: tiktokOld.advertiser_name || tiktokOld.advertiser_id,
+        last_connected_at: tiktokOld.connected_at,
+      };
+    }
 
     // دمج حالة Meta من store_meta_connections
     if (metaConn?.ad_account_id) {
