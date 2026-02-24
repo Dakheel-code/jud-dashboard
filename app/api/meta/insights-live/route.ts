@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { fetchInsightsSummary } from '@/lib/meta/client';
 import { decryptToken } from '@/lib/meta/encryption';
-import { requireMetaRead } from '@/lib/meta/guard';
 
 function getSupabase() {
   return createClient(
@@ -17,9 +16,6 @@ function getSupabase() {
 }
 
 export async function GET(request: NextRequest) {
-  const guard = await requireMetaRead();
-  if (!guard.ok) return guard.error!;
-
   const storeId    = request.nextUrl.searchParams.get('storeId');
   const datePreset = request.nextUrl.searchParams.get('datePreset') || 'last_7d';
 
