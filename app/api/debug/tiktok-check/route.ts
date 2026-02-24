@@ -15,9 +15,8 @@ export async function GET(req: NextRequest) {
   // جلب الربط
   const { data: conn, error: connErr } = await supabase
     .from('tiktok_connections')
-    .select('advertiser_id, advertiser_name, is_active, created_at')
+    .select('advertiser_id, advertiser_name, is_active')
     .eq('store_id', storeId)
-    .order('created_at', { ascending: false })
     .limit(5);
 
   if (connErr || !conn?.length) {
