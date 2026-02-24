@@ -67,12 +67,14 @@ export async function GET(req: NextRequest) {
         const m = row.metrics;
         const spend       = parseFloat(String(m.spend            ?? 0));
         const conversions = parseFloat(String(m.complete_payment ?? 0));
-        const valuePerConv = parseFloat(String((m as any).value_per_complete_payment ?? 0));
+        const roas        = parseFloat(String((m as any).complete_payment_roas ?? 0));
+        // revenue = spend × roas (الطريقة الصحيحة في TikTok API)
+        const revenue     = spend * roas;
         acc.spend       += spend;
         acc.impressions += parseInt(String(m.impressions ?? 0), 10);
         acc.clicks      += parseInt(String(m.clicks      ?? 0), 10);
         acc.conversions += conversions;
-        acc.revenue     += conversions * valuePerConv;
+        acc.revenue     += revenue;
         return acc;
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
