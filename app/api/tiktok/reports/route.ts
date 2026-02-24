@@ -32,20 +32,38 @@ export async function GET(req: NextRequest) {
       if (row?.id) resolvedStoreId = row.id;
     }
 
-    // جلب التوكن من tiktok_connections (التوكن نص عادي بدون تشفير)
+    // جلب advertiser_id الصحيح من ad_platform_accounts
     let advertiser_id: string;
     let access_token: string;
 
-    const { data: connection, error: connErr } = await supabase
-      .from('tiktok_connections')
-      .select('advertiser_id, access_token')
+    const { data: platformAcc } = await supabase
+      .from('ad_platform_accounts')
+      .select('ad_account_id')
       .eq('store_id', resolvedStoreId)
-      .eq('is_active', true)
+      .eq('platform', 'tiktok')
+      .in('status', ['connected', 'active'])
       .limit(1)
       .single();
 
+    // جلب التوكن من tiktok_connections بناءً على advertiser_id الصحيح
+    let connQuery = supabase
+      .from('tiktok_connections')
+      .select('advertiser_id, access_token')
+      .eq('store_id', resolvedStoreId)
+      .eq('is_active', true);
+
+    if (platformAcc?.ad_account_id) {
+      connQuery = connQuery.eq('advertiser_id', platformAcc.ad_account_id);
+    }
+
+    const { data: connection, error: connErr } = await connQuery.limit(1).single();
+
     if (connErr || !connection) {
-      return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط' }, { status: 404 });
+      return NextResponse.json({
+        connected: false,
+        error: 'لا يوجد ربط نشط',
+        debug: { platform_acc_id: platformAcc?.ad_account_id, connErr: connErr?.message }
+      }, { status: 404 });
     }
     advertiser_id = connection.advertiser_id;
     access_token = connection.access_token;

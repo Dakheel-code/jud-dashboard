@@ -23,14 +23,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'لا يوجد ربط', connErr });
   }
 
-  // جلب التوكن للاتصال النشط
-  const { data: activeConn } = await supabase
+  // جلب advertiser_id الصحيح من ad_platform_accounts
+  const { data: platformAcc } = await supabase
+    .from('ad_platform_accounts')
+    .select('ad_account_id, ad_account_name')
+    .eq('store_id', storeId)
+    .eq('platform', 'tiktok')
+    .in('status', ['connected', 'active'])
+    .limit(1)
+    .single();
+
+  // جلب التوكن المطابق من tiktok_connections
+  let connQuery = supabase
     .from('tiktok_connections')
     .select('advertiser_id, access_token')
     .eq('store_id', storeId)
-    .eq('is_active', true)
-    .limit(1)
-    .single();
+    .eq('is_active', true);
+
+  if (platformAcc?.ad_account_id) {
+    connQuery = connQuery.eq('advertiser_id', platformAcc.ad_account_id);
+  }
+
+  const { data: activeConn } = await connQuery.limit(1).single();
 
   if (!activeConn) {
     return NextResponse.json({ connections: conn, error: 'لا يوجد ربط نشط' });
