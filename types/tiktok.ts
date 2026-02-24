@@ -94,6 +94,8 @@ export interface TikTokReportMetrics {
   complete_payment: number;
   cost_per_complete_payment: number;
   complete_payment_rate: number;
+  value_per_complete_payment: number;
+  complete_payment_roas: number;
 }
 
 // صف التقرير
