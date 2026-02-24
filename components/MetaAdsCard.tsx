@@ -7,7 +7,7 @@ interface MetaConnection {
   meta_user_name?: string;
   ad_account_id?: string;
   ad_account_name?: string;
-  status: 'active' | 'revoked' | 'error';
+  status: 'active' | 'connected' | 'revoked' | 'error';
   last_sync_at?: string;
 }
 interface AdAccount { id: string; name: string; account_status: number; currency: string; }
@@ -97,7 +97,8 @@ export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded
 
   // جلب البيانات تلقائياً عند فتح القسم أو تغيير الاتصال
   useEffect(() => {
-    if (connection?.ad_account_id && connection.status === 'active') {
+    const isConnected = connection?.ad_account_id && (connection.status === 'active' || connection.status === 'connected');
+    if (isConnected) {
       fetchCachedAds();
       fetchCachedInsights(datePreset);
     }
@@ -106,7 +107,8 @@ export default function MetaAdsCard({ storeId, embedded = false, onSummaryLoaded
   // إعادة الجلب عند تغيير الفترة من الخارج (embedded mode)
   useEffect(() => {
     if (!externalPreset) return;
-    if (connection?.ad_account_id && connection.status === 'active') {
+    const isConnected = connection?.ad_account_id && (connection.status === 'active' || connection.status === 'connected');
+    if (isConnected) {
       setInsights(null);
       fetchCachedInsights(externalPreset);
     }

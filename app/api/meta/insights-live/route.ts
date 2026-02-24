@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
     .from('store_meta_connections')
     .select('access_token_encrypted, ad_account_id, status')
     .eq('store_id', storeId)
-    .eq('status', 'active')
+    .in('status', ['active', 'connected'])
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single();
 
   if (connErr || !conn?.ad_account_id) {
