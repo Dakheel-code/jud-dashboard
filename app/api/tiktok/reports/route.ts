@@ -33,9 +33,6 @@ export async function GET(req: NextRequest) {
     }
 
     // جلب advertiser_id الصحيح من ad_platform_accounts
-    let advertiser_id: string;
-    let access_token: string;
-
     const { data: platformAcc } = await supabase
       .from('ad_platform_accounts')
       .select('ad_account_id')
@@ -45,28 +42,33 @@ export async function GET(req: NextRequest) {
       .limit(1)
       .single();
 
-    // جلب التوكن من tiktok_connections بناءً على advertiser_id الصحيح
-    let connQuery = supabase
+    // جلب التوكن من tiktok_connections (كل الحسابات تشترك بنفس التوكن في TikTok)
+    const { data: anyConn, error: connErr } = await supabase
       .from('tiktok_connections')
       .select('advertiser_id, access_token')
       .eq('store_id', resolvedStoreId)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .limit(1)
+      .single();
 
-    if (platformAcc?.ad_account_id) {
-      connQuery = connQuery.eq('advertiser_id', platformAcc.ad_account_id);
+    if (connErr || !anyConn) {
+      return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط' }, { status: 404 });
     }
 
-    const { data: connection, error: connErr } = await connQuery.limit(1).single();
+    // استخدام advertiser_id الصحيح من ad_platform_accounts، والتوكن من tiktok_connections
+    const advertiser_id = platformAcc?.ad_account_id || anyConn.advertiser_id;
+    const access_token  = anyConn.access_token;
 
-    if (connErr || !connection) {
-      return NextResponse.json({
-        connected: false,
-        error: 'لا يوجد ربط نشط',
-        debug: { platform_acc_id: platformAcc?.ad_account_id, connErr: connErr?.message }
-      }, { status: 404 });
-    }
-    advertiser_id = connection.advertiser_id;
-    access_token = connection.access_token;
+    // جلب عملة الحساب الإعلاني من TikTok
+    let currency = 'USD';
+    try {
+      const infoParams = new URLSearchParams({ advertiser_ids: JSON.stringify([advertiser_id]), fields: JSON.stringify(['currency']) });
+      const infoRes = await fetch(`https://business-api.tiktok.com/open_api/v1.3/advertiser/info/?${infoParams}`, {
+        headers: { 'Access-Token': access_token },
+      });
+      const infoData = await infoRes.json();
+      currency = infoData?.data?.list?.[0]?.currency || 'USD';
+    } catch { /* استخدم USD كافتراضي */ }
 
     // جلب التقرير من TikTok API
     const campaignIds = campaignId ? [campaignId] : undefined;
@@ -135,6 +137,7 @@ export async function GET(req: NextRequest) {
       totals: { ...totals, ctr, cpc, cost_per_conversion, roas },
       period: { start_date: startDate, end_date: endDate },
       advertiser_id,
+      currency,
     });
   } catch (error: any) {
     console.error('[TikTok Reports] خطأ غير متوقع:', error);

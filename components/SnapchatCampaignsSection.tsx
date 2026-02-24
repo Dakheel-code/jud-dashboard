@@ -374,13 +374,15 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       if (!res.ok) return;
       const d = await res.json();
       if (d.connected === false) return;
-      const spend = d.totals?.spend || 0;
+      const rawSpend   = d.totals?.spend   || 0;
+      const rawRevenue = d.totals?.revenue  || 0;
       const conversions = d.totals?.conversions || 0;
-      const revenue = d.totals?.revenue || 0;
-      const roas = revenue > 0 && spend > 0 ? revenue / spend : (d.totals?.roas || 0);
+      const roas = d.totals?.roas || 0;
+      // تحويل للريال إذا كانت العملة USD (1 USD = 3.75 SAR)
+      const fxRate = d.currency === 'USD' ? 3.75 : 1;
       setTiktokData({
-        spend,
-        sales:  revenue,
+        spend:  rawSpend  * fxRate,
+        sales:  rawRevenue * fxRate,
         orders: conversions,
         roas,
       });
