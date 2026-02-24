@@ -237,6 +237,33 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   // ─── Google Ads Connection State ──────────────────────
   const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
   const [googleAdsAccountName, setGoogleAdsAccountName] = useState<string | undefined>(undefined);
+  const [googleData, setGoogleData] = useState<{ spend: number; sales: number; orders: number; roas: number } | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const fetchGoogle = useCallback(async (preset: string) => {
+    if (!storeId) return;
+    setGoogleLoading(true);
+    try {
+      const end = new Date();
+      const start = new Date();
+      if (preset === 'today') { /* نفس اليوم */ }
+      else if (preset === 'yesterday') { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
+      else if (preset === '7d') start.setDate(start.getDate() - 6);
+      else if (preset === '30d') start.setDate(start.getDate() - 29);
+      else if (preset === '90d') start.setDate(start.getDate() - 89);
+      else start.setDate(start.getDate() - 6);
+      const fmt = (d: Date) => d.toISOString().split('T')[0];
+      const res = await fetch(`/api/google-ads/reports?store_id=${storeId}&start_date=${fmt(start)}&end_date=${fmt(end)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.connected === false) return;
+      const spend = d.totals?.cost || 0;
+      const conversions = d.totals?.conversions || 0;
+      // Google Ads لا يُرجع revenue مباشرة — نعرض الصرف والطلبات فقط
+      setGoogleData({ spend, sales: 0, orders: conversions, roas: 0 });
+    } catch { /* silent */ }
+    finally { setGoogleLoading(false); }
+  }, [storeId]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -246,6 +273,7 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
         if (d?.connected && (d?.connections ?? []).length > 0) {
           setGoogleAdsConnected(true);
           setGoogleAdsAccountName(d.connections[0]?.customer_name || d.connections[0]?.customer_id);
+          fetchGoogle(datePreset);
         } else {
           setGoogleAdsConnected(false);
           setGoogleAdsAccountName(undefined);
@@ -424,12 +452,13 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
     const tiktokConn = internalIntegrations?.tiktok?.status === 'connected' && !!internalIntegrations?.tiktok?.ad_account_id;
     if (snapConn) fetchSnap(datePreset);
     if (tiktokConn) fetchTikTok(datePreset);
-  }, [datePreset, storeId, internalIntegrations]);
+    if (googleAdsConnected) fetchGoogle(datePreset);
+  }, [datePreset, storeId, internalIntegrations, googleAdsConnected]);
 
   // حساب الإجماليات
-  const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0) + (tiktokData?.spend  || 0);
-  const totalSales  = (snapData?.sales  || 0) + (metaData?.sales  || 0) + (tiktokData?.sales  || 0);
-  const totalOrders = (snapData?.orders || 0) + (metaData?.orders || 0) + (tiktokData?.orders || 0);
+  const totalSpend  = (snapData?.spend  || 0) + (metaData?.spend  || 0) + (tiktokData?.spend  || 0) + (googleData?.spend  || 0);
+  const totalSales  = (snapData?.sales  || 0) + (metaData?.sales  || 0) + (tiktokData?.sales  || 0) + (googleData?.sales  || 0);
+  const totalOrders = (snapData?.orders || 0) + (metaData?.orders || 0) + (tiktokData?.orders || 0) + (googleData?.orders || 0);
   const totalRoas   = totalSpend > 0 ? totalSales / totalSpend : 0;
 
   // المنصات المتصلة
@@ -462,7 +491,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       key, name: cfg.name, icon: cfg.icon,
       connected: googleAdsConnected,
       accountName: googleAdsAccountName,
-      spend: 0, sales: 0, orders: 0, roas: 0, loading: false,
+      spend: googleData?.spend || 0, sales: googleData?.sales || 0,
+      orders: googleData?.orders || 0, roas: googleData?.roas || 0,
+      loading: googleLoading,
     };
     // tiktok
     if (key === 'tiktok') return {
