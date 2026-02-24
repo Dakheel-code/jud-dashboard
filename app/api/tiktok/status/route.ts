@@ -17,17 +17,33 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from('tiktok_connections')
-      .select('advertiser_id, advertiser_name, connected_at')
-      .eq('store_id', storeId)
-      .eq('is_active', true);
 
-    if (error) throw error;
+    // قراءة من الجدولين للتوافق مع النظامين القديم والجديد
+    const [tikRes, adRes] = await Promise.all([
+      supabase
+        .from('tiktok_connections')
+        .select('advertiser_id, advertiser_name, connected_at')
+        .eq('store_id', storeId)
+        .eq('is_active', true),
+      supabase
+        .from('ad_platform_accounts')
+        .select('ad_account_id, ad_account_name, last_connected_at, status')
+        .eq('store_id', storeId)
+        .eq('platform', 'tiktok')
+        .single(),
+    ]);
+
+    const tikConnections = tikRes.data ?? [];
+    const adPlatform = adRes.data;
+
+    const connectedViaNew = !!adPlatform?.ad_account_id && adPlatform?.status === 'connected';
+    const connectedViaOld = tikConnections.length > 0;
 
     return NextResponse.json({
-      connected: (data?.length ?? 0) > 0,
-      connections: data ?? [],
+      connected: connectedViaNew || connectedViaOld,
+      connections: tikConnections,
+      ad_account_id: adPlatform?.ad_account_id || null,
+      ad_account_name: adPlatform?.ad_account_name || null,
     });
   } catch (error: any) {
     console.error('[TikTok Status GET] خطأ:', error);

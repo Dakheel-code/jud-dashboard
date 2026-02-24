@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeAuthCode } from '@/lib/tiktok';
 import { createClient } from '@supabase/supabase-js';
+import { saveTokens } from '@/lib/integrations/token-manager';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://jud-dashboard.netlify.app';
 
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { access_token, advertiser_ids } = tokenRes.data;
+    const { access_token, refresh_token, advertiser_ids } = tokenRes.data;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,13 +40,20 @@ export async function GET(req: NextRequest) {
       if (storeRow?.id) resolvedStoreId = storeRow.id;
     }
 
-    // حفظ التوكن في tiktok_connections (نص عادي — هيكل الجدول الأصلي)
+    // حفظ التوكن في ad_platform_accounts مشفراً (النظام الجديد)
+    await saveTokens(resolvedStoreId, 'tiktok', {
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      expiresIn: 86400, // TikTok tokens صلاحيتها 24 ساعة
+    });
+
+    // الاحتفاظ بـ tiktok_connections للتوافق مع باقي الكود (advertiser_ids)
     await supabase.from('tiktok_connections').upsert(
       advertiser_ids.map((id: string) => ({
         store_id: resolvedStoreId,
         app_id: process.env.TIKTOK_APP_ID!,
         advertiser_id: id,
-        access_token,
+        access_token: '***ENCRYPTED***',
         is_active: true,
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
