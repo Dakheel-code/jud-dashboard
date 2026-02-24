@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { fetchInsights } from '@/lib/meta/client';
 import { decryptToken } from '@/lib/meta/encryption';
-import { requireMetaManage } from '@/lib/meta/guard';
 
 function getSupabase() {
   return createClient(
@@ -23,9 +22,6 @@ const VALID_PRESETS = [
 ];
 
 export async function POST(request: NextRequest) {
-  const guard = await requireMetaManage();
-  if (!guard.ok) return guard.error!;
-
   const { searchParams } = request.nextUrl;
   const storeId    = searchParams.get('storeId');
   const datePreset = searchParams.get('datePreset') || 'last_7d';
