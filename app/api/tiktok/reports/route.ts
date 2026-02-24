@@ -32,38 +32,23 @@ export async function GET(req: NextRequest) {
       if (row?.id) resolvedStoreId = row.id;
     }
 
-    // جلب التوكن من ad_platform_accounts أولاً (الربط الجديد)
+    // جلب التوكن من tiktok_connections (التوكن نص عادي بدون تشفير)
     let advertiser_id: string;
     let access_token: string;
 
-    const { data: platformAcc } = await supabase
-      .from('ad_platform_accounts')
-      .select('ad_account_id, access_token_enc')
+    const { data: connection, error: connErr } = await supabase
+      .from('tiktok_connections')
+      .select('advertiser_id, access_token')
       .eq('store_id', resolvedStoreId)
-      .eq('platform', 'tiktok')
-      .eq('status', 'connected')
+      .eq('is_active', true)
+      .limit(1)
       .single();
 
-    if (platformAcc?.ad_account_id && platformAcc?.access_token_enc) {
-      const { decrypt } = await import('@/lib/encryption');
-      advertiser_id = platformAcc.ad_account_id;
-      access_token = decrypt(platformAcc.access_token_enc);
-    } else {
-      // fallback: tiktok_connections (الربط القديم)
-      const { data: connection, error: connErr } = await supabase
-        .from('tiktok_connections')
-        .select('advertiser_id, access_token')
-        .eq('store_id', resolvedStoreId)
-        .eq('is_active', true)
-        .limit(1)
-        .single();
-
-      if (connErr || !connection) {
-        return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط' }, { status: 404 });
-      }
-      advertiser_id = connection.advertiser_id;
-      access_token = connection.access_token;
+    if (connErr || !connection) {
+      return NextResponse.json({ connected: false, error: 'لا يوجد ربط نشط' }, { status: 404 });
     }
+    advertiser_id = connection.advertiser_id;
+    access_token = connection.access_token;
 
     // جلب التقرير من TikTok API
     const campaignIds = campaignId ? [campaignId] : undefined;
