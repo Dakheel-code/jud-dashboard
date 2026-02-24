@@ -50,6 +50,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ summary });
   } catch (err: any) {
     console.error('[meta/insights-live] error:', err.message);
+    // خطأ OAuth — التوكن منتهي الصلاحية
+    const isOAuth = err.message?.includes('OAuthException') || err.message?.includes('access token') || err.message?.includes('190');
+    if (isOAuth) {
+      // تحديث status في قاعدة البيانات
+      await supabase
+        .from('store_meta_connections')
+        .update({ status: 'error' })
+        .eq('store_id', storeId)
+        .eq('ad_account_id', conn.ad_account_id);
+      return NextResponse.json({ summary: null, needs_reauth: true, error: 'token_expired' });
+    }
     return NextResponse.json({ error: err.message, summary: null }, { status: 500 });
   }
 }
