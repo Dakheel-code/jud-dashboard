@@ -221,6 +221,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   const [snapShowAll, setSnapShowAll]     = useState(false);
   const [snapAllCampaigns, setSnapAllCampaigns] = useState<any[]>([]);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
+  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const snapAbortRef = useRef<AbortController | null>(null);
   // حالة المنصات — تُجلب مرة واحدة فقط عند تحميل المكون
   const [internalIntegrations, setInternalIntegrations] = useState<Record<string, any>>({});
@@ -484,10 +486,8 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
   return (
     <div className="bg-purple-950/40 backdrop-blur-xl rounded-2xl border border-purple-500/20 overflow-hidden">
       {/* ─── Header ─────────────────────────────────────── */}
-      <button onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-purple-500/5 transition-all"
-        dir="rtl">
-        <div className="flex items-center gap-3">
+      <div className="w-full px-5 py-4 flex items-center justify-between" dir="rtl">
+        <button onClick={() => setIsCollapsed(!isCollapsed)} className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity text-right">
           <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
@@ -498,12 +498,24 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             <h2 className="text-lg font-bold text-white">الحملات الإعلانية</h2>
             <p className="text-xs text-purple-400/60">{connectedCount}/4 منصة متصلة</p>
           </div>
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={e => { e.stopPropagation(); setShowIntegrationModal(true); }}
+            title="إدارة الربط"
+            className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 hover:bg-purple-500/25 hover:text-white transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <button onClick={() => setIsCollapsed(!isCollapsed)} className="w-9 h-9 flex items-center justify-center text-purple-400 hover:text-white transition-colors">
+            <svg className={`w-5 h-5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
-        <svg className={`w-5 h-5 text-purple-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+      </div>
 
       {!isCollapsed && (
         <div className="px-4 pb-5 space-y-4">
@@ -741,6 +753,179 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
             );
           })()}
 
+        </div>
+      )}
+
+      {/* ─── Modal إدارة الربط ─── */}
+      {showIntegrationModal && storeId && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowIntegrationModal(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+          <div className="relative bg-[#130826] border border-purple-500/30 rounded-2xl w-full max-w-lg shadow-2xl shadow-purple-500/20 overflow-hidden"
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-purple-500/20" dir="rtl">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-bold">إدارة الربط</h3>
+                  <p className="text-xs text-purple-400/60">ربط أو فصل المنصات الإعلانية</p>
+                </div>
+              </div>
+              <button onClick={() => setShowIntegrationModal(false)}
+                className="w-8 h-8 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center text-purple-400 transition-all">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* قائمة المنصات */}
+            <div className="divide-y divide-purple-500/10" dir="rtl">
+              {[
+                {
+                  key: 'snapchat',
+                  name: 'Snapchat',
+                  icon: <SnapIcon />,
+                  color: 'text-yellow-400',
+                  bg: 'bg-yellow-500/10',
+                  border: 'border-yellow-500/30',
+                  connected: snapConnected,
+                  accountName: internalIntegrations?.snapchat?.ad_account_name,
+                  connectAction: () => { setShowIntegrationModal(false); onConnectClick?.(); },
+                  reconnectAction: () => { setShowIntegrationModal(false); onConnectClick?.(); },
+                  disconnectKey: 'snapchat',
+                },
+                {
+                  key: 'meta',
+                  name: 'Meta Ads',
+                  icon: <MetaIcon />,
+                  color: 'text-indigo-400',
+                  bg: 'bg-indigo-500/10',
+                  border: 'border-indigo-500/30',
+                  connected: metaConnected,
+                  accountName: metaConn?.ad_account_name,
+                  connectAction: () => { window.location.href = `/api/meta/connect?storeId=${storeId}`; },
+                  reconnectAction: () => { window.location.href = `/api/meta/connect?storeId=${storeId}`; },
+                  disconnectKey: 'meta',
+                },
+                {
+                  key: 'tiktok',
+                  name: 'TikTok',
+                  icon: <TikTokIcon />,
+                  color: 'text-white',
+                  bg: 'bg-white/5',
+                  border: 'border-white/20',
+                  connected: tiktokConnected,
+                  accountName: internalIntegrations?.tiktok?.ad_account_name,
+                  connectAction: () => { window.location.href = `/api/tiktok/auth?store_id=${storeId}`; },
+                  reconnectAction: () => { window.location.href = `/api/tiktok/auth?store_id=${storeId}`; },
+                  disconnectKey: 'tiktok',
+                },
+                {
+                  key: 'google',
+                  name: 'Google Ads',
+                  icon: <GoogleIcon />,
+                  color: 'text-green-400',
+                  bg: 'bg-green-500/10',
+                  border: 'border-green-500/30',
+                  connected: googleAdsConnected,
+                  accountName: googleAdsAccountName,
+                  connectAction: null,
+                  reconnectAction: null,
+                  disconnectKey: 'google',
+                },
+              ].map(p => (
+                <div key={p.key} className="flex items-center justify-between px-6 py-4 hover:bg-purple-500/5 transition-colors">
+                  {/* المنصة */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl ${p.bg} border ${p.border} flex items-center justify-center ${p.color}`}>
+                      {p.icon}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{p.name}</p>
+                      {p.connected ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                          <span className="text-xs text-green-400/80 truncate max-w-[160px]">
+                            {p.accountName || 'متصل'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                          <span className="text-xs text-gray-500">غير متصل</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* الأزرار */}
+                  <div className="flex items-center gap-2">
+                    {p.connected ? (
+                      <>
+                        {/* إعادة ربط */}
+                        {p.reconnectAction && (
+                          <button
+                            onClick={p.reconnectAction}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/25 transition-all">
+                            إعادة ربط
+                          </button>
+                        )}
+                        {/* فصل */}
+                        {p.key === 'google' ? (
+                          <GoogleAdsInlineButton storeId={storeId} />
+                        ) : (
+                          <button
+                            disabled={disconnecting === p.key}
+                            onClick={async () => {
+                              if (!confirm(`هل تريد فصل ${p.name}؟`)) return;
+                              setDisconnecting(p.key);
+                              try {
+                                if (p.key === 'snapchat' || p.key === 'tiktok') {
+                                  await fetch(`/api/integrations/status?storeId=${storeId}&platform=${p.key}`, { method: 'DELETE' });
+                                  intFetchedRef.current = false;
+                                  setInternalIntegrations({});
+                                  fetch(`/api/integrations/status?storeId=${storeId}`)
+                                    .then(r => r.ok ? r.json() : null)
+                                    .then(d => { if (d?.success && d.platforms) setInternalIntegrations(d.platforms); });
+                                } else if (p.key === 'meta') {
+                                  await fetch(`/api/meta/disconnect?storeId=${storeId}`, { method: 'POST' });
+                                  await fetchMetaConn();
+                                }
+                              } finally { setDisconnecting(null); }
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/25 transition-all disabled:opacity-50">
+                            {disconnecting === p.key ? 'جاري...' : 'فصل'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      p.key === 'google' ? (
+                        <GoogleAdsInlineButton storeId={storeId} />
+                      ) : p.connectAction ? (
+                        <button
+                          onClick={p.connectAction}
+                          className={`text-xs px-3 py-1.5 rounded-lg ${p.bg} border ${p.border} ${p.color} hover:opacity-80 transition-all font-semibold`}>
+                          ربط
+                        </button>
+                      ) : null
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-purple-500/10 bg-purple-900/20 text-center">
+              <p className="text-xs text-purple-400/40">بعد إعادة الربط ستظهر البيانات تلقائياً</p>
+            </div>
+          </div>
         </div>
       )}
 
