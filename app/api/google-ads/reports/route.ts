@@ -44,17 +44,20 @@ export async function GET(req: NextRequest) {
     let totalImpressions = 0;
     let totalClicks = 0;
     let totalConversions = 0;
+    let totalConversionsValue = 0;
 
     const report = rows.map((r: any) => {
-      const costMicros    = Number(r.metrics?.costMicros ?? 0);
-      const impressions   = Number(r.metrics?.impressions ?? 0);
-      const clicks        = Number(r.metrics?.clicks ?? 0);
-      const conversions   = Number(r.metrics?.conversions ?? 0);
+      const costMicros         = Number(r.metrics?.costMicros ?? 0);
+      const impressions        = Number(r.metrics?.impressions ?? 0);
+      const clicks             = Number(r.metrics?.clicks ?? 0);
+      const conversions        = Number(r.metrics?.conversions ?? 0);
+      const conversionsValue   = Number(r.metrics?.conversionsValue ?? 0);
 
-      totalCostMicros  += costMicros;
-      totalImpressions += impressions;
-      totalClicks      += clicks;
-      totalConversions += conversions;
+      totalCostMicros       += costMicros;
+      totalImpressions      += impressions;
+      totalClicks           += clicks;
+      totalConversions      += conversions;
+      totalConversionsValue += conversionsValue;
 
       return {
         campaign_id:   String(r.campaign?.id ?? ''),
@@ -64,6 +67,7 @@ export async function GET(req: NextRequest) {
         impressions,
         clicks,
         conversions,
+        conversions_value: conversionsValue,
         ctr:           Number(r.metrics?.ctr ?? 0),
         avg_cpc:       microsToAmount(r.metrics?.averageCpc ?? 0),
         cost_per_conversion: microsToAmount(r.metrics?.costPerConversion ?? 0),
@@ -71,11 +75,14 @@ export async function GET(req: NextRequest) {
     });
 
     const totalCost = microsToAmount(totalCostMicros);
+    const roas = totalCost > 0 && totalConversionsValue > 0 ? totalConversionsValue / totalCost : 0;
     const totals = {
       cost:               totalCost,
       impressions:        totalImpressions,
       clicks:             totalClicks,
       conversions:        totalConversions,
+      conversions_value:  totalConversionsValue,
+      roas,
       ctr:                totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
       avg_cpc:            totalClicks > 0 ? totalCost / totalClicks : 0,
       cost_per_conversion: totalConversions > 0 ? totalCost / totalConversions : 0,

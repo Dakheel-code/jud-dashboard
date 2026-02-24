@@ -259,8 +259,9 @@ export default function SnapchatCampaignsSection({ storeId, directIntegrations, 
       if (d.connected === false) return;
       const spend = d.totals?.cost || 0;
       const conversions = d.totals?.conversions || 0;
-      // Google Ads لا يُرجع revenue مباشرة — نعرض الصرف والطلبات فقط
-      setGoogleData({ spend, sales: 0, orders: conversions, roas: 0 });
+      const sales = d.totals?.conversions_value || 0;
+      const roas  = d.totals?.roas || 0;
+      setGoogleData({ spend, sales, orders: conversions, roas });
     } catch { /* silent */ }
     finally { setGoogleLoading(false); }
   }, [storeId]);
