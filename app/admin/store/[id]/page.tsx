@@ -115,19 +115,19 @@ function DesignerCell({
   };
 
   return (
-    <div className="p-4 text-center border-l border-purple-500/20 relative">
-      <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-pink-500/20 flex items-center justify-center">
-        <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="p-3 text-center relative">
+      <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-pink-500/20 flex items-center justify-center">
+        <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
         </svg>
       </div>
-      <p className="text-xs text-purple-300/70 mb-1">المصمم</p>
+      <p className="text-[10px] text-purple-300/60 mb-1">المصمم</p>
 
       {/* زر العرض / التغيير */}
       <button
         onClick={() => { setOpen(v => !v); loadDesigners(); }}
-        className="text-sm font-medium hover:text-pink-400 transition-colors flex items-center gap-1 mx-auto"
+        className="text-xs font-medium hover:text-pink-400 transition-colors flex items-center gap-1 mx-auto"
       >
         <span className={storeData?.designer ? 'text-white' : 'text-purple-400'}>
           {storeData?.designer ? storeData.designer.name.split(' ')[0] : 'غير محدد'}
@@ -1273,39 +1273,39 @@ function StoreDetailsContent() {
 
         {/* Store Info Card */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
-          <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-purple-500/20 rtl:divide-x-reverse">
+          <div className="grid grid-cols-4 divide-x divide-purple-500/20 rtl:divide-x-reverse">
             {/* مدير الحساب */}
-            <div className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <p className="text-xs text-purple-300/70">مدير الحساب</p>
+              <p className="text-[10px] text-purple-300/60">مدير الحساب</p>
               {storeData?.account_manager ? (
-                <Link href={`/admin/users/${storeData.account_manager.id}`} className="text-sm text-white font-medium hover:text-fuchsia-400 transition-colors">
+                <Link href={`/admin/users/${storeData.account_manager.id}`} className="text-xs text-white font-medium hover:text-fuchsia-400 transition-colors">
                   {storeData.account_manager.name.split(' ')[0]}
                 </Link>
               ) : (
-                <p className="text-sm text-purple-400">غير محدد</p>
+                <p className="text-xs text-purple-400">غير محدد</p>
               )}
             </div>
             
             {/* ميديا باير */}
-            <div className="p-4 text-center border-l border-purple-500/20">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
                 </svg>
               </div>
-              <p className="text-xs text-purple-300/70">ميديا باير</p>
+              <p className="text-[10px] text-purple-300/60">ميديا باير</p>
               {storeData?.media_buyer ? (
-                <Link href={`/admin/users/${storeData.media_buyer.id}`} className="text-sm text-white font-medium hover:text-cyan-400 transition-colors">
+                <Link href={`/admin/users/${storeData.media_buyer.id}`} className="text-xs text-white font-medium hover:text-cyan-400 transition-colors">
                   {storeData.media_buyer.name.split(' ')[0]}
                 </Link>
               ) : (
-                <p className="text-sm text-purple-400">غير محدد</p>
+                <p className="text-xs text-purple-400">غير محدد</p>
               )}
             </div>
 
@@ -1313,22 +1313,22 @@ function StoreDetailsContent() {
             <DesignerCell storeId={storeId!} storeData={storeData} onUpdated={(d) => setStoreData(prev => prev ? { ...prev, designer: d, designer_id: d?.id } : prev)} />
             
             {/* صاحب المتجر */}
-            <div className="p-4 text-center border-l border-purple-500/20">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-green-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="p-3 text-center">
+              <div className="w-8 h-8 mx-auto mb-1.5 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <p className="text-xs text-purple-300/70">صاحب المتجر</p>
+              <p className="text-[10px] text-purple-300/60">صاحب المتجر</p>
               {storeData?.client_id ? (
                 <Link 
                   href={`/admin/clients?view=${storeData.client_id}`}
-                  className="text-sm text-white font-medium hover:text-purple-300 transition-colors cursor-pointer"
+                  className="text-xs text-white font-medium hover:text-purple-300 transition-colors cursor-pointer"
                 >
                   {storeData?.owner_name || '-'}
                 </Link>
               ) : (
-                <p className="text-sm text-white font-medium">{storeData?.owner_name || '-'}</p>
+                <p className="text-xs text-white font-medium">{storeData?.owner_name || '-'}</p>
               )}
             </div>
           </div>
