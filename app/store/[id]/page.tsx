@@ -460,50 +460,61 @@ export default function StorePublicPage() {
               <p className="text-xs mt-1 opacity-60">تواصل مع الفريق لربط حساباتك الإعلانية</p>
             </div>
           ) : (
-            <div>
-              {/* header */}
-              <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-2 text-[10px] text-purple-300/40 border-b border-purple-500/10 gap-x-3">
-                <span className="text-right">المنصة</span>
-                <span className="text-center w-16">الصرف</span>
-                <span className="text-center w-16">المبيعات</span>
-                <span className="text-center w-14">الطلبات</span>
-              </div>
-              {adsPlatforms.map((p, i) => {
-                const pm = PLATFORM_META[p.platform] ?? { label: p.platform, color: 'text-purple-300', dot: 'bg-purple-400' };
-                return (
-                  <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 border-b border-purple-500/10 last:border-0 hover:bg-purple-500/5 transition-colors gap-x-3">
-                    <div className="flex items-center gap-2 justify-end min-w-0">
-                      <div className="min-w-0">
+            <table className="w-full text-sm" dir="rtl">
+              <thead>
+                <tr className="border-b border-purple-500/10">
+                  <th className="text-right px-4 py-2 text-[10px] font-normal text-purple-300/40">المنصة</th>
+                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">الصرف</th>
+                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">المبيعات</th>
+                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-16">الطلبات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-purple-500/10">
+                {adsPlatforms.map((p, i) => {
+                  const pm = PLATFORM_META[p.platform] ?? { label: p.platform, color: 'text-purple-300', dot: 'bg-purple-400' };
+                  return (
+                    <tr key={i} className="hover:bg-purple-500/5 transition-colors">
+                      <td className="px-4 py-3 text-right">
                         <p className={`text-sm font-medium ${pm.color}`}>{pm.label}</p>
-                        <p className="text-[10px] text-purple-300/40 truncate">
-                          {p.account_name}
-                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${pm.dot} mr-1 flex-shrink-0`} />
+                        <p className="text-[10px] text-purple-300/40 flex items-center gap-1 justify-end mt-0.5">
+                          <span className="truncate max-w-[130px]">{p.account_name}</span>
+                          <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${pm.dot}`} />
                         </p>
-                      </div>
-                    </div>
-                    <p className="text-center text-sm text-white font-medium self-center w-16">
-                      {p.spend > 0 ? p.spend.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
-                    </p>
-                    <p className="text-center text-sm text-white font-medium self-center w-16">
-                      {p.sales > 0 ? p.sales.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
-                    </p>
-                    <p className="text-center text-sm self-center w-14">
-                      {p.orders > 0 ? <span className="text-green-400 font-medium">{p.orders.toLocaleString('ar')}</span> : <span className="text-purple-300/30">—</span>}
-                    </p>
-                  </div>
-                );
-              })}
+                      </td>
+                      <td className="px-3 py-3 text-center text-sm font-medium text-white">
+                        {p.spend > 0 ? p.spend.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-center text-sm font-medium text-white">
+                        {p.sales > 0 ? p.sales.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
+                      </td>
+                      <td className="px-3 py-3 text-center text-sm">
+                        {p.orders > 0
+                          ? <span className="text-green-400 font-medium">{p.orders.toLocaleString('ar')}</span>
+                          : <span className="text-purple-300/30">—</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
               {adsSummary && (
-                <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 bg-purple-500/5 border-t border-purple-500/15 gap-x-3">
-                  <div className="flex items-center justify-end">
-                    <span className="text-xs text-purple-300/60">الإجمالي ({adsPlatforms.length} منصة)</span>
-                  </div>
-                  <p className="text-center text-sm font-bold text-red-300 w-16">{adsSummary.spend.toLocaleString('ar')}</p>
-                  <p className="text-center text-sm font-bold text-white w-16">{adsSummary.sales.toLocaleString('ar')}</p>
-                  <p className="text-center text-sm font-bold text-green-400 w-14">{adsSummary.orders.toLocaleString('ar')}</p>
-                </div>
+                <tfoot>
+                  <tr className="bg-purple-500/5 border-t border-purple-500/15">
+                    <td className="px-4 py-3 text-right text-xs text-purple-300/60">
+                      الإجمالي ({adsPlatforms.length} منصة)
+                    </td>
+                    <td className="px-3 py-3 text-center text-sm font-bold text-red-300">
+                      {adsSummary.spend.toLocaleString('ar')}
+                    </td>
+                    <td className="px-3 py-3 text-center text-sm font-bold text-white">
+                      {adsSummary.sales.toLocaleString('ar')}
+                    </td>
+                    <td className="px-3 py-3 text-center text-sm font-bold text-green-400">
+                      {adsSummary.orders.toLocaleString('ar')}
+                    </td>
+                  </tr>
+                </tfoot>
               )}
-            </div>
+            </table>
           )}
         </section>
 
