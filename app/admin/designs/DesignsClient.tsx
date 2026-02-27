@@ -125,6 +125,19 @@ interface DesignRequest {
   store_id: string;
   stores?: { id: string; store_name: string | null; store_url: string };
   comments?: Comment[];
+  // حقول الاستبيان
+  campaign_goals?: string[];
+  campaign_goals_other?: string;
+  has_offer?: string;
+  target_audience?: string;
+  content_tone?: string;
+  brand_colors?: string;
+  brand_fonts?: string;
+  discount_code?: string;
+  current_discounts?: string;
+  free_shipping?: string;
+  product_links?: string;
+  product_media_links?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -262,6 +275,114 @@ function RequestCard({
         </div>
         {req.description && <p className="text-[10px] text-purple-300/40 mt-2 line-clamp-2">{req.description}</p>}
       </div>
+
+      {/* Details Panel — تفاصيل الاستبيان */}
+      {open && (() => {
+        const hasDetails = req.campaign_goals?.length || req.target_audience || req.has_offer ||
+          req.content_tone || req.brand_colors || req.brand_fonts ||
+          req.discount_code || req.free_shipping || req.product_links || req.product_media_links;
+        if (!hasDetails) return null;
+        return (
+          <div className="border-t border-purple-500/10 px-3 py-2.5 space-y-2" onClick={e => e.stopPropagation()}>
+            <p className="text-[10px] font-semibold text-purple-300/50 uppercase tracking-wider">تفاصيل الطلب</p>
+            <div className="grid grid-cols-1 gap-1.5">
+
+              {req.campaign_goals && req.campaign_goals.length > 0 && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 mt-0.5 flex-shrink-0 w-20">هدف الحملة</span>
+                  <div className="flex flex-wrap gap-1">
+                    {req.campaign_goals.map((g, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{g}</span>
+                    ))}
+                    {req.campaign_goals_other && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{req.campaign_goals_other}</span>}
+                  </div>
+                </div>
+              )}
+
+              {req.target_audience && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">الجمهور</span>
+                  <span className="text-[10px] text-white/70">{req.target_audience}</span>
+                </div>
+              )}
+
+              {req.content_tone && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">نبرة المحتوى</span>
+                  <span className="text-[10px] text-white/70">{req.content_tone}</span>
+                </div>
+              )}
+
+              {req.has_offer && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">يوجد عرض</span>
+                  <span className={`text-[10px] font-medium ${req.has_offer === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.has_offer}</span>
+                </div>
+              )}
+
+              {req.discount_code && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">كود خصم</span>
+                  <span className="text-[10px] text-yellow-400 font-mono bg-yellow-500/10 px-1.5 py-0.5 rounded">{req.discount_code}</span>
+                </div>
+              )}
+
+              {req.free_shipping && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">توصيل مجاني</span>
+                  <span className={`text-[10px] font-medium ${req.free_shipping === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.free_shipping}</span>
+                </div>
+              )}
+
+              {req.brand_colors && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">ألوان البراند</span>
+                  <span className="text-[10px] text-white/70">{req.brand_colors}</span>
+                </div>
+              )}
+
+              {req.brand_fonts && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">الخطوط</span>
+                  <span className="text-[10px] text-white/70">{req.brand_fonts}</span>
+                </div>
+              )}
+
+              {req.product_links && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">روابط منتجات</span>
+                  <div className="flex-1">
+                    {req.product_links.split('\n').filter(Boolean).map((l, i) => (
+                      <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
+                        className="block text-[10px] text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {req.product_media_links && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">ميديا المنتج</span>
+                  <div className="flex-1">
+                    {req.product_media_links.split('\n').filter(Boolean).map((l, i) => (
+                      <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
+                        className="block text-[10px] text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {req.current_discounts && (
+                <div className="flex items-start gap-1.5">
+                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">خصومات</span>
+                  <span className="text-[10px] text-white/70">{req.current_discounts}</span>
+                </div>
+              )}
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Comments Panel */}
       {open && (
