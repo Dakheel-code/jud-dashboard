@@ -72,7 +72,6 @@ export default function StorePublicPage() {
   const [requests, setRequests] = useState<CreativeRequest[]>([]);
   const [tasks, setTasks]       = useState<StoreTask[]>([]);
   const [loading, setLoading]   = useState(true);
-  const [activeTab, setActiveTab] = useState<'requests' | 'designs' | 'tasks' | 'ads'>('requests');
 
   // form
   const [showForm, setShowForm]   = useState(false);
@@ -187,143 +186,147 @@ export default function StorePublicPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-white/5 rounded-xl border border-purple-500/20">
-          {([
-            { key: 'requests' as const, label: 'الطلبات',   badge: requests.length,                        badgeColor: 'bg-purple-500' },
-            { key: 'designs'  as const, label: 'التصاميم',  badge: pendingReview.length,                   badgeColor: 'bg-orange-500' },
-            { key: 'tasks'    as const, label: 'المهام',     badge: tasks.filter(t => !t.is_done).length,   badgeColor: 'bg-purple-500' },
-            { key: 'ads'      as const, label: 'الإعلانات', badge: 0,                                       badgeColor: 'bg-purple-500' },
-          ]).map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`relative py-2.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === tab.key
-                  ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-lg'
-                  : 'text-purple-300/70 hover:text-white'
-              }`}
-            >
-              {tab.label}
-              {tab.badge > 0 && (
-                <span className={`absolute -top-1 -left-1 w-4 h-4 ${tab.badgeColor} rounded-full text-[9px] flex items-center justify-center text-white font-bold`}>
-                  {tab.badge}
-                </span>
+        {/* ══════════════ قسم الطلبات ══════════════ */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-fuchsia-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
+                </svg>
+              </span>
+              الطلبات
+              {requests.length > 0 && (
+                <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">{requests.length}</span>
               )}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab: الطلبات ── */}
-        {activeTab === 'requests' && (
-          <div className="space-y-4">
+            </h2>
             <button
               onClick={() => { setShowForm(true); setSubmitted(null); }}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-2xl font-medium hover:from-purple-500 hover:to-fuchsia-500 transition-all shadow-lg shadow-purple-500/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl text-sm font-medium hover:from-purple-500 hover:to-fuchsia-500 transition-all"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               طلب جديد
             </button>
-
-            {requests.length === 0 ? (
-              <div className="text-center py-16 text-purple-300/40">
-                <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
-                </svg>
-                <p className="text-sm">لا توجد طلبات بعد</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {requests.map(req => (
-                  <RequestCard key={req.id} req={req} onFeedback={handleFeedback} />
-                ))}
-              </div>
-            )}
           </div>
-        )}
 
-        {/* ── Tab: التصاميم ── */}
-        {activeTab === 'designs' && (
-          <div className="space-y-4">
-            {/* بانتظار المراجعة */}
+          {requests.length === 0 ? (
+            <div className="text-center py-10 text-purple-300/40 bg-white/3 border border-purple-500/10 rounded-2xl">
+              <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
+              </svg>
+              <p className="text-sm">لا توجد طلبات بعد</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {requests.map(req => (
+                <RequestCard key={req.id} req={req} onFeedback={handleFeedback} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ══════════════ قسم التصاميم ══════════════ */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-pink-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </span>
+            التصاميم
             {pendingReview.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-orange-400 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                  بانتظار مراجعتك ({pendingReview.length})
-                </h3>
-                {pendingReview.map(req => (
-                  <DesignCard key={req.id} req={req} onFeedback={handleFeedback} highlight />
-                ))}
-              </div>
+              <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                {pendingReview.length} بانتظار مراجعتك
+              </span>
             )}
+          </h2>
 
-            {/* تصاميم مكتملة */}
-            {designs.filter(r => r.status !== 'review').length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-purple-300/60">التصاميم المنجزة</h3>
-                {designs.filter(r => r.status !== 'review').map(req => (
-                  <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />
-                ))}
-              </div>
+          {pendingReview.length > 0 && (
+            <div className="space-y-3">
+              {pendingReview.map(req => (
+                <DesignCard key={req.id} req={req} onFeedback={handleFeedback} highlight />
+              ))}
+            </div>
+          )}
+
+          {designs.filter(r => r.status !== 'review').length > 0 && (
+            <div className="space-y-3">
+              {pendingReview.length > 0 && (
+                <p className="text-xs text-purple-300/40 px-1">المنجزة</p>
+              )}
+              {designs.filter(r => r.status !== 'review').map(req => (
+                <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />
+              ))}
+            </div>
+          )}
+
+          {designs.length === 0 && pendingReview.length === 0 && (
+            <div className="text-center py-10 text-purple-300/40 bg-white/3 border border-purple-500/10 rounded-2xl">
+              <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-sm">لا توجد تصاميم بعد</p>
+              <p className="text-xs mt-1 opacity-60">ستظهر هنا عند إرسال الفريق للتصاميم</p>
+            </div>
+          )}
+        </section>
+
+        {/* ══════════════ قسم المهام ══════════════ */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </span>
+            المهام
+            {tasks.filter(t => !t.is_done).length > 0 && (
+              <span className="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
+                {tasks.filter(t => !t.is_done).length} قيد التنفيذ
+              </span>
             )}
+          </h2>
 
-            {designs.length === 0 && pendingReview.length === 0 && (
-              <div className="text-center py-16 text-purple-300/40">
-                <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p className="text-sm">لا توجد تصاميم بعد</p>
-                <p className="text-xs mt-1 text-purple-300/30">ستظهر هنا عند إرسال الفريق للتصاميم</p>
-              </div>
-            )}
-          </div>
-        )}
+          {tasks.length === 0 ? (
+            <div className="text-center py-10 text-purple-300/40 bg-white/3 border border-purple-500/10 rounded-2xl">
+              <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <p className="text-sm">لا توجد مهام بعد</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {tasks.filter(t => !t.is_done).map(task => (
+                <TaskRow key={task.id} task={task} />
+              ))}
+              {tasks.filter(t => t.is_done).length > 0 && (
+                <>
+                  <p className="text-xs text-green-400/40 px-1 pt-2">منجزة ({tasks.filter(t => t.is_done).length})</p>
+                  {tasks.filter(t => t.is_done).map(task => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </section>
 
-        {/* ── Tab: المهام ── */}
-        {activeTab === 'tasks' && (
-          <div className="space-y-3">
-            {tasks.length === 0 ? (
-              <div className="text-center py-16 text-purple-300/40">
-                <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p className="text-sm">لا توجد مهام بعد</p>
-              </div>
-            ) : (
-              <>
-                {/* مهام قيد التنفيذ */}
-                {tasks.filter(t => !t.is_done).length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-medium text-purple-300/50 px-1">قيد التنفيذ ({tasks.filter(t => !t.is_done).length})</h3>
-                    {tasks.filter(t => !t.is_done).map(task => (
-                      <TaskRow key={task.id} task={task} />
-                    ))}
-                  </div>
-                )}
-                {/* مهام منجزة */}
-                {tasks.filter(t => t.is_done).length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    <h3 className="text-xs font-medium text-green-400/50 px-1">منجزة ({tasks.filter(t => t.is_done).length})</h3>
-                    {tasks.filter(t => t.is_done).map(task => (
-                      <TaskRow key={task.id} task={task} />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        {/* ══════════════ قسم الإعلانات ══════════════ */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+            </span>
+            الإعلانات
+          </h2>
 
-        {/* ── Tab: الإعلانات ── */}
-        {activeTab === 'ads' && (
-          <div className="space-y-4">
-            {/* منصات متصلة */}
-            {(store?.meta_account || store?.snapchat_account || store?.tiktok_account) ? (
-              <div className="space-y-3">
-                <p className="text-xs text-purple-300/50 px-1">المنصات الإعلانية</p>
+          {(store?.meta_account || store?.snapchat_account || store?.tiktok_account) ? (
+            <div className="space-y-3">
                 {store?.snapchat_account && (
                   <div className="flex items-center justify-between p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl">
                     <div className="flex items-center gap-3">
@@ -372,22 +375,21 @@ export default function StorePublicPage() {
                     <span className="text-xs bg-green-500/15 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full">متصل</span>
                   </div>
                 )}
-                <p className="text-xs text-purple-300/30 text-center pt-2">
-                  بيانات الأداء التفصيلية متاحة عبر الفريق المختص
-                </p>
-              </div>
-            ) : (
-              <div className="text-center py-16 text-purple-300/40">
-                <svg className="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                </svg>
-                <p className="text-sm">لا توجد منصات إعلانية مرتبطة</p>
-                <p className="text-xs mt-1 text-purple-300/30">تواصل مع الفريق لإضافة حساباتك الإعلانية</p>
-              </div>
-            )}
-          </div>
-        )}
+              <p className="text-xs text-purple-300/30 text-center pt-2">
+                بيانات الأداء التفصيلية متاحة عبر الفريق المختص
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-10 text-purple-300/40 bg-white/3 border border-purple-500/10 rounded-2xl">
+              <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+              </svg>
+              <p className="text-sm">لا توجد منصات إعلانية مرتبطة</p>
+              <p className="text-xs mt-1 opacity-60">تواصل مع الفريق لإضافة حساباتك الإعلانية</p>
+            </div>
+          )}
+        </section>
 
       </div>
 
