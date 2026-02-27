@@ -1,8 +1,106 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
-// ─── Types ────────────────────────────────────────────────────────────────
+// ─── Lightbox ───────────────────────────────────────────────────────
+function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: number; onClose: () => void }) {
+  const [idx, setIdx] = useState(startIndex);
+  const url = urls[idx];
+  const isImg = /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(url) ||
+    (url.includes('supabase') && !url.match(/\.(pdf|zip|rar|docx?|xlsx?|mp4|mov)$/i));
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setIdx(i => Math.max(0, i - 1));
+      if (e.key === 'ArrowLeft')  setIdx(i => Math.min(urls.length - 1, i + 1));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [urls.length, onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute -top-10 right-0 text-white/70 hover:text-white">
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        {isImg ? (
+          <img src={url} alt="" className="max-h-[80vh] max-w-full rounded-xl object-contain shadow-2xl" />
+        ) : (
+          <div className="bg-[#130825] border border-purple-500/30 rounded-2xl p-8 text-center">
+            <svg className="w-16 h-16 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p className="text-white font-medium mb-4">{url.split('/').pop()?.split('?')[0] || 'ملف'}</p>
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-medium transition-colors">
+              فتح / تحميل
+            </a>
+          </div>
+        )}
+        {urls.length > 1 && (
+          <div className="flex items-center gap-6 mt-4">
+            <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <span className="text-white/50 text-sm">{idx + 1} / {urls.length}</span>
+            <button onClick={() => setIdx(i => Math.min(urls.length - 1, i + 1))} disabled={idx === urls.length - 1}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── FileThumb ───────────────────────────────────────────────────────
+function FileThumb({ urls, size = 'md' }: { urls: string[]; size?: 'sm' | 'md' }) {
+  const [lb, setLb] = useState<number | null>(null);
+  const dim = size === 'sm' ? 'w-12 h-12' : 'w-14 h-14';
+  const isImg = (u: string) => /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(u) ||
+    (u.includes('supabase') && !u.match(/\.(pdf|zip|rar|docx?|xlsx?|mp4|mov)$/i));
+  const ext = (u: string) => u.split('.').pop()?.split('?')[0]?.toUpperCase().slice(0, 4) ?? 'FILE';
+  return (
+    <>
+      <div className="flex flex-wrap gap-1.5">
+        {urls.map((u, i) => (
+          <button key={i} onClick={e => { e.stopPropagation(); setLb(i); }}
+            className={`${dim} rounded-lg overflow-hidden border-2 border-purple-500/30 hover:border-purple-400 transition-all flex-shrink-0 relative group`}>
+            {isImg(u) ? (
+              <img src={u} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-purple-500/10 flex flex-col items-center justify-center gap-0.5">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span className="text-[8px] text-purple-300/60 font-bold">{ext(u)}</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </div>
+          </button>
+        ))}
+      </div>
+      {lb !== null && <Lightbox urls={urls} startIndex={lb} onClose={() => setLb(null)} />}
+    </>
+  );
+}
+
+// ─── Types ───────────────────────────────────────────────────────
 interface Comment {
   id: string;
   request_id: string;
@@ -191,11 +289,8 @@ function RequestCard({
                   </div>
                   {c.body && <p className="text-white/80">{c.body}</p>}
                   {c.file_urls?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {c.file_urls.map((u, i) => (
-                        <a key={i} href={u} target="_blank" rel="noopener noreferrer"
-                          className="text-purple-400 underline">ملف {i+1}</a>
-                      ))}
+                    <div className="mt-1.5">
+                      <FileThumb urls={c.file_urls} size="sm" />
                     </div>
                   )}
                 </div>
