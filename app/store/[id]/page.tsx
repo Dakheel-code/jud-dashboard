@@ -246,20 +246,29 @@ export default function StorePublicPage() {
   };
 
   const handleFeedback = async (reqId: string, feedback: 'approved' | 'revision_requested', note?: string) => {
-    // Optimistic update — تحديث فوريبدون انتظار السيرفير
+    // 1. Optimistic update — تحديث فوري في الـ UI
     const newStatus = feedback === 'approved' ? 'done' : 'in_progress';
     setRequests(prev => prev.map(r =>
       r.id === reqId
-        ? { ...r, status: newStatus, client_feedback: feedback, client_feedback_note: note || null }
+        ? { ...r, status: newStatus, client_feedback: feedback, client_feedback_note: note ?? null }
         : r
     ));
     try {
-      await fetch(`/api/public/store/${storeId}/requests/${reqId}/feedback`, {
+      const res = await fetch(`/api/public/store/${storeId}/requests/${reqId}/feedback`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ feedback, note }),
       });
+      if (res.ok) {
+        // 2. بعد نجاح السيرفير — حدّث من الـ response مباشرة (أسرع من fetchData)
+        const { request: updated } = await res.json();
+        if (updated) {
+          setRequests(prev => prev.map(r => r.id === reqId ? { ...r, ...updated } : r));
+        }
+      } else {
+        // 3. عند فشل — أعد البيانات الأصلية
+        await fetchData();
+      }
     } catch {
-      // عند فشل السيرفير — إعادة جلب البيانات الحقيقية
       await fetchData();
     }
   };
@@ -1047,8 +1056,8 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
           <FileThumb urls={req.result_files} />
         )}
 
-        {/* أزرار الاعتماد — تظهر فقط عند review */}
-        {isReview && !req.client_feedback && (
+        {/* أزرار الاعتماد — تظهر فقط عند review بغض النظر عن client_feedback القديم */}
+        {isReview && (
           <div className="space-y-2 pt-1">
             <p className="text-xs text-orange-400 font-medium">التصميم جاهز — هل تعتمده؟</p>
             <div className="flex gap-2">

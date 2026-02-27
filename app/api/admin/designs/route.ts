@@ -63,6 +63,12 @@ export async function PATCH(req: NextRequest) {
 
     const updates: any = { status, updated_at: new Date().toISOString() };
     if (assigned_to !== undefined) updates.assigned_to = assigned_to;
+    // عند إعادة التصميم للمراجعة — امسح الـ feedback القديم حتى تظهر أزرار الاعتماد
+    if (status === 'review') {
+      updates.client_feedback      = null;
+      updates.client_feedback_note = null;
+      updates.client_feedback_at   = null;
+    }
 
     const { data, error } = await supabase
       .from('creative_requests')
