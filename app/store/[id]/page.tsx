@@ -246,11 +246,22 @@ export default function StorePublicPage() {
   };
 
   const handleFeedback = async (reqId: string, feedback: 'approved' | 'revision_requested', note?: string) => {
-    await fetch(`/api/public/store/${storeId}/requests/${reqId}/feedback`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feedback, note }),
-    });
-    await fetchData();
+    // Optimistic update — تحديث فوريبدون انتظار السيرفير
+    const newStatus = feedback === 'approved' ? 'done' : 'in_progress';
+    setRequests(prev => prev.map(r =>
+      r.id === reqId
+        ? { ...r, status: newStatus, client_feedback: feedback, client_feedback_note: note || null }
+        : r
+    ));
+    try {
+      await fetch(`/api/public/store/${storeId}/requests/${reqId}/feedback`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback, note }),
+      });
+    } catch {
+      // عند فشل السيرفير — إعادة جلب البيانات الحقيقية
+      await fetchData();
+    }
   };
 
   const toggleCat = (cat: string) =>
@@ -975,11 +986,18 @@ function RequestCard({ req, storeId, onFeedback, onRefresh }: {
 
 // ─── DesignCard ───────────────────────────────────────────────────────────────
 function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
-  const [showNote, setShowNote] = useState(false);
-  const [note, setNote]         = useState('');
+  const [showNote, setShowNote]   = useState(false);
+  const [note, setNote]           = useState('');
+  const [acting, setActing]       = useState<'approved' | 'revision_requested' | null>(null);
   const isDone       = req.status === 'done';
   const isReview     = req.status === 'review';
   const isInProgress = req.status === 'in_progress';
+
+  const handleAction = async (fb: 'approved' | 'revision_requested', n?: string) => {
+    setActing(fb);
+    await onFeedback(req.id, fb, n);
+    setActing(null);
+  };
 
   const borderCls = isDone
     ? 'bg-green-500/5 border-green-500/25'
@@ -1034,12 +1052,18 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
           <div className="space-y-2 pt-1">
             <p className="text-xs text-orange-400 font-medium">التصميم جاهز — هل تعتمده؟</p>
             <div className="flex gap-2">
-              <button onClick={() => onFeedback(req.id, 'approved')}
-                className="flex-1 py-2.5 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-semibold hover:bg-green-500/25 transition-colors">
-                ✓ اعتماد
+              <button
+                disabled={!!acting}
+                onClick={() => handleAction('approved')}
+                className="flex-1 py-2.5 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-semibold hover:bg-green-500/25 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
+                {acting === 'approved' ? (
+                  <><div className="w-3 h-3 rounded-full border-2 border-green-400/30 border-t-green-400 animate-spin" /> جاري...</>
+                ) : '✓ اعتماد'}
               </button>
-              <button onClick={() => setShowNote(v => !v)}
-                className="flex-1 py-2.5 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-semibold hover:bg-orange-500/25 transition-colors">
+              <button
+                disabled={!!acting}
+                onClick={() => setShowNote(v => !v)}
+                className="flex-1 py-2.5 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-semibold hover:bg-orange-500/25 transition-colors disabled:opacity-60">
                 ✕ طلب تعديل
               </button>
             </div>
@@ -1048,9 +1072,13 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
                 <textarea rows={2} value={note} onChange={e => setNote(e.target.value)}
                   placeholder="اكتب ملاحظات التعديل..."
                   className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
-                <button onClick={() => { onFeedback(req.id, 'revision_requested', note); setShowNote(false); }}
-                  className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors">
-                  إرسال الملاحظات
+                <button
+                  disabled={!!acting}
+                  onClick={() => { handleAction('revision_requested', note); setShowNote(false); }}
+                  className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
+                  {acting === 'revision_requested' ? (
+                    <><div className="w-3 h-3 rounded-full border-2 border-orange-400/30 border-t-orange-400 animate-spin" /> جاري...</>
+                  ) : 'إرسال الملاحظات'}
                 </button>
               </div>
             )}
