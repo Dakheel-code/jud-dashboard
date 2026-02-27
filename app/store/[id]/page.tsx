@@ -82,8 +82,21 @@ export default function StorePublicPage() {
   const [showForm, setShowForm]               = useState(false);
   const [submitting, setSubmitting]           = useState(false);
   const [submitted, setSubmitted]             = useState<{ id: string } | null>(null);
+  const [formStep, setFormStep] = useState(1);
   const [form, setForm] = useState({
     title: '', request_type: 'design', priority: 'normal', platform: '', description: '',
+    campaign_goals: [] as string[],
+    campaign_goals_other: '',
+    has_offer: '',
+    target_audience: '',
+    content_tone: '',
+    brand_colors: '',
+    brand_fonts: '',
+    discount_code: '',
+    current_discounts: '',
+    free_shipping: '',
+    product_links: '',
+    product_media_links: '',
   });
 
   const fetchData = useCallback(async () => {
@@ -119,7 +132,8 @@ export default function StorePublicPage() {
       if (res.ok) {
         setSubmitted({ id: data.request.id });
         setShowForm(false);
-        setForm({ title: '', request_type: 'design', priority: 'normal', platform: '', description: '' });
+        setFormStep(1);
+        setForm({ title: '', request_type: 'design', priority: 'normal', platform: '', description: '', campaign_goals: [], campaign_goals_other: '', has_offer: '', target_audience: '', content_tone: '', brand_colors: '', brand_fonts: '', discount_code: '', current_discounts: '', free_shipping: '', product_links: '', product_media_links: '' });
         await fetchData();
       }
     } catch { /* silent */ }
@@ -378,57 +392,249 @@ export default function StorePublicPage() {
       {/* ── Modal: طلب جديد ── */}
       {showForm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-[#130825] border border-purple-500/30 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-purple-500/20">
-              <h2 className="text-lg font-bold text-white">طلب جديد</h2>
-              <button onClick={() => setShowForm(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-purple-400 hover:bg-purple-500/10 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+          <div className="bg-[#130825] border border-purple-500/30 rounded-3xl w-full max-w-lg shadow-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-purple-500/20 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-white">طلب تصميم جديد</h2>
+                <p className="text-xs text-purple-300/50 mt-0.5">الخطوة {formStep} من 3</p>
+              </div>
+              <button onClick={() => { setShowForm(false); setFormStep(1); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-purple-400 hover:bg-purple-500/10">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs text-purple-300/70 mb-1.5">عنوان الطلب *</label>
-                <input
-                  type="text" required
-                  value={form.title}
-                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="مثال: تصميم بنر إعلاني..."
-                  className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-purple-300/70 mb-1.5">نوع الطلب</label>
-                  <select value={form.request_type} onChange={e => setForm(f => ({ ...f, request_type: e.target.value }))}
-                    className="w-full bg-[#1a0a2e] border border-purple-500/30 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400">
-                    {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+
+            {/* Progress */}
+            <div className="flex gap-1.5 px-5 pt-3 flex-shrink-0">
+              {[1,2,3].map(s => (
+                <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= formStep ? 'bg-purple-500' : 'bg-purple-500/15'}`} />
+              ))}
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5">
+
+              {/* ── الخطوة 1: معلومات الطلب الأساسية ── */}
+              {formStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">عنوان الطلب *</label>
+                    <input type="text" required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                      placeholder="مثال: تصميم بنر إعلاني..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-purple-300/70 mb-1.5">نوع الطلب</label>
+                      <select value={form.request_type} onChange={e => setForm(f => ({ ...f, request_type: e.target.value }))}
+                        className="w-full bg-[#1a0a2e] border border-purple-500/30 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400">
+                        {Object.entries(TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-purple-300/70 mb-1.5">الأولوية</label>
+                      <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+                        className="w-full bg-[#1a0a2e] border border-purple-500/30 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400">
+                        {Object.entries(PRIORITY_META).map(([v, m]) => <option key={v} value={v}>{m.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">المنصة (اختياري)</label>
+                    <input type="text" value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
+                      placeholder="مثال: Snapchat، Meta..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+
+                  {/* هدف الحملة */}
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-2">هدف الحملة *</label>
+                    <div className="space-y-2">
+                      {['زيادة المبيعات','تصريف منتجات','إطلاق منتج جديد','زيادة الوعي بالعلامة التجارية'].map(g => (
+                        <label key={g} className="flex items-center gap-3 cursor-pointer">
+                          <div onClick={() => setForm(f => ({ ...f, campaign_goals: f.campaign_goals.includes(g) ? f.campaign_goals.filter(x => x !== g) : [...f.campaign_goals, g] }))}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                              form.campaign_goals.includes(g) ? 'bg-purple-500 border-purple-500' : 'border-purple-500/40'
+                            }`}>
+                            {form.campaign_goals.includes(g) && (
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                            )}
+                          </div>
+                          <span className="text-sm text-white/80">{g}</span>
+                        </label>
+                      ))}
+                      <div className="flex items-center gap-3">
+                        <div onClick={() => setForm(f => ({ ...f, campaign_goals: f.campaign_goals.includes('أخرى') ? f.campaign_goals.filter(x => x !== 'أخرى') : [...f.campaign_goals, 'أخرى'] }))}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all ${
+                            form.campaign_goals.includes('أخرى') ? 'bg-purple-500 border-purple-500' : 'border-purple-500/40'
+                          }`}>
+                          {form.campaign_goals.includes('أخرى') && (
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                          )}
+                        </div>
+                        <input type="text" placeholder="أخرى:" value={form.campaign_goals_other} onChange={e => setForm(f => ({ ...f, campaign_goals_other: e.target.value }))}
+                          className="flex-1 bg-white/5 border border-purple-500/30 rounded-lg px-3 py-1.5 text-sm text-white placeholder-purple-300/30 focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* الجمهور المستهدف */}
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">الجمهور المستهدف * <span className="text-purple-300/40">(مثال: نساء – السعودية – 25-40 سنة)</span></label>
+                    <input type="text" value={form.target_audience} onChange={e => setForm(f => ({ ...f, target_audience: e.target.value }))}
+                      placeholder="إجابتك..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+
+                  {/* نبرة المحتوى */}
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-2">نبرة المحتوى المفضلة *</label>
+                    <div className="space-y-2">
+                      {['رسمية','عامية','مرحة','حسب ما ترونه مناسب'].map(t => (
+                        <label key={t} className="flex items-center gap-3 cursor-pointer" onClick={() => setForm(f => ({ ...f, content_tone: t }))}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            form.content_tone === t ? 'border-purple-500' : 'border-purple-500/40'
+                          }`}>
+                            {form.content_tone === t && <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />}
+                          </div>
+                          <span className="text-sm text-white/80">{t}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">تفاصيل إضافية</label>
+                    <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                      placeholder="أي تفاصيل إضافية..." className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400 resize-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-purple-300/70 mb-1.5">الأولوية</label>
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                    className="w-full bg-[#1a0a2e] border border-purple-500/30 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400">
-                    {Object.entries(PRIORITY_META).map(([v, m]) => <option key={v} value={v}>{m.label}</option>)}
-                  </select>
+              )}
+
+              {/* ── الخطوة 2: العروض والخصومات ── */}
+              {formStep === 2 && (
+                <div className="space-y-4">
+
+                  {/* هل يوجد عرض */}
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-2">هل يوجد عرض/كود/خصوم؟ *</label>
+                    <div className="space-y-2">
+                      {['لا','نعم'].map(o => (
+                        <label key={o} className="flex items-center gap-3 cursor-pointer" onClick={() => setForm(f => ({ ...f, has_offer: o }))}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            form.has_offer === o ? 'border-purple-500' : 'border-purple-500/40'
+                          }`}>
+                            {form.has_offer === o && <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />}
+                          </div>
+                          <span className="text-sm text-white/80">{o}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">هل يوجد كود خصم تريد إبرازه وكم نسبة خصمه؟</label>
+                    <input type="text" value={form.discount_code} onChange={e => setForm(f => ({ ...f, discount_code: e.target.value }))}
+                      placeholder="مثال: SAVE20 - خصم 20%..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">هل توجد خصومات حالية على المنتجات؟</label>
+                    <input type="text" value={form.current_discounts} onChange={e => setForm(f => ({ ...f, current_discounts: e.target.value }))}
+                      placeholder="إجابتك..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+
+                  {/* التوصيل المجاني */}
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-2">هل يوجد توصيل مجاني؟ *</label>
+                    <div className="space-y-2">
+                      {['نعم','لا','أخرى'].map(o => (
+                        <label key={o} className="flex items-center gap-3 cursor-pointer" onClick={() => setForm(f => ({ ...f, free_shipping: o }))}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            form.free_shipping === o ? 'border-purple-500' : 'border-purple-500/40'
+                          }`}>
+                            {form.free_shipping === o && <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />}
+                          </div>
+                          <span className="text-sm text-white/80">{o}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">روابط المنتجات للحملات الإعلانية * <span className="text-purple-300/40">(حد أقصى 5 منتجات)</span></label>
+                    <textarea rows={3} value={form.product_links} onChange={e => setForm(f => ({ ...f, product_links: e.target.value }))}
+                      placeholder="ضع روابط المنتجات هنا..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400 resize-none" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">إرفاق صور/فيديوهات المنتجات * <span className="text-purple-300/40">(يفضل روابط درايف)</span></label>
+                    <textarea rows={2} value={form.product_media_links} onChange={e => setForm(f => ({ ...f, product_media_links: e.target.value }))}
+                      placeholder="روابط الصور أو الفيديوهات..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400 resize-none" />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs text-purple-300/70 mb-1.5">المنصة (اختياري)</label>
-                <input type="text" value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
-                  placeholder="مثال: Snapchat، Meta..." className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
-              </div>
-              <div>
-                <label className="block text-xs text-purple-300/70 mb-1.5">تفاصيل إضافية</label>
-                <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="أي تفاصيل إضافية..." className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400 resize-none" />
-              </div>
-              <button type="submit" disabled={submitting}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl font-medium text-white hover:from-purple-500 hover:to-fuchsia-500 transition-all disabled:opacity-60">
-                {submitting ? 'جاري الإرسال...' : 'إرسال الطلب'}
-              </button>
-            </form>
+              )}
+
+              {/* ── الخطوة 3: الهوية البصرية ── */}
+              {formStep === 3 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">ما هي ألوان البراند المعتمدة؟ *</label>
+                    <input type="text" value={form.brand_colors} onChange={e => setForm(f => ({ ...f, brand_colors: e.target.value }))}
+                      placeholder="مثال: أزرق #1E40AF، أبيض #FFFFFF..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-purple-300/70 mb-1.5">ما الخطوط المستخدمة في الهوية؟ <span className="text-purple-300/40">(أسماء الخطوط أو ملقاتها)</span></label>
+                    <input type="text" value={form.brand_fonts} onChange={e => setForm(f => ({ ...f, brand_fonts: e.target.value }))}
+                      placeholder="مثال: Cairo Bold، Tajawal Regular..."
+                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
+                  </div>
+
+                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
+                    <p className="text-xs text-purple-300/60 mb-1">هل لديكم شعار (لوقو) بدقة عالية؟</p>
+                    <p className="text-[10px] text-purple-300/30">يرجى إرسال ملفات الشعار عبر المحادثة بعد إرسال الطلب</p>
+                  </div>
+                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
+                    <p className="text-xs text-purple-300/60 mb-1">هل يوجد أمثلة إعلانية أو تصاميم تحبكم؟</p>
+                    <p className="text-[10px] text-purple-300/30">يمكنك إرفاق الملفات عبر المحادثة بعد إرسال الطلب</p>
+                  </div>
+                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
+                    <p className="text-xs text-purple-300/60 mb-1">هل لديكم دليل هوية (Brand Guidelines)؟</p>
+                    <p className="text-[10px] text-purple-300/30">يمكنك إرفاق الملفات عبر المحادثة بعد إرسال الطلب</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="p-5 border-t border-purple-500/20 flex gap-3 flex-shrink-0">
+              {formStep > 1 && (
+                <button type="button" onClick={() => setFormStep(s => s - 1)}
+                  className="flex-1 py-3 bg-white/5 border border-purple-500/30 rounded-xl font-medium text-purple-300 hover:bg-white/10 transition-all">
+                  السابق
+                </button>
+              )}
+              {formStep < 3 ? (
+                <button type="button"
+                  onClick={() => {
+                    if (formStep === 1 && !form.title.trim()) return;
+                    setFormStep(s => s + 1);
+                  }}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl font-medium text-white hover:from-purple-500 hover:to-fuchsia-500 transition-all">
+                  التالي
+                </button>
+              ) : (
+                <button type="button" disabled={submitting} onClick={handleSubmit as any}
+                  className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl font-medium text-white hover:from-purple-500 hover:to-fuchsia-500 transition-all disabled:opacity-60">
+                  {submitting ? 'جاري الإرسال...' : 'إرسال الطلب'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
