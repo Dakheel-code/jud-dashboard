@@ -206,7 +206,7 @@ export default function StorePublicPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res  = await fetch(`/api/public/store/${storeId}`);
+      const res  = await fetch(`/api/public/store/${storeId}?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) return;
       setStore(data.store);
@@ -220,7 +220,7 @@ export default function StorePublicPage() {
   // polling كل 30 ثانية لتحديث حالة الطلبات
   useEffect(() => {
     fetchData();
-    const t = setInterval(fetchData, 30_000);
+    const t = setInterval(fetchData, 10_000);
     return () => clearInterval(t);
   }, [fetchData]);
 

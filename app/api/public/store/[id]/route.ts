@@ -73,15 +73,23 @@ export async function GET(
   const totalTasks     = allTasks.length;
   const completedTasks = allTasks.filter((t: any) => t.is_done).length;
 
-  return NextResponse.json({
-    store:           storeRes.data,
-    requests:        requestsRes.data  ?? [],
-    store_tasks:     tasksRes.data     ?? [],
-    tasks_by_category: tasksByCategory,
-    tasks_stats: {
-      total:      totalTasks,
-      completed:  completedTasks,
-      percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+  return NextResponse.json(
+    {
+      store:           storeRes.data,
+      requests:        requestsRes.data  ?? [],
+      store_tasks:     tasksRes.data     ?? [],
+      tasks_by_category: tasksByCategory,
+      tasks_stats: {
+        total:      totalTasks,
+        completed:  completedTasks,
+        percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+      },
     },
-  });
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    }
+  );
 }
