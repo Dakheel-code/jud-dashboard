@@ -467,6 +467,7 @@ export default function StorePublicPage() {
                   <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">الصرف</th>
                   <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">المبيعات</th>
                   <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-16">الطلبات</th>
+                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-16">العائد</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-purple-500/10">
@@ -492,6 +493,11 @@ export default function StorePublicPage() {
                           ? <span className="text-green-400 font-medium">{p.orders.toLocaleString('ar')}</span>
                           : <span className="text-purple-300/30">—</span>}
                       </td>
+                      <td className="px-3 py-3 text-center text-sm">
+                        {p.roas > 0
+                          ? <span className={p.roas < 1 ? 'text-red-400 font-medium' : 'text-purple-300 font-medium'}>{p.roas.toFixed(2)}x</span>
+                          : <span className="text-purple-300/30">—</span>}
+                      </td>
                     </tr>
                   );
                 })}
@@ -510,6 +516,9 @@ export default function StorePublicPage() {
                     </td>
                     <td className="px-3 py-3 text-center text-sm font-bold text-green-400">
                       {adsSummary.orders.toLocaleString('ar')}
+                    </td>
+                    <td className="px-3 py-3 text-center text-sm font-bold text-purple-300">
+                      {adsSummary.roas > 0 ? `${adsSummary.roas.toFixed(2)}x` : '—'}
                     </td>
                   </tr>
                 </tfoot>
