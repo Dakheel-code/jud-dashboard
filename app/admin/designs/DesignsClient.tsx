@@ -521,13 +521,14 @@ export default function DesignsClient() {
   const [stores, setStores]       = useState<{ id: string; name: string }[]>([]);
   const dragId                    = useRef<string | null>(null);
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
+  const fetchRequests = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const url = filterStore
+      const base = filterStore
         ? `/api/admin/designs?store_id=${filterStore}`
         : '/api/admin/designs';
-      const res  = await fetch(url);
+      const url = `${base}${filterStore ? '&' : '?'}t=${Date.now()}`;
+      const res  = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       const list: DesignRequest[] = data.requests ?? [];
       setRequests(list);
@@ -549,7 +550,11 @@ export default function DesignsClient() {
     finally { setLoading(false); }
   }, [filterStore]);
 
-  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+  useEffect(() => {
+    fetchRequests();
+    const t = setInterval(() => fetchRequests(true), 15_000);
+    return () => clearInterval(t);
+  }, [fetchRequests]);
 
   const deleteRequest = useCallback(async (id: string) => {
     if (!window.confirm('هل تريد حذف هذا الطلب نهائياً؟')) return;
@@ -614,7 +619,7 @@ export default function DesignsClient() {
           </p>
         </div>
         <button
-          onClick={fetchRequests}
+          onClick={() => fetchRequests()}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 border border-purple-500/30 rounded-xl text-sm text-purple-300 hover:bg-purple-600/30 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

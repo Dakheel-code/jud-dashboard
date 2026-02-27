@@ -21,7 +21,12 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { title, request_type = 'design', priority = 'normal', platform, description } = body;
+    const {
+      title, request_type = 'design', priority = 'normal', platform, description,
+      campaign_goals, campaign_goals_other, has_offer, target_audience,
+      content_tone, brand_colors, brand_fonts, discount_code,
+      current_discounts, free_shipping, product_links, product_media_links,
+    } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'العنوان مطلوب' }, { status: 400 });
@@ -41,13 +46,25 @@ export async function POST(
     const { data: request, error } = await supabase
       .from('creative_requests')
       .insert({
-        store_id:     storeId,
-        title:        title.trim(),
+        store_id:              storeId,
+        title:                 title.trim(),
         request_type,
         priority,
-        platform:     platform || null,
-        description:  description || null,
-        status:       'new',
+        platform:              platform             || null,
+        description:           description          || null,
+        status:                'new',
+        campaign_goals:        campaign_goals        || [],
+        campaign_goals_other:  campaign_goals_other  || null,
+        has_offer:             has_offer             || null,
+        target_audience:       target_audience       || null,
+        content_tone:          content_tone          || null,
+        brand_colors:          brand_colors          || null,
+        brand_fonts:           brand_fonts           || null,
+        discount_code:         discount_code         || null,
+        current_discounts:     current_discounts     || null,
+        free_shipping:         free_shipping         || null,
+        product_links:         product_links         || null,
+        product_media_links:   product_media_links   || null,
       })
       .select()
       .single();
