@@ -1274,13 +1274,22 @@ function StoreDetailsContent() {
         {/* Store Info Card */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
           <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-purple-500/20 rtl:divide-x-reverse">
-            {/* نسبة الإنجاز */}
+            {/* صفحة التاجر */}
             <div className="p-4 text-center">
               <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
-                <span className="text-lg font-bold text-white">{stats.percentage}%</span>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
               </div>
-              <p className="text-xs text-purple-300/70">نسبة الإنجاز</p>
-              <p className="text-sm text-white font-medium">{stats.completed}/{stats.total}</p>
+              <p className="text-xs text-purple-300/70 mb-1">صفحة التاجر</p>
+              <a
+                href={`/store/${storeId}/requests`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-purple-400 hover:text-fuchsia-400 transition-colors underline underline-offset-2"
+              >
+                فتح الصفحة
+              </a>
             </div>
             
             {/* مدير الحساب */}
