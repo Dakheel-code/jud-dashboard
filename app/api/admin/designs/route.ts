@@ -33,6 +33,21 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ requests: data ?? [] });
 }
 
+// DELETE /api/admin/designs?id=... — حذف الطلب
+export async function DELETE(req: NextRequest) {
+  const supabase = getSupabase();
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id مطلوب' }, { status: 400 });
+
+  const { error } = await supabase
+    .from('creative_requests')
+    .delete()
+    .eq('id', id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
 // PATCH /api/admin/designs — تحديث حالة الطلب
 export async function PATCH(req: NextRequest) {
   const supabase = getSupabase();
