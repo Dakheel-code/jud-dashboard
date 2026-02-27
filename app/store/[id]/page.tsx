@@ -20,17 +20,6 @@ interface TaskItem {
   is_done: boolean;
 }
 
-interface AdsRow {
-  platform: string;
-  account_name: string;
-  spend: number;
-  orders: number;
-  sales: number;
-  roas: number;
-  status: string;
-}
-
-interface AdsSummary { spend: number; orders: number; sales: number; roas: number; }
 
 interface CreativeRequest {
   id: string;
@@ -69,12 +58,6 @@ const PRIORITY_META: Record<string, { label: string; color: string }> = {
   urgent: { label: 'عاجل', color: 'text-red-400' },
 };
 
-const PLATFORM_META: Record<string, { label: string; color: string; dot: string }> = {
-  snapchat: { label: 'Snapchat', color: 'text-yellow-400', dot: 'bg-yellow-400' },
-  tiktok:   { label: 'TikTok',   color: 'text-white',      dot: 'bg-white'      },
-  meta:     { label: 'Meta Ads', color: 'text-blue-400',   dot: 'bg-blue-400'   },
-  google:   { label: 'Google',   color: 'text-green-400',  dot: 'bg-green-400'  },
-};
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function StorePublicPage() {
@@ -85,10 +68,6 @@ export default function StorePublicPage() {
   const [tasksByCategory, setTasksByCategory] = useState<Record<string, TaskItem[]>>({});
   const [tasksStats, setTasksStats]           = useState<{ total: number; completed: number; percentage: number } | null>(null);
   const [collapsedCats, setCollapsedCats]     = useState<Set<string>>(new Set());
-  const [adsPlatforms, setAdsPlatforms]       = useState<AdsRow[]>([]);
-  const [adsSummary, setAdsSummary]           = useState<AdsSummary | null>(null);
-  const [adsRange, setAdsRange]               = useState('7d');
-  const [adsLoading, setAdsLoading]           = useState(false);
   const [loading, setLoading]                 = useState(true);
   const [showForm, setShowForm]               = useState(false);
   const [submitting, setSubmitting]           = useState(false);
@@ -110,21 +89,7 @@ export default function StorePublicPage() {
     finally { setLoading(false); }
   }, [storeId]);
 
-  const fetchAds = useCallback(async (range: string) => {
-    setAdsLoading(true);
-    try {
-      const res  = await fetch(`/api/public/store/${storeId}/ads?range=${range}`);
-      const data = await res.json();
-      if (res.ok) {
-        setAdsPlatforms(data.platforms ?? []);
-        setAdsSummary(data.summary ?? null);
-      }
-    } catch { /* silent */ }
-    finally { setAdsLoading(false); }
-  }, [storeId]);
-
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { fetchAds(adsRange); }, [fetchAds, adsRange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,140 +357,6 @@ export default function StorePublicPage() {
           )}
         </section>
 
-        {/* ══ قسم الحملات الإعلانية ══ */}
-        <section className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/15">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-white">الحملات الإعلانية</h2>
-                {adsPlatforms.length > 0 && (
-                  <p className="text-[10px] text-purple-300/50">{adsPlatforms.length}/4 منصة متصلة</p>
-                )}
-              </div>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-              </svg>
-            </div>
-          </div>
-
-          {/* بطاقات الإجمالي */}
-          {adsSummary && adsPlatforms.length > 0 && (
-            <div className="grid grid-cols-4 divide-x divide-purple-500/15 rtl:divide-x-reverse border-b border-purple-500/15">
-              {([
-                { label: 'الصرف الإجمالي',   val: adsSummary.spend.toLocaleString('ar'),  sub: 'ر.س',                cls: 'bg-red-950/30',   txt: 'text-red-300'   },
-                { label: 'المبيعات الإجمالية', val: adsSummary.sales.toLocaleString('ar'),  sub: 'ر.س',                cls: '',                txt: 'text-white'     },
-                { label: 'الطلبات الإجمالية', val: adsSummary.orders.toLocaleString('ar'), sub: 'طلب',               cls: 'bg-green-950/20', txt: 'text-green-400' },
-                { label: 'العائد (ROAS)',      val: `${adsSummary.roas}x`,                  sub: 'العائد على الإنفاق', cls: '',                txt: 'text-white'     },
-              ] as { label: string; val: string; sub: string; cls: string; txt: string }[]).map((c, i) => (
-                <div key={i} className={`p-3 text-center ${c.cls}`}>
-                  <p className="text-[10px] text-purple-300/50 mb-1">{c.label}</p>
-                  <p className={`text-base font-bold ${c.txt}`}>{c.val}</p>
-                  <p className="text-[10px] text-purple-300/40">{c.sub}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* فلتر الفترة */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-purple-500/10">
-            <span className="text-xs text-purple-300/40 ml-auto">الفترة:</span>
-            {(['1d', '7d', '30d', '90d'] as const).map(r => (
-              <button
-                key={r}
-                onClick={() => setAdsRange(r)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${adsRange === r ? 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white' : 'text-purple-300/50 hover:text-white'}`}
-              >
-                {r === '1d' ? 'اليوم' : r === '7d' ? '7 أيام' : r === '30d' ? '30 يوم' : '90 يوم'}
-              </button>
-            ))}
-          </div>
-
-          {/* جدول المنصات */}
-          {adsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
-            </div>
-          ) : adsPlatforms.length === 0 ? (
-            <div className="text-center py-10 text-purple-300/40">
-              <p className="text-sm">لا توجد منصات مرتبطة</p>
-              <p className="text-xs mt-1 opacity-60">تواصل مع الفريق لربط حساباتك الإعلانية</p>
-            </div>
-          ) : (
-            <table className="w-full text-sm" dir="rtl">
-              <thead>
-                <tr className="border-b border-purple-500/10">
-                  <th className="text-right px-4 py-2 text-[10px] font-normal text-purple-300/40">المنصة</th>
-                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">الصرف</th>
-                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-20">المبيعات</th>
-                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-16">الطلبات</th>
-                  <th className="text-center px-3 py-2 text-[10px] font-normal text-purple-300/40 w-16">العائد</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-purple-500/10">
-                {adsPlatforms.map((p, i) => {
-                  const pm = PLATFORM_META[p.platform] ?? { label: p.platform, color: 'text-purple-300', dot: 'bg-purple-400' };
-                  return (
-                    <tr key={i} className="hover:bg-purple-500/5 transition-colors">
-                      <td className="px-4 py-3 text-right">
-                        <p className={`text-sm font-medium ${pm.color}`}>{pm.label}</p>
-                        <p className="text-[10px] text-purple-300/40 flex items-center gap-1 justify-end mt-0.5">
-                          <span className="truncate max-w-[130px]">{p.account_name}</span>
-                          <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${pm.dot}`} />
-                        </p>
-                      </td>
-                      <td className="px-3 py-3 text-center text-sm font-medium text-white">
-                        {p.spend > 0 ? p.spend.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center text-sm font-medium text-white">
-                        {p.sales > 0 ? p.sales.toLocaleString('ar') : <span className="text-purple-300/30">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center text-sm">
-                        {p.orders > 0
-                          ? <span className="text-green-400 font-medium">{p.orders.toLocaleString('ar')}</span>
-                          : <span className="text-purple-300/30">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-center text-sm">
-                        {p.roas > 0
-                          ? <span className={p.roas < 1 ? 'text-red-400 font-medium' : 'text-purple-300 font-medium'}>{p.roas.toFixed(2)}x</span>
-                          : <span className="text-purple-300/30">—</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {adsSummary && (
-                <tfoot>
-                  <tr className="bg-purple-500/5 border-t border-purple-500/15">
-                    <td className="px-4 py-3 text-right text-xs text-purple-300/60">
-                      الإجمالي ({adsPlatforms.length} منصة)
-                    </td>
-                    <td className="px-3 py-3 text-center text-sm font-bold text-red-300">
-                      {adsSummary.spend.toLocaleString('ar')}
-                    </td>
-                    <td className="px-3 py-3 text-center text-sm font-bold text-white">
-                      {adsSummary.sales.toLocaleString('ar')}
-                    </td>
-                    <td className="px-3 py-3 text-center text-sm font-bold text-green-400">
-                      {adsSummary.orders.toLocaleString('ar')}
-                    </td>
-                    <td className="px-3 py-3 text-center text-sm font-bold text-purple-300">
-                      {adsSummary.roas > 0 ? `${adsSummary.roas.toFixed(2)}x` : '—'}
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          )}
-        </section>
 
       </div>
 
