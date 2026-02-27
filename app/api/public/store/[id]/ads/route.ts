@@ -28,14 +28,37 @@ export async function GET(
   const startStr = start.toISOString().split('T')[0];
   const endStr   = end.toISOString().split('T')[0];
 
-  // جلب المنصات المربوطة
-  const { data: platforms } = await supabase
+  // جلب المنصات من ad_platform_accounts
+  const { data: platformAccounts } = await supabase
     .from('ad_platform_accounts')
     .select('platform, ad_account_id, ad_account_name, status')
     .eq('store_id', storeId)
     .in('status', ['connected', 'active']);
 
-  if (!platforms || platforms.length === 0) {
+  // جلب المنصات من platform_tokens (Meta, Snapchat, TikTok)
+  const { data: tokens } = await supabase
+    .from('platform_tokens')
+    .select('platform, ad_account_id, ad_account_name')
+    .eq('store_id', storeId);
+
+  // دمج المصدرين — منع التكرار بالمنصة
+  const seenPlatforms = new Set<string>();
+  const platforms: { platform: string; ad_account_id: string; ad_account_name: string }[] = [];
+
+  for (const p of (platformAccounts ?? [])) {
+    if (!seenPlatforms.has(p.platform)) {
+      seenPlatforms.add(p.platform);
+      platforms.push({ platform: p.platform, ad_account_id: p.ad_account_id, ad_account_name: p.ad_account_name });
+    }
+  }
+  for (const t of (tokens ?? [])) {
+    if (!seenPlatforms.has(t.platform)) {
+      seenPlatforms.add(t.platform);
+      platforms.push({ platform: t.platform, ad_account_id: t.ad_account_id || '', ad_account_name: t.ad_account_name || t.ad_account_id || t.platform });
+    }
+  }
+
+  if (platforms.length === 0) {
     return NextResponse.json({ platforms: [], summary: null, range, start: startStr, end: endStr });
   }
 
