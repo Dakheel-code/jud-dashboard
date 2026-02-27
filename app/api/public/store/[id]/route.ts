@@ -19,10 +19,10 @@ export async function GET(
   const supabase = getSupabase();
   const storeId = params.id;
 
-  const [storeRes, requestsRes] = await Promise.all([
+  const [storeRes, requestsRes, tasksRes] = await Promise.all([
     supabase
       .from('stores')
-      .select('id, store_name, store_url, status')
+      .select('id, store_name, store_url, status, meta_account, snapchat_account, tiktok_account')
       .eq('id', storeId)
       .single(),
 
@@ -35,6 +35,12 @@ export async function GET(
       `)
       .eq('store_id', storeId)
       .order('created_at', { ascending: false }),
+
+    supabase
+      .from('store_tasks')
+      .select('id, title, description, status, priority, type, category, is_done, due_date, created_at')
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: false }),
   ]);
 
   if (storeRes.error || !storeRes.data) {
@@ -44,5 +50,6 @@ export async function GET(
   return NextResponse.json({
     store:    storeRes.data,
     requests: requestsRes.data ?? [],
+    tasks:    tasksRes.data    ?? [],
   });
 }
