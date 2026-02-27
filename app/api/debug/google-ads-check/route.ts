@@ -55,12 +55,13 @@ export async function GET(req: NextRequest) {
     if (accessToken && data?.customer_id) {
       const end = new Date().toISOString().split('T')[0];
       const start = new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0];
+      const effectiveManagerId = data.manager_id || managerId;
       const headers: Record<string, string> = {
         Authorization: `Bearer ${accessToken}`,
         'developer-token': developerToken,
         'Content-Type': 'application/json',
       };
-      if (managerId) headers['login-customer-id'] = managerId;
+      if (effectiveManagerId) headers['login-customer-id'] = effectiveManagerId;
 
       try {
         const url = `https://googleads.googleapis.com/v18/customers/${data.customer_id}/googleAds:searchStream`;

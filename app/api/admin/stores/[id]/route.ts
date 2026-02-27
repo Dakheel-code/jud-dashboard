@@ -30,12 +30,15 @@ export async function GET(
       .from('stores')
       .select(`
         id, store_name, store_url, owner_name, owner_phone, owner_email,
-        account_manager_id, media_buyer_id, notes, priority, budget, status,
+        account_manager_id, media_buyer_id, designer_id, notes, priority, budget, status,
         is_active, created_at, updated_at, subscription_start_date,
         store_group_url, category, client_id,
         billing_type, billing_amount,
         snapchat_account, tiktok_account, google_account, meta_account,
-        client:clients(id, name, phone, email)
+        client:clients(id, name, phone, email),
+        account_manager:admin_users!stores_account_manager_id_fkey(id, name, avatar),
+        media_buyer:admin_users!stores_media_buyer_id_fkey(id, name, avatar),
+        designer:admin_users!stores_designer_id_fkey(id, name, avatar)
       `)
       .eq('id', id)
       .single();
@@ -95,6 +98,7 @@ export async function PUT(
     if (body.meta_account !== undefined) updateData.meta_account = body.meta_account || null;
     if (body.client_id !== undefined) updateData.client_id = body.client_id;
     if (body.media_buyer_id !== undefined) updateData.media_buyer_id = body.media_buyer_id || null;
+    if (body.designer_id    !== undefined) updateData.designer_id    = body.designer_id    || null;
     if (body.store_group_url !== undefined) updateData.store_group_url = body.store_group_url || null;
     if (body.category !== undefined) updateData.category = body.category || null;
     if (body.billing_type !== undefined) updateData.billing_type = body.billing_type || null;

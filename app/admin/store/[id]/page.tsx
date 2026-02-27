@@ -40,6 +40,11 @@ interface StoreFullData {
     id: string;
     name: string;
   };
+  designer?: {
+    id: string;
+    name: string;
+  };
+  designer_id?: string;
 }
 
 interface StoreMetadata {
@@ -67,6 +72,112 @@ const getTimeAgo = (dateString: string) => {
   if (diffInSeconds < 31536000) return `منذ ${Math.floor(diffInSeconds / 2592000)} شهر`;
   return `منذ ${Math.floor(diffInSeconds / 31536000)} سنة`;
 };
+
+// ─── DesignerCell: خلية المصمم مع Dropdown لتغييره ───────────────────────────
+function DesignerCell({
+  storeId,
+  storeData,
+  onUpdated,
+}: {
+  storeId: string;
+  storeData: StoreFullData | null;
+  onUpdated: (d: { id: string; name: string } | undefined) => void;
+}) {
+  const [open, setOpen]         = React.useState(false);
+  const [designers, setDesigners] = React.useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading]   = React.useState(false);
+  const [saving, setSaving]     = React.useState(false);
+
+  const loadDesigners = async () => {
+    if (designers.length > 0) return;
+    setLoading(true);
+    try {
+      const res  = await fetch('/api/admin/users?role=designer&active=true');
+      const data = await res.json();
+      setDesigners(data.users ?? []);
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  };
+
+  const select = async (designerId: string | null) => {
+    setSaving(true);
+    try {
+      await fetch(`/api/admin/stores/${storeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designer_id: designerId }),
+      });
+      const found = designers.find(d => d.id === designerId);
+      onUpdated(found ? { id: found.id, name: found.name } : undefined);
+      setOpen(false);
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="p-4 text-center border-l border-purple-500/20 relative">
+      <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-pink-500/20 flex items-center justify-center">
+        <svg className="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
+        </svg>
+      </div>
+      <p className="text-xs text-purple-300/70 mb-1">المصمم</p>
+
+      {/* زر العرض / التغيير */}
+      <button
+        onClick={() => { setOpen(v => !v); loadDesigners(); }}
+        className="text-sm font-medium hover:text-pink-400 transition-colors flex items-center gap-1 mx-auto"
+      >
+        <span className={storeData?.designer ? 'text-white' : 'text-purple-400'}>
+          {storeData?.designer ? storeData.designer.name.split(' ')[0] : 'غير محدد'}
+        </span>
+        <svg className="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-[#1a0a2e] border border-purple-500/30 rounded-xl shadow-2xl min-w-[160px] overflow-hidden">
+          {loading ? (
+            <p className="text-xs text-purple-400 p-3 text-center">جاري التحميل...</p>
+          ) : (
+            <>
+              <button
+                onClick={() => select(null)}
+                disabled={saving}
+                className="w-full text-right px-3 py-2 text-xs text-purple-400 hover:bg-purple-500/10 transition-colors"
+              >
+                {'— بدون مصمم'}
+              </button>
+              {designers.map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => select(d.id)}
+                  disabled={saving}
+                  className={`w-full text-right px-3 py-2 text-xs transition-colors hover:bg-pink-500/10 ${
+                    storeData?.designer?.id === d.id
+                      ? 'text-pink-400 font-bold'
+                      : 'text-white'
+                  }`}
+                >
+                  {d.name}
+                </button>
+              ))}
+              {designers.length === 0 && (
+                <p className="text-xs text-purple-400 p-3 text-center">{'لا يوجد مصممون'}</p>
+              )}
+            </>
+          )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function StoreDetailsContent() {
   const params = useParams();
@@ -1099,6 +1210,9 @@ function StoreDetailsContent() {
                 <p className="text-sm text-purple-400">غير محدد</p>
               )}
             </div>
+
+            {/* المصمم */}
+            <DesignerCell storeId={storeId!} storeData={storeData} onUpdated={(d) => setStoreData(prev => prev ? { ...prev, designer: d, designer_id: d?.id } : prev)} />
             
             {/* صاحب المتجر */}
             <div className="p-4 text-center border-l border-purple-500/20">
