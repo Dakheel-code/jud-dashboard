@@ -179,6 +179,113 @@ function DesignerCell({
   );
 }
 
+// ─── NoDesignerWarning: تحذير + زر إعادة إسناد ───────────────────────────────
+function NoDesignerWarning({
+  storeId,
+  storeData,
+}: {
+  storeId: string;
+  storeData: StoreFullData;
+}) {
+  const [unassignedCount, setUnassignedCount] = React.useState<number | null>(null);
+  const [reassigning, setReassigning]         = React.useState(false);
+  const [done, setDone]                       = React.useState(false);
+  const [designers, setDesigners]             = React.useState<{ id: string; name: string }[]>([]);
+  const [selectedDesigner, setSelectedDesigner] = React.useState('');
+  const [showReassign, setShowReassign]       = React.useState(false);
+
+  React.useEffect(() => {
+    // عدّ مهام التصميم المفتوحة بدون مصمم
+    fetch(`/api/admin/stores/${storeId}/unassigned-design-tasks`)
+      .then(r => r.json())
+      .then(d => setUnassignedCount(d.count ?? 0))
+      .catch(() => setUnassignedCount(0));
+  }, [storeId]);
+
+  const loadDesigners = async () => {
+    if (designers.length > 0) return;
+    const res  = await fetch('/api/admin/users?role=designer&active=true');
+    const data = await res.json();
+    setDesigners(data.users ?? []);
+  };
+
+  const handleReassign = async () => {
+    if (!selectedDesigner) return;
+    setReassigning(true);
+    try {
+      const res  = await fetch(`/api/admin/stores/${storeId}/reassign-designer`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ designer_id: selectedDesigner }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUnassignedCount(0);
+        setDone(true);
+        setShowReassign(false);
+      }
+    } catch { /* silent */ }
+    finally { setReassigning(false); }
+  };
+
+  if (done) return null;
+
+  return (
+    <div className="mx-4 mb-1 p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl flex items-start gap-3">
+      <svg className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      </svg>
+      <div className="flex-1 min-w-0">
+        <p className="text-orange-400 text-xs font-medium">
+          هذا المتجر بدون مصمم مسند
+          {unassignedCount !== null && unassignedCount > 0 && (
+            <span className="mr-1 text-orange-300/70">
+              {'· '}{unassignedCount} مهمة تصميم غير مسندة
+            </span>
+          )}
+        </p>
+        {unassignedCount !== null && unassignedCount > 0 && !showReassign && (
+          <button
+            onClick={() => { setShowReassign(true); loadDesigners(); }}
+            className="mt-1.5 text-xs text-orange-400 underline hover:text-orange-300 transition-colors"
+          >
+            إعادة إسناد مهام التصميم المفتوحة
+          </button>
+        )}
+        {showReassign && (
+          <div className="mt-2 flex items-center gap-2">
+            <select
+              value={selectedDesigner}
+              onChange={e => setSelectedDesigner(e.target.value)}
+              className="flex-1 px-2 py-1.5 bg-purple-900/40 border border-purple-500/20 rounded-lg text-white text-xs focus:outline-none focus:border-orange-400"
+            >
+              <option value="">اختر مصمماً...</option>
+              {designers.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={handleReassign}
+              disabled={reassigning || !selectedDesigner}
+              className="px-3 py-1.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 text-xs rounded-lg hover:bg-orange-500/30 transition-all disabled:opacity-50"
+            >
+              {reassigning ? '...' : 'إسناد'}
+            </button>
+            <button
+              onClick={() => setShowReassign(false)}
+              className="text-purple-400 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StoreDetailsContent() {
   const params = useParams();
   const router = useRouter();
@@ -1234,7 +1341,12 @@ function StoreDetailsContent() {
               )}
             </div>
           </div>
-          
+
+          {/* 5.1 تحذير: بدون مصمم + 5.2 زر إعادة الإسناد */}
+          {storeData && !storeData.designer_id && (
+            <NoDesignerWarning storeId={storeId!} storeData={storeData} />
+          )}
+
           {/* بيانات الاشتراك */}
           <div className="border-t border-purple-500/20 p-4">
             <div className="flex items-center justify-center gap-6 flex-wrap">
