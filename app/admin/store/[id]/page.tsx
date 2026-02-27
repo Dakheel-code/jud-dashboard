@@ -1273,25 +1273,7 @@ function StoreDetailsContent() {
 
         {/* Store Info Card */}
         <div className="bg-purple-950/40  rounded-2xl border border-purple-500/20 mb-6 overflow-hidden">
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-purple-500/20 rtl:divide-x-reverse">
-            {/* صفحة التاجر */}
-            <div className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </div>
-              <p className="text-xs text-purple-300/70 mb-1">صفحة التاجر</p>
-              <a
-                href={`/store/${storeId}/requests`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-purple-400 hover:text-fuchsia-400 transition-colors underline underline-offset-2"
-              >
-                فتح الصفحة
-              </a>
-            </div>
-            
+          <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-purple-500/20 rtl:divide-x-reverse">
             {/* مدير الحساب */}
             <div className="p-4 text-center">
               <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-blue-500/20 flex items-center justify-center">
@@ -1581,6 +1563,38 @@ function StoreDetailsContent() {
                     <span className="text-white font-medium">
                       {new Date(storeData.created_at).toLocaleDateString('en-US')}
                     </span>
+                  </div>
+                )}
+
+                {/* رابط صفحة التاجر */}
+                {storeId && (
+                  <div className="w-full mt-2 pt-3 border-t border-purple-500/20">
+                    <p className="text-xs text-purple-300/60 mb-2">صفحة التاجر</p>
+                    <div className="flex items-center gap-2 bg-purple-900/30 border border-purple-500/20 rounded-xl px-3 py-2">
+                      <span className="flex-1 text-xs text-purple-300 font-mono break-all select-all" dir="ltr">
+                        {`${typeof window !== 'undefined' ? window.location.origin : 'https://jud-dashboard.netlify.app'}/store/${storeId}`}
+                      </span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(`${window.location.origin}/store/${storeId}`)}
+                        className="flex-shrink-0 p-1.5 text-purple-400 hover:text-white hover:bg-purple-500/20 rounded-lg transition-all"
+                        title="نسخ الرابط"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                      <a
+                        href={`/store/${storeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 p-1.5 text-fuchsia-400 hover:text-white hover:bg-fuchsia-500/20 rounded-lg transition-all"
+                        title="فتح الصفحة"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
                   </div>
                 )}
                 {storeData?.store_group_url && (
