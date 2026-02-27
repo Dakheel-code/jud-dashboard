@@ -262,6 +262,9 @@ export default function StorePublicPage() {
 
   const designs      = requests.filter(r => r.result_files && r.result_files.length > 0);
   const pendingReview = requests.filter(r => r.status === 'review');
+  const approvedDesigns = designs.filter(r => r.status === 'done');
+  const revisionDesigns = designs.filter(r => r.status === 'in_progress');
+  const otherDesigns    = designs.filter(r => r.status !== 'review' && r.status !== 'done' && r.status !== 'in_progress');
 
   if (loading) {
     return (
@@ -378,18 +381,44 @@ export default function StorePublicPage() {
               </div>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-4 space-y-4">
+
+            {/* — بانتظار مراجعتك — */}
             {pendingReview.length > 0 && (
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3">
                 {pendingReview.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} highlight />)}
               </div>
             )}
-            {designs.filter(r => r.status !== 'review').length > 0 && (
-              <div className="space-y-3">
-                {pendingReview.length > 0 && <p className="text-xs text-purple-300/40 px-1">المنجزة</p>}
-                {designs.filter(r => r.status !== 'review').map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+
+            {/* — تحت التعديل — */}
+            {revisionDesigns.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-orange-300/60 font-medium px-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+                  تحت التعديل
+                </p>
+                {revisionDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
               </div>
             )}
+
+            {/* — معتمدة — */}
+            {approvedDesigns.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-green-400/70 font-medium px-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                  معتمدة
+                </p>
+                {approvedDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+              </div>
+            )}
+
+            {/* — أخرى (canceled, waiting_info...) — */}
+            {otherDesigns.length > 0 && (
+              <div className="space-y-2">
+                {otherDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+              </div>
+            )}
+
             {designs.length === 0 && pendingReview.length === 0 && (
               <div className="text-center py-8 text-purple-300/40">
                 <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -948,54 +977,86 @@ function RequestCard({ req, storeId, onFeedback, onRefresh }: {
 function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
   const [showNote, setShowNote] = useState(false);
   const [note, setNote]         = useState('');
-  const s = STATUS_META[req.status] ?? STATUS_META.new;
+  const isDone       = req.status === 'done';
+  const isReview     = req.status === 'review';
+  const isInProgress = req.status === 'in_progress';
+
+  const borderCls = isDone
+    ? 'bg-green-500/5 border-green-500/25'
+    : highlight
+      ? 'bg-orange-500/5 border-orange-500/30'
+      : isInProgress
+        ? 'bg-orange-500/5 border-orange-400/20'
+        : 'bg-white/5 border-purple-500/20';
 
   return (
-    <div className={`p-4 rounded-2xl border space-y-3 ${highlight ? 'bg-orange-500/5 border-orange-500/30' : 'bg-white/5 border-purple-500/20'}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-white">{req.title}</p>
-          <p className="text-xs text-purple-300/50 mt-0.5">{TYPE_LABELS[req.request_type] ?? req.request_type}</p>
-        </div>
-        <span className={`flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-medium ${s.color}`}>{s.label}</span>
-      </div>
-      {req.result_files && req.result_files.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {req.result_files.map((f, i) => (
-            <a key={i} href={f} target="_blank" rel="noopener noreferrer"
-              className="text-xs text-purple-400 hover:text-purple-300 underline flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              ملف {i + 1}
-            </a>
-          ))}
+    <div className={`rounded-2xl border overflow-hidden ${borderCls}`}>
+
+      {/* شارة معتمد */}
+      {isDone && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border-b border-green-500/20">
+          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs font-semibold text-green-400">تم الاعتماد</span>
         </div>
       )}
-      {req.status === 'review' && !req.client_feedback && (
-        <div className="space-y-2 pt-1">
-          <div className="flex gap-2">
-            <button onClick={() => onFeedback(req.id, 'approved')}
-              className="flex-1 py-2 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-medium hover:bg-green-500/25 transition-colors">
-              ✓ اعتماد
-            </button>
-            <button onClick={() => setShowNote(v => !v)}
-              className="flex-1 py-2 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/25 transition-colors">
-              ✕ طلب تعديل
-            </button>
-          </div>
-          {showNote && (
-            <div className="space-y-2">
-              <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="ملاحظات التعديل..."
-                className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
-              <button onClick={() => { onFeedback(req.id, 'revision_requested', note); setShowNote(false); }}
-                className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors">
-                إرسال الملاحظات
-              </button>
-            </div>
+
+      {/* شارة تحت التعديل */}
+      {isInProgress && req.client_feedback === 'revision_requested' && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border-b border-orange-500/20">
+          <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span className="text-xs font-semibold text-orange-400">تحت التعديل</span>
+          {req.client_feedback_note && (
+            <span className="text-[10px] text-orange-300/70 mr-1">— {req.client_feedback_note}</span>
           )}
         </div>
       )}
+
+      <div className="p-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-white">{req.title}</p>
+            <p className="text-xs text-purple-300/50 mt-0.5">{TYPE_LABELS[req.request_type] ?? req.request_type}</p>
+          </div>
+        </div>
+
+        {/* الملفات */}
+        {req.result_files && req.result_files.length > 0 && (
+          <FileThumb urls={req.result_files} />
+        )}
+
+        {/* أزرار الاعتماد — تظهر فقط عند review */}
+        {isReview && !req.client_feedback && (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-orange-400 font-medium">التصميم جاهز — هل تعتمده؟</p>
+            <div className="flex gap-2">
+              <button onClick={() => onFeedback(req.id, 'approved')}
+                className="flex-1 py-2.5 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-semibold hover:bg-green-500/25 transition-colors">
+                ✓ اعتماد
+              </button>
+              <button onClick={() => setShowNote(v => !v)}
+                className="flex-1 py-2.5 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-semibold hover:bg-orange-500/25 transition-colors">
+                ✕ طلب تعديل
+              </button>
+            </div>
+            {showNote && (
+              <div className="space-y-2">
+                <textarea rows={2} value={note} onChange={e => setNote(e.target.value)}
+                  placeholder="اكتب ملاحظات التعديل..."
+                  className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
+                <button onClick={() => { onFeedback(req.id, 'revision_requested', note); setShowNote(false); }}
+                  className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors">
+                  إرسال الملاحظات
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
