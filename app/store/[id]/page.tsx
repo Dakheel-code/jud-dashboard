@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -34,6 +34,16 @@ interface CreativeRequest {
   client_feedback_note?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface Comment {
+  id: string;
+  request_id: string;
+  body: string | null;
+  author_name: string;
+  author_role: 'client' | 'designer' | 'admin';
+  file_urls: string[];
+  created_at: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -89,7 +99,12 @@ export default function StorePublicPage() {
     finally { setLoading(false); }
   }, [storeId]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // polling كل 30 ثانية لتحديث حالة الطلبات
+  useEffect(() => {
+    fetchData();
+    const t = setInterval(fetchData, 30_000);
+    return () => clearInterval(t);
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,7 +236,7 @@ export default function StorePublicPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {requests.map(req => <RequestCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+                {requests.map(req => <RequestCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} onRefresh={fetchData} />)}
               </div>
             )}
           </div>
@@ -422,44 +437,214 @@ export default function StorePublicPage() {
 }
 
 // ─── RequestCard ──────────────────────────────────────────────────────────────
-function RequestCard({ req, onFeedback }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void }) {
-  const [showNote, setShowNote] = useState(false);
-  const [note, setNote]         = useState('');
+function RequestCard({ req, storeId, onFeedback, onRefresh }: {
+  req: CreativeRequest;
+  storeId: string;
+  onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void;
+  onRefresh: () => void;
+}) {
+  const [showNote, setShowNote]         = useState(false);
+  const [note, setNote]                 = useState('');
+  const [open, setOpen]                 = useState(false);
+  const [comments, setComments]         = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText]   = useState('');
+  const [files, setFiles]               = useState<File[]>([]);
+  const [sending, setSending]           = useState(false);
+  const fileRef                         = useRef<HTMLInputElement>(null);
   const s  = STATUS_META[req.status] ?? STATUS_META.new;
 
+  const loadComments = useCallback(async () => {
+    setCommentsLoading(true);
+    try {
+      const res  = await fetch(`/api/public/store/${storeId}/requests/${req.id}/comments`);
+      const data = await res.json();
+      setComments(data.comments ?? []);
+    } catch { /* silent */ }
+    finally { setCommentsLoading(false); }
+  }, [storeId, req.id]);
+
+  useEffect(() => { if (open) loadComments(); }, [open, loadComments]);
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('request_id', req.id);
+    try {
+      const res  = await fetch('/api/public/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      return data.url ?? null;
+    } catch { return null; }
+  };
+
+  const sendComment = async () => {
+    if (!commentText.trim() && files.length === 0) return;
+    setSending(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const f of files) {
+        const url = await uploadFile(f);
+        if (url) uploadedUrls.push(url);
+      }
+      await fetch(`/api/public/store/${storeId}/requests/${req.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: commentText, author_role: 'client', file_urls: uploadedUrls }),
+      });
+      setCommentText('');
+      setFiles([]);
+      await loadComments();
+    } catch { /* silent */ }
+    finally { setSending(false); }
+  };
+
+  const fmt = (d: string) => new Date(d).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div className="p-4 bg-white/5 border border-purple-500/20 rounded-2xl space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-white">{req.title}</p>
-          <p className="text-xs text-purple-300/50 mt-0.5">{TYPE_LABELS[req.request_type] ?? req.request_type}</p>
-        </div>
-        <span className={`flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-medium ${s.color}`}>{s.label}</span>
-      </div>
-      {req.result_files && req.result_files.length > 0 && req.status === 'review' && !req.client_feedback && (
-        <div className="space-y-2 pt-1">
-          <p className="text-xs text-orange-400">الملفات جاهزة — هل تعتمد؟</p>
-          <div className="flex gap-2">
-            <button onClick={() => onFeedback(req.id, 'approved')}
-              className="flex-1 py-2 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-medium hover:bg-green-500/25 transition-colors">
-              ✓ اعتماد
-            </button>
-            <button onClick={() => setShowNote(v => !v)}
-              className="flex-1 py-2 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/25 transition-colors">
-              ✕ تعديل
-            </button>
+    <div className="bg-white/5 border border-purple-500/20 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <button onClick={() => setOpen(v => !v)} className="w-full p-4 text-right">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-white">{req.title}</p>
+            <p className="text-xs text-purple-300/50 mt-0.5">{TYPE_LABELS[req.request_type] ?? req.request_type}</p>
           </div>
-          {showNote && (
-            <div className="space-y-2">
-              <textarea rows={2} value={note} onChange={e => setNote(e.target.value)}
-                placeholder="اكتب ملاحظات التعديل..."
-                className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
-              <button onClick={() => { onFeedback(req.id, 'revision_requested', note); setShowNote(false); }}
-                className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors">
-                إرسال الملاحظات
-              </button>
+          <div className="flex items-center gap-2">
+            <span className={`flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full border font-medium ${s.color}`}>{s.label}</span>
+            <svg className={`w-4 h-4 text-purple-400 transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-purple-500/15 px-4 pb-4 space-y-3">
+
+          {/* ملفات النتيجة */}
+          {req.result_files && req.result_files.length > 0 && (
+            <div className="pt-3">
+              <p className="text-xs text-purple-300/50 mb-2">الملفات المرفقة</p>
+              <div className="flex flex-wrap gap-2">
+                {req.result_files.map((f, i) => (
+                  <a key={i} href={f} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-purple-400 hover:text-purple-300 underline flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    ملف {i + 1}
+                  </a>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* أزرار الاعتماد */}
+          {req.result_files && req.result_files.length > 0 && req.status === 'review' && !req.client_feedback && (
+            <div className="space-y-2">
+              <p className="text-xs text-orange-400">الملفات جاهزة للمراجعة</p>
+              <div className="flex gap-2">
+                <button onClick={() => { onFeedback(req.id, 'approved'); }}
+                  className="flex-1 py-2 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-medium hover:bg-green-500/25 transition-colors">
+                  ✓ اعتماد
+                </button>
+                <button onClick={() => setShowNote(v => !v)}
+                  className="flex-1 py-2 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/25 transition-colors">
+                  ✕ تعديل
+                </button>
+              </div>
+              {showNote && (
+                <div className="space-y-2">
+                  <textarea rows={2} value={note} onChange={e => setNote(e.target.value)}
+                    placeholder="ملاحظات التعديل..."
+                    className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
+                  <button onClick={() => { onFeedback(req.id, 'revision_requested', note); setShowNote(false); }}
+                    className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors">
+                    إرسال الملاحظات
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* التعليقات */}
+          <div className="pt-1">
+            <p className="text-xs text-purple-300/40 mb-2">المحادثة</p>
+            {commentsLoading ? (
+              <div className="flex justify-center py-3">
+                <div className="w-4 h-4 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-purple-300/25 py-2 text-center">لا توجد رسائل بعد</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {comments.map(c => (
+                  <div key={c.id} className={`p-2.5 rounded-xl text-xs ${
+                    c.author_role === 'client'
+                      ? 'bg-purple-500/10 border border-purple-500/20 mr-4'
+                      : 'bg-fuchsia-500/10 border border-fuchsia-500/20 ml-4'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-medium ${
+                        c.author_role === 'client' ? 'text-purple-300' : 'text-fuchsia-300'
+                      }`}>{c.author_role === 'client' ? 'أنت' : c.author_name}</span>
+                      <span className="text-purple-300/30">{fmt(c.created_at)}</span>
+                    </div>
+                    {c.body && <p className="text-white/80">{c.body}</p>}
+                    {c.file_urls && c.file_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {c.file_urls.map((u, i) => (
+                          <a key={i} href={u} target="_blank" rel="noopener noreferrer"
+                            className="text-purple-400 hover:text-purple-300 underline flex items-center gap-0.5">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            ملف
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* إرسال تعليق */}
+            <div className="mt-2 space-y-2">
+              <textarea
+                rows={2}
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                placeholder="اكتب رسالة أو ملاحظة..."
+                className="w-full bg-white/5 border border-purple-500/25 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none"
+              />
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[10px] bg-purple-500/10 px-2 py-0.5 rounded-lg text-purple-300">
+                      <span className="truncate max-w-[100px]">{f.name}</span>
+                      <button onClick={() => setFiles(p => p.filter((_, j) => j !== i))} className="text-purple-400 hover:text-red-400">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button onClick={() => fileRef.current?.click()}
+                  className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                <input ref={fileRef} type="file" multiple className="hidden"
+                  onChange={e => setFiles(p => [...p, ...Array.from(e.target.files ?? [])])} />
+                <button
+                  onClick={sendComment} disabled={sending || (!commentText.trim() && files.length === 0)}
+                  className="flex-1 py-1.5 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl text-xs font-medium text-white disabled:opacity-50 hover:from-purple-500 hover:to-fuchsia-500 transition-all">
+                  {sending ? 'جاري الإرسال...' : 'إرسال'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
