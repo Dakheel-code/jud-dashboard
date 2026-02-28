@@ -145,6 +145,7 @@ interface BrandIdentity {
 
 interface CreativeRequest {
   id: string;
+  store_id?: string;
   title: string;
   request_type: string;
   status: string;
@@ -250,7 +251,7 @@ export default function StorePublicPage() {
     try {
       const { data, error } = await supabasePublic
         .from('creative_requests')
-        .select('id, title, request_type, status, priority, platform, description, result_files, client_feedback, client_feedback_note, client_feedback_at, created_at, updated_at')
+        .select('id, store_id, title, request_type, status, priority, platform, description, result_files, client_feedback, client_feedback_note, client_feedback_at, created_at, updated_at')
         .eq('store_id', storeId)
         .order('created_at', { ascending: false });
       if (error) return;
@@ -1177,17 +1178,61 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
   onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void;
   onClose: () => void;
 }) {
-  const [showNote, setShowNote] = useState(false);
-  const [note, setNote]         = useState('');
-  const [acting, setActing]     = useState<'approved' | 'revision_requested' | null>(null);
+  const [showNote, setShowNote]   = useState(false);
+  const [note, setNote]           = useState('');
+  const [acting, setActing]       = useState<'approved' | 'revision_requested' | null>(null);
+  const [comments, setComments]   = useState<{id:string;body:string|null;author_name:string;author_role:string;file_urls:string[];created_at:string}[]>([]);
+  const [commLoading, setCommLoading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [sending, setSending]     = useState(false);
+  const [files, setFiles]         = useState<File[]>([]);
+  const fileRef                   = useRef<HTMLInputElement>(null);
   const isDone       = req.status === 'done';
   const isReview     = req.status === 'review';
   const isInProgress = req.status === 'in_progress';
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    loadComments();
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  const loadComments = async () => {
+    setCommLoading(true);
+    try {
+      const res  = await fetch(`/api/public/store/${req.store_id}/requests/${req.id}/comments`);
+      if (res.ok) { const d = await res.json(); setComments(d.comments ?? []); }
+    } catch { /* silent */ }
+    finally { setCommLoading(false); }
+  };
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('request_id', req.id);
+    try {
+      const res  = await fetch('/api/public/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      return data.url ?? null;
+    } catch { return null; }
+  };
+
+  const sendComment = async () => {
+    if (!commentText.trim() && files.length === 0) return;
+    setSending(true);
+    try {
+      const urls = (await Promise.all(files.map(uploadFile))).filter(Boolean) as string[];
+      await fetch(`/api/public/store/${req.store_id}/requests/${req.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: commentText, author_name: 'العميل', author_role: 'client', file_urls: urls }),
+      });
+      setCommentText('');
+      setFiles([]);
+      await loadComments();
+    } catch { /* silent */ }
+    finally { setSending(false); }
+  };
 
   const handleAction = async (fb: 'approved' | 'revision_requested', n?: string) => {
     setActing(fb);
@@ -1196,7 +1241,8 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
     onClose();
   };
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  const fmt     = (d: string) => new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  const fmtTime = (d: string) => new Date(d).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={onClose}>
@@ -1260,6 +1306,69 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
               <FileThumb urls={req.result_files} />
             </div>
           )}
+
+          {/* ─── التعليقات ─── */}
+          <div className="border-t border-purple-500/10 pt-4">
+            <p className="text-[10px] text-purple-300/40 uppercase tracking-wider mb-3">المحادثة</p>
+            {commLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-purple-300/25 text-center py-3">لا توجد رسائل بعد</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+                {comments.map(c => (
+                  <div key={c.id} className={`p-3 rounded-xl text-xs ${
+                    c.author_role === 'client'
+                      ? 'bg-purple-500/10 border border-purple-500/20'
+                      : 'bg-fuchsia-500/10 border border-fuchsia-500/20'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-semibold ${
+                        c.author_role === 'client' ? 'text-purple-300' : 'text-fuchsia-300'
+                      }`}>{c.author_role === 'client' ? 'أنت' : c.author_name}</span>
+                      <span className="text-purple-300/30 text-[10px]">{fmtTime(c.created_at)}</span>
+                    </div>
+                    {c.body && <p className="text-white/80 leading-relaxed">{c.body}</p>}
+                    {c.file_urls?.length > 0 && (
+                      <div className="mt-2"><FileThumb urls={c.file_urls} /></div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* إرسال تعليق */}
+            <div className="space-y-2">
+              <textarea rows={2} value={commentText} onChange={e => setCommentText(e.target.value)}
+                placeholder="اكتب رسالة..."
+                className="w-full bg-white/5 border border-purple-500/20 rounded-xl px-3 py-2 text-sm text-white placeholder-purple-300/30 focus:outline-none resize-none" />
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[10px] bg-purple-500/10 px-2 py-1 rounded-lg text-purple-300">
+                      <span className="truncate max-w-[80px]">{f.name}</span>
+                      <button onClick={() => setFiles(p => p.filter((_, j) => j !== i))}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input ref={fileRef} type="file" multiple className="hidden"
+                  onChange={e => setFiles(p => [...p, ...Array.from(e.target.files ?? [])])} />
+                <button onClick={() => fileRef.current?.click()}
+                  className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                <button onClick={sendComment} disabled={sending || (!commentText.trim() && files.length === 0)}
+                  className="flex-1 py-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl text-sm font-medium text-white disabled:opacity-50 flex items-center justify-center gap-2">
+                  {sending ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />جاري...</> : 'إرسال'}
+                </button>
+              </div>
+            </div>
+          </div>
 
           {/* أزرار الاعتماد */}
           {isReview && (
