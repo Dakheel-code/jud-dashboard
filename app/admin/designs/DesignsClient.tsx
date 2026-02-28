@@ -615,7 +615,12 @@ function RequestCard({
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{TYPE_LABELS[req.request_type] ?? req.request_type}</span>
             {req.platform && <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{req.platform}</span>}
           </div>
-          <p className="text-[10px] text-purple-300/50 mb-2 truncate">{storeName}</p>
+          <div className="flex items-center gap-1 mb-2">
+            <svg className="w-3 h-3 text-fuchsia-400/70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <p className="text-xs text-fuchsia-300/80 font-medium truncate">{storeName}</p>
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-purple-300/30">{fmt(req.created_at)}</span>
             <div className="flex items-center gap-2">
@@ -672,24 +677,24 @@ function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-col min-h-[200px] rounded-2xl border ${col.border} ${col.color} transition-all ${over ? 'ring-2 ring-purple-400/50' : ''}`}
+      className={`flex flex-col min-h-[200px] transition-all ${over ? 'ring-2 ring-purple-400/30 rounded-2xl' : ''}`}
       onDragOver={e => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={() => { setOver(false); onDrop(col.id); }}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl mb-3 border ${col.border} ${col.color}`}>
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${col.dot}`} />
           <span className="text-sm font-semibold text-white">{col.label}</span>
         </div>
-        <span className="text-xs font-bold text-purple-300/50 bg-purple-500/10 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-bold text-purple-300/60 bg-purple-500/10 px-2 py-0.5 rounded-full">
           {cards.length}
         </span>
       </div>
 
       {/* Cards */}
-      <div className="flex-1 p-3 space-y-2 overflow-y-auto">
+      <div className="flex-1 space-y-2 overflow-y-auto">
         {cards.length === 0 && (
           <div className="flex items-center justify-center h-20 text-purple-300/20 text-xs">
             لا توجد طلبات
