@@ -126,6 +126,17 @@ interface TaskItem {
 }
 
 
+interface BrandIdentity {
+  id?: string;
+  store_id: string;
+  logo_urls: string[];
+  guideline_urls: string[];
+  brand_colors: string | null;
+  fonts: string | null;
+  notes: string | null;
+  updated_at?: string;
+}
+
 interface CreativeRequest {
   id: string;
   title: string;
@@ -184,6 +195,8 @@ export default function StorePublicPage() {
   const [tasksStats, setTasksStats]           = useState<{ total: number; completed: number; percentage: number } | null>(null);
   const [collapsedCats, setCollapsedCats]     = useState<Set<string>>(new Set());
   const [loading, setLoading]                 = useState(true);
+  const [brandIdentity, setBrandIdentity]     = useState<BrandIdentity | null>(null);
+  const [showBrandModal, setShowBrandModal]   = useState(false);
   const [showForm, setShowForm]               = useState(false);
   const [submitting, setSubmitting]           = useState(false);
   const [submitted, setSubmitted]             = useState<{ id: string } | null>(null);
@@ -217,6 +230,15 @@ export default function StorePublicPage() {
     finally { setLoading(false); }
   }, [storeId]);
 
+  const fetchBrandIdentity = useCallback(async () => {
+    try {
+      const res  = await fetch(`/api/public/store/${storeId}/brand-identity`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setBrandIdentity(data.identity);
+    } catch { /* silent */ }
+  }, [storeId]);
+
   // polling خفيف كل 10 ثوانٍ للطلبات فقط — يعكس تغييرات الإدارة بسرعة
   const fetchRequestsOnly = useCallback(async () => {
     try {
@@ -230,11 +252,12 @@ export default function StorePublicPage() {
   // polling الكامل كل 30 ثانية (متجر + مهام + طلبات)
   useEffect(() => {
     fetchData();
+    fetchBrandIdentity();
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') fetchData();
     }, 30_000);
     return () => clearInterval(t);
-  }, [fetchData]);
+  }, [fetchData, fetchBrandIdentity]);
 
   // polling خفيف كل 10 ثوانٍ للطلبات فقط
   useEffect(() => {
@@ -478,6 +501,123 @@ export default function StorePublicPage() {
           </div>
         </section>
 
+        {/* ══ قسم هوية المتجر ══ */}
+        <section className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/15">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+              </div>
+              <h2 className="text-base font-bold text-white">هوية المتجر</h2>
+            </div>
+            <button
+              onClick={() => setShowBrandModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 border border-indigo-500/30 rounded-xl text-xs font-medium text-indigo-300 hover:bg-indigo-600/30 transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              {brandIdentity ? 'تعديل' : 'إضافة'}
+            </button>
+          </div>
+
+          <div className="p-4 space-y-5">
+            {!brandIdentity ? (
+              <div className="text-center py-8 text-purple-300/40">
+                <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                </svg>
+                <p className="text-sm">لم تُضف هوية المتجر بعد</p>
+                <button onClick={() => setShowBrandModal(true)} className="mt-3 text-xs text-indigo-400 underline underline-offset-2">إضافة الآن</button>
+              </div>
+            ) : (
+              <>
+                {/* الشعار */}
+                {brandIdentity.logo_urls?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-indigo-300/60 mb-2 font-medium">الشعار</p>
+                    <div className="flex flex-wrap gap-2">
+                      {brandIdentity.logo_urls.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          className="w-20 h-20 rounded-xl border border-purple-500/20 bg-white/5 flex items-center justify-center overflow-hidden hover:border-indigo-400/50 transition-all">
+                          {/\.(jpe?g|png|gif|webp|svg)$/i.test(url) ? (
+                            <img src={url} alt="logo" className="w-full h-full object-contain p-1" />
+                          ) : (
+                            <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* الألوان */}
+                {brandIdentity.brand_colors && (
+                  <div>
+                    <p className="text-xs text-indigo-300/60 mb-2 font-medium">ألوان البراند</p>
+                    <div className="flex flex-wrap gap-2">
+                      {brandIdentity.brand_colors.split(/[\n,،]+/).map((c, i) => {
+                        const hex = c.trim().match(/#[0-9a-fA-F]{3,6}/)?.[0];
+                        return (
+                          <div key={i} className="flex items-center gap-2 bg-white/5 border border-purple-500/20 rounded-xl px-3 py-1.5">
+                            {hex && <span className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0" style={{ background: hex }} />}
+                            <span className="text-xs text-white/80 font-mono">{c.trim()}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* الخطوط */}
+                {brandIdentity.fonts && (
+                  <div>
+                    <p className="text-xs text-indigo-300/60 mb-2 font-medium">الخطوط</p>
+                    <div className="bg-white/5 border border-purple-500/20 rounded-xl px-4 py-3">
+                      <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{brandIdentity.fonts}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* دليل الهوية */}
+                {brandIdentity.guideline_urls?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-indigo-300/60 mb-2 font-medium">دليل الهوية (Brand Guidelines)</p>
+                    <div className="space-y-2">
+                      {brandIdentity.guideline_urls.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 bg-white/5 border border-purple-500/20 rounded-xl px-4 py-2.5 hover:border-indigo-400/50 transition-all">
+                          <svg className="w-5 h-5 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span className="text-xs text-indigo-300 truncate">{url.split('/').pop() ?? `ملف ${i + 1}`}</span>
+                          <svg className="w-4 h-4 text-purple-400/50 mr-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ملاحظات إضافية */}
+                {brandIdentity.notes && (
+                  <div>
+                    <p className="text-xs text-indigo-300/60 mb-2 font-medium">ملاحظات إضافية</p>
+                    <div className="bg-white/5 border border-purple-500/20 rounded-xl px-4 py-3">
+                      <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">{brandIdentity.notes}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
         {/* ══ قسم المهام ══ */}
         <section className="bg-purple-950/40 rounded-2xl border border-purple-500/20 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-purple-500/15">
@@ -570,6 +710,16 @@ export default function StorePublicPage() {
 
 
       </div>
+
+      {/* ── Modal: هوية المتجر ── */}
+      {showBrandModal && (
+        <BrandIdentityModal
+          storeId={storeId}
+          current={brandIdentity}
+          onClose={() => setShowBrandModal(false)}
+          onSave={(identity) => { setBrandIdentity(identity); setShowBrandModal(false); }}
+        />
+      )}
 
       {/* ── Modal: طلب جديد ── */}
       {showForm && (
@@ -1119,6 +1269,221 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── BrandIdentityModal ───────────────────────────────────────────────────────
+function BrandIdentityModal({
+  storeId, current, onClose, onSave,
+}: {
+  storeId: string;
+  current: BrandIdentity | null;
+  onClose: () => void;
+  onSave: (identity: BrandIdentity) => void;
+}) {
+  const [brandColors, setBrandColors] = useState(current?.brand_colors ?? '');
+  const [fonts,       setFonts]       = useState(current?.fonts       ?? '');
+  const [notes,       setNotes]       = useState(current?.notes       ?? '');
+  const [logoUrls,      setLogoUrls]      = useState<string[]>(current?.logo_urls      ?? []);
+  const [guidelineUrls, setGuidelineUrls] = useState<string[]>(current?.guideline_urls ?? []);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingGuide, setUploadingGuide] = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const logoRef  = useRef<HTMLInputElement>(null);
+  const guideRef = useRef<HTMLInputElement>(null);
+
+  const uploadFile = async (file: File, type: 'logo' | 'guideline'): Promise<string | null> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('type', type);
+    const res = await fetch(`/api/public/store/${storeId}/brand-identity/upload`, { method: 'POST', body: fd });
+    if (!res.ok) return null;
+    const { url } = await res.json();
+    return url;
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setUploadingLogo(true);
+    const urls = await Promise.all(files.map(f => uploadFile(f, 'logo')));
+    setLogoUrls(prev => [...prev, ...(urls.filter(Boolean) as string[])]);
+    setUploadingLogo(false);
+    e.target.value = '';
+  };
+
+  const handleGuideChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setUploadingGuide(true);
+    const urls = await Promise.all(files.map(f => uploadFile(f, 'guideline')));
+    setGuidelineUrls(prev => [...prev, ...(urls.filter(Boolean) as string[])]);
+    setUploadingGuide(false);
+    e.target.value = '';
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/public/store/${storeId}/brand-identity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand_colors: brandColors || null,
+          fonts:        fonts       || null,
+          notes:        notes       || null,
+          logo_urls:      logoUrls,
+          guideline_urls: guidelineUrls,
+        }),
+      });
+      if (res.ok) {
+        const { identity } = await res.json();
+        onSave(identity);
+      }
+    } catch { /* silent */ }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#130825] border border-indigo-500/30 rounded-3xl w-full max-w-lg shadow-2xl max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-indigo-500/20 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-white">هوية المتجر</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-indigo-400 hover:bg-indigo-500/10">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-5">
+
+          {/* الشعار */}
+          <div>
+            <label className="block text-xs text-indigo-300/70 mb-2 font-medium">الشعار (بأعلى دقة ممكنة)</label>
+            <input ref={logoRef} type="file" multiple accept="image/*,.pdf,.svg,.ai,.eps,.zip" className="hidden" onChange={handleLogoChange} />
+            <div className="flex flex-wrap gap-2 mb-2">
+              {logoUrls.map((url, i) => (
+                <div key={i} className="relative w-20 h-20 rounded-xl border border-indigo-500/30 bg-white/5 overflow-hidden group">
+                  {/\.(jpe?g|png|gif|webp|svg)$/i.test(url) ? (
+                    <img src={url} alt="logo" className="w-full h-full object-contain p-1" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <button onClick={() => setLogoUrls(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute top-1 left-1 w-5 h-5 rounded-full bg-red-500/80 text-white text-[10px] items-center justify-center hidden group-hover:flex">✕</button>
+                </div>
+              ))}
+              <button onClick={() => logoRef.current?.click()}
+                disabled={uploadingLogo}
+                className="w-20 h-20 rounded-xl border border-dashed border-indigo-500/40 bg-indigo-500/5 flex flex-col items-center justify-center gap-1 text-indigo-400 hover:bg-indigo-500/10 transition-all disabled:opacity-50">
+                {uploadingLogo ? (
+                  <div className="w-5 h-5 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />
+                ) : (
+                  <>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="text-[10px]">رفع</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* دليل الهوية */}
+          <div>
+            <label className="block text-xs text-indigo-300/70 mb-2 font-medium">دليل الهوية (Brand Guidelines)</label>
+            <input ref={guideRef} type="file" multiple accept=".pdf,.zip,.rar,.docx,.pptx,.ai,.eps" className="hidden" onChange={handleGuideChange} />
+            <div className="space-y-1.5 mb-2">
+              {guidelineUrls.map((url, i) => (
+                <div key={i} className="flex items-center gap-2 bg-white/5 border border-indigo-500/20 rounded-xl px-3 py-2">
+                  <svg className="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-xs text-indigo-300 truncate flex-1">{url.split('/').pop()}</span>
+                  <button onClick={() => setGuidelineUrls(prev => prev.filter((_, j) => j !== i))} className="text-red-400 text-xs hover:text-red-300">✕</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => guideRef.current?.click()}
+              disabled={uploadingGuide}
+              className="w-full py-2.5 border border-dashed border-indigo-500/40 rounded-xl text-xs text-indigo-400 hover:bg-indigo-500/5 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {uploadingGuide ? (
+                <><div className="w-3.5 h-3.5 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" /> جاري الرفع...</>
+              ) : (
+                <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> رفع ملف دليل الهوية</>
+              )}
+            </button>
+          </div>
+
+          {/* الألوان */}
+          <div>
+            <label className="block text-xs text-indigo-300/70 mb-1.5 font-medium">ألوان البراند المعتمدة</label>
+            <textarea
+              rows={3}
+              value={brandColors}
+              onChange={e => setBrandColors(e.target.value)}
+              placeholder={"مثال:\n#1E40AF - أزرق رئيسي\n#FFFFFF - أبيض\n#F59E0B - ذهبي"}
+              className="w-full bg-white/5 border border-indigo-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-indigo-400 resize-none font-mono"
+            />
+            <p className="text-[10px] text-purple-300/40 mt-1">اكتب كل لون في سطر مستقل، ويفضل كتابة كود اللون HEX</p>
+          </div>
+
+          {/* الخطوط */}
+          <div>
+            <label className="block text-xs text-indigo-300/70 mb-1.5 font-medium">الخطوط المستخدمة في الهوية</label>
+            <textarea
+              rows={3}
+              value={fonts}
+              onChange={e => setFonts(e.target.value)}
+              placeholder={"مثال:\nArabic: Cairo Bold\nEnglish: Poppins Regular\nيمكن رفع ملفات الخطوط في حقل دليل الهوية"}
+              className="w-full bg-white/5 border border-indigo-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-indigo-400 resize-none"
+            />
+          </div>
+
+          {/* ملاحظات */}
+          <div>
+            <label className="block text-xs text-indigo-300/70 mb-1.5 font-medium">ملاحظات إضافية للمصمم</label>
+            <textarea
+              rows={3}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="أي تفاصيل إضافية تساعد المصمم على فهم هوية متجرك..."
+              className="w-full bg-white/5 border border-indigo-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-indigo-400 resize-none"
+            />
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="p-5 border-t border-indigo-500/20 flex-shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl text-sm font-bold text-white hover:from-indigo-500 hover:to-purple-500 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> جاري الحفظ...</>
+            ) : 'حفظ هوية المتجر'}
+          </button>
+        </div>
+
       </div>
     </div>
   );
