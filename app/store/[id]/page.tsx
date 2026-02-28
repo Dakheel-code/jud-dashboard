@@ -245,13 +245,16 @@ export default function StorePublicPage() {
     } catch { /* silent */ }
   }, [storeId]);
 
-  // polling خفيف كل 10 ثوانٍ للطلبات فقط — يعكس تغييرات الإدارة بسرعة
+  // جلب الطلبات مباشرة من Supabase client — يتجاوز Netlify CDN كلياً
   const fetchRequestsOnly = useCallback(async () => {
     try {
-      const res  = await fetch(`/api/public/store/${storeId}/requests-only?t=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = await res.json();
-      setRequests(data.requests ?? []);
+      const { data, error } = await supabasePublic
+        .from('creative_requests')
+        .select('id, title, request_type, status, priority, platform, description, result_files, client_feedback, client_feedback_note, client_feedback_at, created_at, updated_at')
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+      if (error) return;
+      setRequests(data ?? []);
     } catch { /* silent */ }
   }, [storeId]);
 
