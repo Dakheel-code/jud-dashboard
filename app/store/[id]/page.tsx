@@ -280,11 +280,11 @@ export default function StorePublicPage() {
     return () => { supabasePublic.removeChannel(channel); };
   }, [storeId, fetchRequestsOnly]);
 
-  // polling احتياطي كل 8 ثوانٍ (في حال انقطع Realtime)
+  // polling كل 3 ثوانٍ للطلبات — يضمن التحديث حتى لو كان Realtime غير مفعّل
   useEffect(() => {
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') fetchRequestsOnly();
-    }, 8_000);
+    }, 3_000);
     return () => clearInterval(t);
   }, [fetchRequestsOnly]);
 

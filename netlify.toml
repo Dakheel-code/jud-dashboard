@@ -24,6 +24,13 @@
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
 
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Surrogate-Control = "no-store"
+
 # توليد الفواتير الشهرية تلقائياً أول كل شهر الساعة 6 صباحاً
 [functions]
   directory = "netlify/functions"
