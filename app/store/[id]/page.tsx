@@ -2,6 +2,12 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+
+const supabasePublic = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // ─── Lightbox ───────────────────────────────────────────────────────────────
 function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: number; onClose: () => void }) {
@@ -249,23 +255,46 @@ export default function StorePublicPage() {
     } catch { /* silent */ }
   }, [storeId]);
 
-  // polling الكامل كل 30 ثانية (متجر + مهام + طلبات)
+  // تحميل أولي
   useEffect(() => {
     fetchData();
     fetchBrandIdentity();
-    const t = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchData();
-    }, 30_000);
-    return () => clearInterval(t);
   }, [fetchData, fetchBrandIdentity]);
 
-  // polling خفيف كل 10 ثوانٍ للطلبات فقط
+  // Supabase Realtime — تحديث فوري عند أي تغيير في طلبات هذا المتجر
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabasePublic
+      .channel(`store-requests-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'creative_requests',
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => { fetchRequestsOnly(); }
+      )
+      .subscribe();
+    return () => { supabasePublic.removeChannel(channel); };
+  }, [storeId, fetchRequestsOnly]);
+
+  // polling احتياطي كل 8 ثوانٍ (في حال انقطع Realtime)
   useEffect(() => {
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') fetchRequestsOnly();
-    }, 10_000);
+    }, 8_000);
     return () => clearInterval(t);
   }, [fetchRequestsOnly]);
+
+  // polling كامل كل 60 ثانية للمهام والمتجر
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchData();
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
