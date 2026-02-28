@@ -161,7 +161,7 @@ const STATUS_META: Record<string, { label: string; color: string; dot: string }>
   waiting_info: { label: 'بانتظار معلومات', color: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', dot: 'bg-yellow-400' },
   in_progress:  { label: 'قيد التنفيذ',     color: 'bg-purple-500/15 text-purple-400 border-purple-500/30', dot: 'bg-purple-400' },
   review:       { label: 'جاهز للمراجعة',   color: 'bg-orange-500/15 text-orange-400 border-orange-500/30', dot: 'bg-orange-400' },
-  done:         { label: 'مكتمل',           color: 'bg-green-500/15 text-green-400 border-green-500/30',   dot: 'bg-green-400' },
+  done:         { label: 'معتمد',           color: 'bg-green-500/15 text-green-400 border-green-500/30',   dot: 'bg-green-400' },
   rejected:     { label: 'مرفوض',           color: 'bg-red-500/15 text-red-400 border-red-500/30',         dot: 'bg-red-400' },
   canceled:     { label: 'ملغي',            color: 'bg-gray-500/15 text-gray-400 border-gray-500/30',      dot: 'bg-gray-400' },
 };
@@ -300,11 +300,14 @@ export default function StorePublicPage() {
       return n;
     });
 
-  const designs      = requests.filter(r => r.result_files && r.result_files.length > 0);
-  const pendingReview = requests.filter(r => r.status === 'review');
+  // طلبات التصميم — تظهر في قسم التصاميم فقط
+  const DESIGN_TYPES = ['design', 'video', 'photo', 'copy', 'other'];
+  const designs         = requests.filter(r => DESIGN_TYPES.includes(r.request_type));
+  const nonDesignRequests = requests.filter(r => !DESIGN_TYPES.includes(r.request_type));
+  const pendingReview   = designs.filter(r => r.status === 'review');
   const approvedDesigns = designs.filter(r => r.status === 'done');
   const revisionDesigns = designs.filter(r => r.status === 'in_progress');
-  const otherDesigns    = designs.filter(r => r.status !== 'review' && r.status !== 'done' && r.status !== 'in_progress');
+  const otherDesigns    = designs.filter(r => !['review', 'done', 'in_progress'].includes(r.status));
 
   if (loading) {
     return (
@@ -373,8 +376,8 @@ export default function StorePublicPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-white">الطلبات</h2>
-                {requests.length > 0 && (
-                  <p className="text-[10px] text-purple-300/50">{requests.length} طلب</p>
+                {nonDesignRequests.length > 0 && (
+                  <p className="text-[10px] text-purple-300/50">{nonDesignRequests.length} طلب</p>
                 )}
               </div>
             </div>
@@ -389,7 +392,7 @@ export default function StorePublicPage() {
             </button>
           </div>
           <div className="p-4">
-            {requests.length === 0 ? (
+            {nonDesignRequests.length === 0 ? (
               <div className="text-center py-8 text-purple-300/40">
                 <svg className="w-10 h-10 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z" />
@@ -398,7 +401,7 @@ export default function StorePublicPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {requests.map(req => <RequestCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} onRefresh={fetchData} />)}
+                {nonDesignRequests.map(req => <RequestCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} onRefresh={fetchData} />)}
               </div>
             )}
           </div>
