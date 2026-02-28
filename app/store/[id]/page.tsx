@@ -300,14 +300,19 @@ export default function StorePublicPage() {
       return n;
     });
 
-  // طلبات التصميم — تظهر في قسم التصاميم فقط
   const DESIGN_TYPES = ['design', 'video', 'photo', 'copy', 'other'];
-  const designs         = requests.filter(r => DESIGN_TYPES.includes(r.request_type));
-  const nonDesignRequests = requests.filter(r => !DESIGN_TYPES.includes(r.request_type));
-  const pendingReview   = designs.filter(r => r.status === 'review');
-  const approvedDesigns = designs.filter(r => r.status === 'done');
-  const revisionDesigns = designs.filter(r => r.status === 'in_progress');
-  const otherDesigns    = designs.filter(r => !['review', 'done', 'in_progress'].includes(r.status));
+  // قسم التصاميم: فقط طلبات التصميم ذات review أو done (review=جاهز, done=معتمد)
+  const DESIGN_STATUSES = ['review', 'done'];
+  const pendingReview   = requests.filter(r => DESIGN_TYPES.includes(r.request_type) && r.status === 'review');
+  const approvedDesigns = requests.filter(r => DESIGN_TYPES.includes(r.request_type) && r.status === 'done');
+  const designs         = [...pendingReview, ...approvedDesigns];
+  // قسم الطلبات: كل ما ليس في قسم التصاميم (new, in_progress, waiting_info ... + أي طلب غير تصميمي)
+  const nonDesignRequests = requests.filter(r =>
+    !DESIGN_TYPES.includes(r.request_type) ||
+    !DESIGN_STATUSES.includes(r.status)
+  );
+  const revisionDesigns: typeof requests = []; // لم تعد تستخدم بعد هذا التعديل
+  const otherDesigns:    typeof requests = [];
 
   if (loading) {
     return (
