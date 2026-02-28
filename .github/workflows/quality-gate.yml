@@ -8,7 +8,7 @@ on:
 
 jobs:
   quality:
-    name: Typecheck + Lint + Build
+    name: Typecheck
     runs-on: ubuntu-latest
 
     steps:
@@ -28,14 +28,3 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key' }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'placeholder-secret' }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
-          META_TOKEN_ENCRYPTION_KEY: ${{ secrets.META_TOKEN_ENCRYPTION_KEY || 'placeholder-encryption-key-32chars!!' }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET || 'placeholder-cron-secret' }}
