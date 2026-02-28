@@ -730,7 +730,7 @@ export default function StorePublicPage() {
             <div className="flex items-center justify-between p-5 border-b border-purple-500/20 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-white">طلب تصميم جديد</h2>
-                <p className="text-xs text-purple-300/50 mt-0.5">الخطوة {formStep} من 3</p>
+                <p className="text-xs text-purple-300/50 mt-0.5">الخطوة {formStep} من 2</p>
               </div>
               <button onClick={() => { setShowForm(false); setFormStep(1); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-purple-400 hover:bg-purple-500/10">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -739,7 +739,7 @@ export default function StorePublicPage() {
 
             {/* Progress */}
             <div className="flex gap-1.5 px-5 pt-3 flex-shrink-0">
-              {[1,2,3].map(s => (
+              {[1,2].map(s => (
                 <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= formStep ? 'bg-purple-500' : 'bg-purple-500/15'}`} />
               ))}
             </div>
@@ -911,36 +911,6 @@ export default function StorePublicPage() {
                 </div>
               )}
 
-              {/* ── الخطوة 3: الهوية البصرية ── */}
-              {formStep === 3 && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs text-purple-300/70 mb-1.5">ما هي ألوان البراند المعتمدة؟ *</label>
-                    <input type="text" value={form.brand_colors} onChange={e => setForm(f => ({ ...f, brand_colors: e.target.value }))}
-                      placeholder="مثال: أزرق #1E40AF، أبيض #FFFFFF..."
-                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-purple-300/70 mb-1.5">ما الخطوط المستخدمة في الهوية؟ <span className="text-purple-300/40">(أسماء الخطوط أو ملقاتها)</span></label>
-                    <input type="text" value={form.brand_fonts} onChange={e => setForm(f => ({ ...f, brand_fonts: e.target.value }))}
-                      placeholder="مثال: Cairo Bold، Tajawal Regular..."
-                      className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-purple-300/30 focus:outline-none focus:border-purple-400" />
-                  </div>
-
-                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
-                    <p className="text-xs text-purple-300/60 mb-1">هل لديكم شعار (لوقو) بدقة عالية؟</p>
-                    <p className="text-[10px] text-purple-300/30">يرجى إرسال ملفات الشعار عبر المحادثة بعد إرسال الطلب</p>
-                  </div>
-                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
-                    <p className="text-xs text-purple-300/60 mb-1">هل يوجد أمثلة إعلانية أو تصاميم تحبكم؟</p>
-                    <p className="text-[10px] text-purple-300/30">يمكنك إرفاق الملفات عبر المحادثة بعد إرسال الطلب</p>
-                  </div>
-                  <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-3">
-                    <p className="text-xs text-purple-300/60 mb-1">هل لديكم دليل هوية (Brand Guidelines)؟</p>
-                    <p className="text-[10px] text-purple-300/30">يمكنك إرفاق الملفات عبر المحادثة بعد إرسال الطلب</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Footer Buttons */}
