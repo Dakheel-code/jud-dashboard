@@ -238,11 +238,14 @@ export default function StorePublicPage() {
   }, [storeId]);
 
   const fetchBrandIdentity = useCallback(async () => {
+    setBrandIdentity(null); // تصفير أولاً لمنع ظهور بيانات متجر سابق
     try {
-      const res  = await fetch(`/api/public/store/${storeId}/brand-identity`, { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = await res.json();
-      setBrandIdentity(data.identity);
+      const { data } = await supabasePublic
+        .from('brand_identity')
+        .select('*')
+        .eq('store_id', storeId)
+        .maybeSingle();
+      setBrandIdentity(data ?? null);
     } catch { /* silent */ }
   }, [storeId]);
 
