@@ -1171,20 +1171,140 @@ function RequestCard({ req, storeId, onFeedback, onRefresh }: {
   );
 }
 
-// ─── DesignCard ───────────────────────────────────────────────────────────────
-function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
-  const [showNote, setShowNote]   = useState(false);
-  const [note, setNote]           = useState('');
-  const [acting, setActing]       = useState<'approved' | 'revision_requested' | null>(null);
+// ─── DesignDetailModal ────────────────────────────────────────────────────────
+function DesignDetailModal({ req, onFeedback, onClose }: {
+  req: CreativeRequest;
+  onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void;
+  onClose: () => void;
+}) {
+  const [showNote, setShowNote] = useState(false);
+  const [note, setNote]         = useState('');
+  const [acting, setActing]     = useState<'approved' | 'revision_requested' | null>(null);
   const isDone       = req.status === 'done';
   const isReview     = req.status === 'review';
   const isInProgress = req.status === 'in_progress';
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   const handleAction = async (fb: 'approved' | 'revision_requested', n?: string) => {
     setActing(fb);
     await onFeedback(req.id, fb, n);
     setActing(null);
+    onClose();
   };
+
+  const fmt = (d: string) => new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#130825] border border-purple-500/30 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b border-purple-500/15 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              {isDone && (
+                <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 font-semibold">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  تم الاعتماد
+                </span>
+              )}
+              {isReview && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-semibold animate-pulse">
+                  بانتظار مراجعتك
+                </span>
+              )}
+              {isInProgress && req.client_feedback === 'revision_requested' && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-semibold">
+                  تحت التعديل
+                </span>
+              )}
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300">
+                {TYPE_LABELS[req.request_type] ?? req.request_type}
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-white leading-snug">{req.title}</h2>
+            <p className="text-[10px] text-purple-300/40 mt-0.5">{fmt(req.created_at)}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-purple-400 hover:bg-purple-500/10 flex-shrink-0 mr-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+
+          {/* الوصف */}
+          {req.description && (
+            <div>
+              <p className="text-[10px] text-purple-300/40 uppercase tracking-wider mb-1.5">الوصف</p>
+              <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{req.description}</p>
+            </div>
+          )}
+
+          {/* ملاحظة التعديل السابقة */}
+          {req.client_feedback_note && (
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3">
+              <p className="text-[10px] text-orange-400/70 mb-1">ملاحظات التعديل</p>
+              <p className="text-xs text-orange-300">{req.client_feedback_note}</p>
+            </div>
+          )}
+
+          {/* الملفات */}
+          {req.result_files && req.result_files.length > 0 && (
+            <div>
+              <p className="text-[10px] text-purple-300/40 uppercase tracking-wider mb-2">ملفات التصميم</p>
+              <FileThumb urls={req.result_files} />
+            </div>
+          )}
+
+          {/* أزرار الاعتماد */}
+          {isReview && (
+            <div className="space-y-2 pt-1">
+              <p className="text-xs text-orange-400 font-medium">التصميم جاهز — هل تعتمده؟</p>
+              <div className="flex gap-2">
+                <button disabled={!!acting} onClick={() => handleAction('approved')}
+                  className="flex-1 py-3 bg-green-500/15 border border-green-500/30 rounded-xl text-sm text-green-400 font-semibold hover:bg-green-500/25 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
+                  {acting === 'approved'
+                    ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-green-400/30 border-t-green-400 animate-spin" /> جاري...</>
+                    : '✓ اعتماد'}
+                </button>
+                <button disabled={!!acting} onClick={() => setShowNote(v => !v)}
+                  className="flex-1 py-3 bg-orange-500/15 border border-orange-500/30 rounded-xl text-sm text-orange-400 font-semibold hover:bg-orange-500/25 transition-colors disabled:opacity-60">
+                  ✕ طلب تعديل
+                </button>
+              </div>
+              {showNote && (
+                <div className="space-y-2">
+                  <textarea rows={3} value={note} onChange={e => setNote(e.target.value)}
+                    placeholder="اكتب ملاحظات التعديل..."
+                    className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-sm text-white placeholder-purple-300/30 focus:outline-none resize-none" />
+                  <button disabled={!!acting}
+                    onClick={() => { handleAction('revision_requested', note); setShowNote(false); }}
+                    className="w-full py-2.5 bg-orange-500/20 border border-orange-500/40 rounded-xl text-sm text-orange-400 font-medium hover:bg-orange-500/30 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
+                    {acting === 'revision_requested'
+                      ? <><div className="w-3.5 h-3.5 rounded-full border-2 border-orange-400/30 border-t-orange-400 animate-spin" /> جاري...</>
+                      : 'إرسال الملاحظات'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DesignCard ───────────────────────────────────────────────────────────────
+function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
+  const [showModal, setShowModal] = useState(false);
+  const isDone       = req.status === 'done';
+  const isReview     = req.status === 'review';
+  const isInProgress = req.status === 'in_progress';
 
   const borderCls = isDone
     ? 'bg-green-500/5 border-green-500/25'
@@ -1195,84 +1315,75 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
         : 'bg-white/5 border-purple-500/20';
 
   return (
-    <div className={`rounded-2xl border overflow-hidden ${borderCls}`}>
-
-      {/* شارة معتمد */}
-      {isDone && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border-b border-green-500/20">
-          <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-xs font-semibold text-green-400">تم الاعتماد</span>
-        </div>
+    <>
+      {showModal && (
+        <DesignDetailModal req={req} onFeedback={onFeedback} onClose={() => setShowModal(false)} />
       )}
+      <div
+        onClick={() => setShowModal(true)}
+        className={`rounded-2xl border overflow-hidden cursor-pointer hover:brightness-110 transition-all active:scale-[0.99] ${borderCls}`}
+      >
+        {/* شارة معتمد */}
+        {isDone && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-500/10 border-b border-green-500/20">
+            <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs font-semibold text-green-400">تم الاعتماد</span>
+          </div>
+        )}
 
-      {/* شارة تحت التعديل */}
-      {isInProgress && req.client_feedback === 'revision_requested' && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border-b border-orange-500/20">
-          <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span className="text-xs font-semibold text-orange-400">تحت التعديل</span>
-          {req.client_feedback_note && (
-            <span className="text-[10px] text-orange-300/70 mr-1">— {req.client_feedback_note}</span>
-          )}
-        </div>
-      )}
+        {/* شارة بانتظار مراجعتك */}
+        {isReview && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border-b border-orange-500/20">
+            <svg className="w-4 h-4 text-orange-400 flex-shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span className="text-xs font-semibold text-orange-400">اضغط للمراجعة</span>
+          </div>
+        )}
 
-      <div className="p-4 space-y-3">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white">{req.title}</p>
+        {/* شارة تحت التعديل */}
+        {isInProgress && req.client_feedback === 'revision_requested' && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border-b border-orange-500/20">
+            <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="text-xs font-semibold text-orange-400">تحت التعديل</span>
+          </div>
+        )}
+
+        <div className="p-4 flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">{req.title}</p>
             <p className="text-xs text-purple-300/50 mt-0.5">{TYPE_LABELS[req.request_type] ?? req.request_type}</p>
           </div>
-        </div>
-
-        {/* الملفات */}
-        {req.result_files && req.result_files.length > 0 && (
-          <FileThumb urls={req.result_files} />
-        )}
-
-        {/* أزرار الاعتماد — تظهر فقط عند review بغض النظر عن client_feedback القديم */}
-        {isReview && (
-          <div className="space-y-2 pt-1">
-            <p className="text-xs text-orange-400 font-medium">التصميم جاهز — هل تعتمده؟</p>
-            <div className="flex gap-2">
-              <button
-                disabled={!!acting}
-                onClick={() => handleAction('approved')}
-                className="flex-1 py-2.5 bg-green-500/15 border border-green-500/30 rounded-xl text-xs text-green-400 font-semibold hover:bg-green-500/25 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
-                {acting === 'approved' ? (
-                  <><div className="w-3 h-3 rounded-full border-2 border-green-400/30 border-t-green-400 animate-spin" /> جاري...</>
-                ) : '✓ اعتماد'}
-              </button>
-              <button
-                disabled={!!acting}
-                onClick={() => setShowNote(v => !v)}
-                className="flex-1 py-2.5 bg-orange-500/15 border border-orange-500/30 rounded-xl text-xs text-orange-400 font-semibold hover:bg-orange-500/25 transition-colors disabled:opacity-60">
-                ✕ طلب تعديل
-              </button>
+          {/* معاينة الملفات */}
+          {req.result_files && req.result_files.length > 0 && (
+            <div className="flex -space-x-1 flex-shrink-0">
+              {req.result_files.slice(0, 2).map((url, i) => (
+                /\.(jpe?g|png|gif|webp|svg)$/i.test(url) ? (
+                  <img key={i} src={url} alt="" className="w-9 h-9 rounded-lg border border-purple-500/30 object-cover" />
+                ) : (
+                  <div key={i} className="w-9 h-9 rounded-lg border border-purple-500/30 bg-purple-500/10 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                  </div>
+                )
+              ))}
+              {req.result_files.length > 2 && (
+                <div className="w-9 h-9 rounded-lg border border-purple-500/30 bg-purple-500/15 flex items-center justify-center">
+                  <span className="text-[9px] text-purple-300 font-bold">+{req.result_files.length - 2}</span>
+                </div>
+              )}
             </div>
-            {showNote && (
-              <div className="space-y-2">
-                <textarea rows={2} value={note} onChange={e => setNote(e.target.value)}
-                  placeholder="اكتب ملاحظات التعديل..."
-                  className="w-full bg-white/5 border border-orange-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
-                <button
-                  disabled={!!acting}
-                  onClick={() => { handleAction('revision_requested', note); setShowNote(false); }}
-                  className="w-full py-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-xs text-orange-400 font-medium hover:bg-orange-500/30 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
-                  {acting === 'revision_requested' ? (
-                    <><div className="w-3 h-3 rounded-full border-2 border-orange-400/30 border-t-orange-400 animate-spin" /> جاري...</>
-                  ) : 'إرسال الملاحظات'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+          <svg className="w-4 h-4 text-purple-400/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
