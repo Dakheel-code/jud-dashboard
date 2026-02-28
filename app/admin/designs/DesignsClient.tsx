@@ -140,6 +140,14 @@ interface DesignRequest {
   product_media_links?: string;
 }
 
+interface BrandIdentity {
+  logo_urls: string[];
+  guideline_urls: string[];
+  brand_colors: string | null;
+  fonts: string | null;
+  notes: string | null;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLUMNS: { id: string; label: string; color: string; border: string; dot: string }[] = [
   { id: 'new',         label: 'جديد',           color: 'bg-blue-500/10',   border: 'border-blue-500/30',   dot: 'bg-blue-400'   },
@@ -159,32 +167,32 @@ const PRIORITY_META: Record<string, { label: string; color: string }> = {
   urgent: { label: 'عاجل',   color: 'text-red-400 bg-red-500/10'       },
 };
 
-// ─── Card Component ──────────────────────────────────────────────────────────────
-function RequestCard({
-  req,
-  onDragStart,
-  onStatusChange,
-  onDelete,
+// ─── RequestDetailModal ──────────────────────────────────────────────────────
+function RequestDetailModal({
+  req, onClose, onStatusChange, onDelete,
 }: {
   req: DesignRequest;
-  onDragStart: (id: string) => void;
+  onClose: () => void;
   onStatusChange: (id: string, status: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const [moving, setMoving]           = useState(false);
-  const [open, setOpen]               = useState(false);
   const [comments, setComments]       = useState<Comment[]>(req.comments ?? []);
   const [commLoading, setCommLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [files, setFiles]             = useState<File[]>([]);
   const [sending, setSending]         = useState(false);
-  const fileRef                       = useRef<HTMLInputElement>(null);
+  const [moving, setMoving]           = useState(false);
+  const [brand, setBrand]             = useState<BrandIdentity | null>(null);
+  const [brandLoading, setBrandLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const pm = PRIORITY_META[req.priority] ?? { label: req.priority, color: 'text-gray-400 bg-gray-500/10' };
   const storeName = req.stores?.store_name || req.stores?.store_url || '—';
+  const storeId   = req.store_id;
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+  const fmt     = (d: string) => new Date(d).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });
   const fmtFull = (d: string) => new Date(d).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+  // جلب التعليقات
   const loadComments = useCallback(async () => {
     setCommLoading(true);
     try {
@@ -195,7 +203,26 @@ function RequestCard({
     finally { setCommLoading(false); }
   }, [req.id]);
 
-  useEffect(() => { if (open) loadComments(); }, [open, loadComments]);
+  // جلب هوية المتجر
+  const loadBrand = useCallback(async () => {
+    if (!storeId) return;
+    setBrandLoading(true);
+    try {
+      const res  = await fetch(`/api/public/store/${storeId}/brand-identity`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setBrand(data.identity);
+    } catch { /* silent */ }
+    finally { setBrandLoading(false); }
+  }, [storeId]);
+
+  useEffect(() => {
+    loadComments();
+    loadBrand();
+    // منع scroll الخلفية
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [loadComments, loadBrand]);
 
   const uploadFile = async (file: File): Promise<string | null> => {
     const form = new FormData();
@@ -212,7 +239,6 @@ function RequestCard({
     if (!commentText.trim() && files.length === 0) return;
     setSending(true);
     try {
-      // رفع الملفات بالتوازي بدل sequential
       const results = await Promise.all(files.map(f => uploadFile(f)));
       const urls = results.filter(Boolean) as string[];
       const adminUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
@@ -228,231 +254,380 @@ function RequestCard({
     finally { setSending(false); }
   };
 
+  const colMeta = COLUMNS.find(c => c.id === req.status);
+
   return (
-    <div
-      draggable={!open}
-      onDragStart={() => { if (!open) onDragStart(req.id); }}
-      className="bg-[#130825] border border-purple-500/20 rounded-xl overflow-hidden hover:border-purple-400/40 transition-all"
-    >
-      {/* Header — قابل للسحب */}
-      <div className="p-3 cursor-grab active:cursor-grabbing select-none">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <p className="text-sm font-medium text-white leading-snug flex-1">{req.title}</p>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-md flex-shrink-0 font-medium ${pm.color}`}>{pm.label}</span>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap mb-2">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{TYPE_LABELS[req.request_type] ?? req.request_type}</span>
-          {req.platform && <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{req.platform}</span>}
-        </div>
-        <p className="text-[10px] text-purple-300/50 mb-2 truncate">{storeName}</p>
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-purple-300/30">{fmt(req.created_at)}</span>
-          <div className="flex items-center gap-2">
-            {/* Quick move */}
-            <div className="flex items-center gap-1">
-              {COLUMNS.filter(c => c.id !== req.status).map(col => (
-                <button key={col.id} disabled={moving}
-                  onClick={async (e) => { e.stopPropagation(); setMoving(true); await onStatusChange(req.id, col.id); setMoving(false); }}
-                  title={`نقل إلى: ${col.label}`}
-                  className={`w-2 h-2 rounded-full ${col.dot} opacity-50 hover:opacity-100 transition-opacity`}
-                />
-              ))}
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#0e0620] border border-purple-500/30 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 border-b border-purple-500/15 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${colMeta ? `bg-${colMeta.dot.replace('bg-','')}/15 text-${colMeta.dot.replace('bg-','')}` : 'bg-purple-500/15 text-purple-300'}`}
+                style={{ backgroundColor: `color-mix(in srgb, ${colMeta?.dot.replace('bg-','').replace('-400','').replace('-500','') ?? 'purple'} 15%, transparent)` }}>
+                {colMeta?.label ?? req.status}
+              </span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${pm.color}`}>{pm.label}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{TYPE_LABELS[req.request_type] ?? req.request_type}</span>
+              {req.platform && <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{req.platform}</span>}
             </div>
-            {/* Toggle comments */}
-            <button onClick={() => setOpen(v => !v)} title="المحادثة"
-              className="p-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors">
-              <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </button>
-            {/* Delete */}
-            <button onClick={(e) => { e.stopPropagation(); onDelete(req.id); }} title="حذف الطلب"
-              className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors">
-              <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+            <h2 className="text-lg font-bold text-white leading-snug">{req.title}</h2>
+            <p className="text-xs text-purple-300/50 mt-0.5">{storeName} · {fmt(req.created_at)}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-purple-400 hover:bg-purple-500/10 flex-shrink-0 mr-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Body — scrollable */}
+        <div className="overflow-y-auto flex-1 divide-y divide-purple-500/10">
+
+          {/* تغيير الحالة */}
+          <div className="px-5 py-3 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-purple-300/50 flex-shrink-0">نقل إلى:</span>
+            {COLUMNS.filter(c => c.id !== req.status).map(col => (
+              <button key={col.id} disabled={moving}
+                onClick={async () => { setMoving(true); await onStatusChange(req.id, col.id); setMoving(false); onClose(); }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border ${col.border} ${col.color} hover:opacity-80 transition-all disabled:opacity-40`}>
+                <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                {col.label}
+              </button>
+            ))}
+            <button onClick={() => { if (window.confirm('هل تريد حذف هذا الطلب؟')) { onDelete(req.id); onClose(); } }}
+              className="mr-auto flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              حذف
             </button>
           </div>
-        </div>
-        {req.description && <p className="text-[10px] text-purple-300/40 mt-2 line-clamp-2">{req.description}</p>}
-      </div>
 
-      {/* Details Panel — تفاصيل الاستبيان */}
-      {open && (() => {
-        const hasDetails = req.campaign_goals?.length || req.target_audience || req.has_offer ||
-          req.content_tone || req.brand_colors || req.brand_fonts ||
-          req.discount_code || req.free_shipping || req.product_links || req.product_media_links;
-        if (!hasDetails) return null;
-        return (
-          <div className="border-t border-purple-500/10 px-3 py-2.5 space-y-2" onClick={e => e.stopPropagation()}>
-            <p className="text-[10px] font-semibold text-purple-300/50 uppercase tracking-wider">تفاصيل الطلب</p>
-            <div className="grid grid-cols-1 gap-1.5">
-
-              {req.campaign_goals && req.campaign_goals.length > 0 && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 mt-0.5 flex-shrink-0 w-20">هدف الحملة</span>
-                  <div className="flex flex-wrap gap-1">
-                    {req.campaign_goals.map((g, i) => (
-                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{g}</span>
-                    ))}
-                    {req.campaign_goals_other && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{req.campaign_goals_other}</span>}
-                  </div>
-                </div>
-              )}
-
-              {req.target_audience && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">الجمهور</span>
-                  <span className="text-[10px] text-white/70">{req.target_audience}</span>
-                </div>
-              )}
-
-              {req.content_tone && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">نبرة المحتوى</span>
-                  <span className="text-[10px] text-white/70">{req.content_tone}</span>
-                </div>
-              )}
-
-              {req.has_offer && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">يوجد عرض</span>
-                  <span className={`text-[10px] font-medium ${req.has_offer === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.has_offer}</span>
-                </div>
-              )}
-
-              {req.discount_code && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">كود خصم</span>
-                  <span className="text-[10px] text-yellow-400 font-mono bg-yellow-500/10 px-1.5 py-0.5 rounded">{req.discount_code}</span>
-                </div>
-              )}
-
-              {req.free_shipping && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">توصيل مجاني</span>
-                  <span className={`text-[10px] font-medium ${req.free_shipping === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.free_shipping}</span>
-                </div>
-              )}
-
-              {req.brand_colors && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">ألوان البراند</span>
-                  <span className="text-[10px] text-white/70">{req.brand_colors}</span>
-                </div>
-              )}
-
-              {req.brand_fonts && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">الخطوط</span>
-                  <span className="text-[10px] text-white/70">{req.brand_fonts}</span>
-                </div>
-              )}
-
-              {req.product_links && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">روابط منتجات</span>
-                  <div className="flex-1">
-                    {req.product_links.split('\n').filter(Boolean).map((l, i) => (
-                      <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
-                        className="block text-[10px] text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {req.product_media_links && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">ميديا المنتج</span>
-                  <div className="flex-1">
-                    {req.product_media_links.split('\n').filter(Boolean).map((l, i) => (
-                      <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
-                        className="block text-[10px] text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {req.current_discounts && (
-                <div className="flex items-start gap-1.5">
-                  <span className="text-[9px] text-purple-300/40 flex-shrink-0 w-20">خصومات</span>
-                  <span className="text-[10px] text-white/70">{req.current_discounts}</span>
-                </div>
-              )}
-
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Comments Panel */}
-      {open && (
-        <div className="border-t border-purple-500/15 p-3 space-y-2" onClick={e => e.stopPropagation()}>
-          {/* قائمة التعليقات */}
-          {commLoading ? (
-            <div className="flex justify-center py-2">
-              <div className="w-4 h-4 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
-            </div>
-          ) : comments.length === 0 ? (
-            <p className="text-[10px] text-purple-300/25 text-center py-1">لا توجد رسائل</p>
-          ) : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
-              {comments.map(c => (
-                <div key={c.id} className={`p-2 rounded-lg text-[10px] ${
-                  c.author_role === 'client'
-                    ? 'bg-purple-500/10 border border-purple-500/20'
-                    : 'bg-fuchsia-500/10 border border-fuchsia-500/20'
-                }`}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className={`font-semibold ${
-                      c.author_role === 'client' ? 'text-purple-300' : 'text-fuchsia-300'
-                    }`}>{c.author_role === 'client' ? 'العميل' : c.author_name}</span>
-                    <span className="text-purple-300/30">{fmtFull(c.created_at)}</span>
-                  </div>
-                  {c.body && <p className="text-white/80">{c.body}</p>}
-                  {c.file_urls?.length > 0 && (
-                    <div className="mt-1.5">
-                      <FileThumb urls={c.file_urls} size="sm" />
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* الوصف */}
+          {req.description && (
+            <div className="px-5 py-4">
+              <p className="text-xs font-semibold text-purple-300/50 uppercase tracking-wider mb-2">الوصف</p>
+              <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{req.description}</p>
             </div>
           )}
 
-          {/* إرسال تعليق */}
-          <div className="space-y-1.5">
-            <textarea rows={2} value={commentText} onChange={e => setCommentText(e.target.value)}
-              placeholder="اكتب رداً أو أرفق ملف..."
-              className="w-full bg-white/5 border border-purple-500/20 rounded-lg px-2.5 py-1.5 text-[10px] text-white placeholder-purple-300/30 focus:outline-none resize-none" />
-            {files.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {files.map((f, i) => (
-                  <div key={i} className="flex items-center gap-1 text-[10px] bg-purple-500/10 px-1.5 py-0.5 rounded text-purple-300">
-                    <span className="truncate max-w-[80px]">{f.name}</span>
-                    <button onClick={() => setFiles(p => p.filter((_, j) => j !== i))}>×</button>
+          {/* تفاصيل الاستبيان */}
+          {(req.campaign_goals?.length || req.target_audience || req.has_offer || req.content_tone ||
+            req.brand_colors || req.brand_fonts || req.discount_code || req.free_shipping ||
+            req.product_links || req.product_media_links || req.current_discounts) && (
+            <div className="px-5 py-4">
+              <p className="text-xs font-semibold text-purple-300/50 uppercase tracking-wider mb-3">تفاصيل الطلب</p>
+              <div className="grid grid-cols-1 gap-2.5">
+
+                {req.campaign_goals && req.campaign_goals.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">هدف الحملة</span>
+                    <div className="flex flex-wrap gap-1">
+                      {req.campaign_goals.map((g, i) => <span key={i} className="text-xs px-2 py-0.5 rounded-lg bg-purple-500/15 text-purple-300">{g}</span>)}
+                      {req.campaign_goals_other && <span className="text-xs px-2 py-0.5 rounded-lg bg-purple-500/15 text-purple-300">{req.campaign_goals_other}</span>}
+                    </div>
+                  </div>
+                )}
+                {req.target_audience && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">الجمهور المستهدف</span>
+                    <span className="text-sm text-white/80">{req.target_audience}</span>
+                  </div>
+                )}
+                {req.content_tone && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">نبرة المحتوى</span>
+                    <span className="text-sm text-white/80">{req.content_tone}</span>
+                  </div>
+                )}
+                {req.has_offer && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">يوجد عرض</span>
+                    <span className={`text-sm font-medium ${req.has_offer === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.has_offer}</span>
+                  </div>
+                )}
+                {req.discount_code && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">كود خصم</span>
+                    <span className="text-sm text-yellow-400 font-mono bg-yellow-500/10 px-2 py-0.5 rounded-lg">{req.discount_code}</span>
+                  </div>
+                )}
+                {req.free_shipping && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">شحن مجاني</span>
+                    <span className={`text-sm font-medium ${req.free_shipping === 'نعم' ? 'text-green-400' : 'text-gray-400'}`}>{req.free_shipping}</span>
+                  </div>
+                )}
+                {req.brand_colors && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">ألوان البراند</span>
+                    <span className="text-sm text-white/80">{req.brand_colors}</span>
+                  </div>
+                )}
+                {req.brand_fonts && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">الخطوط</span>
+                    <span className="text-sm text-white/80">{req.brand_fonts}</span>
+                  </div>
+                )}
+                {req.product_links && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">روابط منتجات</span>
+                    <div className="flex-1 space-y-1">
+                      {req.product_links.split('\n').filter(Boolean).map((l, i) => (
+                        <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
+                          className="block text-sm text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {req.product_media_links && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">ميديا المنتج</span>
+                    <div className="flex-1 space-y-1">
+                      {req.product_media_links.split('\n').filter(Boolean).map((l, i) => (
+                        <a key={i} href={l.trim()} target="_blank" rel="noopener noreferrer"
+                          className="block text-sm text-purple-400 hover:text-purple-300 truncate underline">{l.trim()}</a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {req.current_discounts && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-purple-300/40 flex-shrink-0 w-28">خصومات حالية</span>
+                    <span className="text-sm text-white/80">{req.current_discounts}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* هوية المتجر */}
+          <div className="px-5 py-4">
+            <p className="text-xs font-semibold text-indigo-300/60 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              هوية المتجر
+            </p>
+            {brandLoading ? (
+              <div className="flex items-center gap-2 text-xs text-purple-300/40">
+                <div className="w-3 h-3 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />
+                جاري التحميل...
+              </div>
+            ) : !brand ? (
+              <p className="text-xs text-purple-300/30">لم تُضف هوية المتجر بعد</p>
+            ) : (
+              <div className="space-y-3">
+                {/* الشعار */}
+                {brand.logo_urls?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-indigo-300/50 mb-1.5">الشعار</p>
+                    <div className="flex flex-wrap gap-2">
+                      {brand.logo_urls.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          className="w-16 h-16 rounded-xl border border-indigo-500/25 bg-white/5 flex items-center justify-center overflow-hidden hover:border-indigo-400/50 transition-all">
+                          {/\.(jpe?g|png|gif|webp|svg)$/i.test(url)
+                            ? <img src={url} alt="logo" className="w-full h-full object-contain p-1" />
+                            : <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          }
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* الألوان */}
+                {brand.brand_colors && (
+                  <div>
+                    <p className="text-[10px] text-indigo-300/50 mb-1.5">الألوان</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {brand.brand_colors.split(/[\n,،]+/).filter(Boolean).map((c, i) => {
+                        const hex = c.trim().match(/#[0-9a-fA-F]{3,6}/)?.[0];
+                        return (
+                          <div key={i} className="flex items-center gap-1.5 bg-white/5 border border-purple-500/20 rounded-lg px-2 py-1">
+                            {hex && <span className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0" style={{ background: hex }} />}
+                            <span className="text-[10px] text-white/80 font-mono">{c.trim()}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* الخطوط */}
+                {brand.fonts && (
+                  <div>
+                    <p className="text-[10px] text-indigo-300/50 mb-1">الخطوط</p>
+                    <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed">{brand.fonts}</p>
+                  </div>
+                )}
+                {/* دليل الهوية */}
+                {brand.guideline_urls?.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-indigo-300/50 mb-1.5">دليل الهوية</p>
+                    <div className="space-y-1.5">
+                      {brand.guideline_urls.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 bg-white/5 border border-indigo-500/20 rounded-xl px-3 py-2 hover:border-indigo-400/40 transition-all">
+                          <svg className="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          <span className="text-xs text-indigo-300 truncate flex-1">{url.split('/').pop() ?? `ملف ${i + 1}`}</span>
+                          <svg className="w-3.5 h-3.5 text-purple-400/40 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {brand.notes && (
+                  <div>
+                    <p className="text-[10px] text-indigo-300/50 mb-1">ملاحظات</p>
+                    <p className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed">{brand.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* المحادثة */}
+          <div className="px-5 py-4">
+            <p className="text-xs font-semibold text-purple-300/50 uppercase tracking-wider mb-3">المحادثة</p>
+            {commLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-xs text-purple-300/25 text-center py-3">لا توجد رسائل بعد</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                {comments.map(c => (
+                  <div key={c.id} className={`p-3 rounded-xl text-xs ${
+                    c.author_role === 'client'
+                      ? 'bg-purple-500/10 border border-purple-500/20'
+                      : 'bg-fuchsia-500/10 border border-fuchsia-500/20'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-semibold ${
+                        c.author_role === 'client' ? 'text-purple-300' : 'text-fuchsia-300'
+                      }`}>{c.author_role === 'client' ? 'العميل' : c.author_name}</span>
+                      <span className="text-purple-300/30">{fmtFull(c.created_at)}</span>
+                    </div>
+                    {c.body && <p className="text-white/80">{c.body}</p>}
+                    {c.file_urls?.length > 0 && <div className="mt-2"><FileThumb urls={c.file_urls} size="sm" /></div>}
                   </div>
                 ))}
               </div>
             )}
-            <div className="flex gap-1.5">
-              <button onClick={() => fileRef.current?.click()}
-                className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            {/* إرسال تعليق */}
+            <div className="space-y-2">
+              <textarea rows={2} value={commentText} onChange={e => setCommentText(e.target.value)}
+                placeholder="اكتب رداً أو أرفق ملف..."
+                className="w-full bg-white/5 border border-purple-500/20 rounded-xl px-3 py-2 text-xs text-white placeholder-purple-300/30 focus:outline-none resize-none" />
+              {files.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[10px] bg-purple-500/10 px-2 py-1 rounded-lg text-purple-300">
+                      <span className="truncate max-w-[80px]">{f.name}</span>
+                      <button onClick={() => setFiles(p => p.filter((_, j) => j !== i))}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input ref={fileRef} type="file" multiple className="hidden"
+                  onChange={e => setFiles(p => [...p, ...Array.from(e.target.files ?? [])])} />
+                <button onClick={() => fileRef.current?.click()}
+                  className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                <button onClick={sendComment} disabled={sending || (!commentText.trim() && files.length === 0)}
+                  className="flex-1 py-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-xl text-xs font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2">
+                  {sending ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />جاري...</> : 'إرسال'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Card Component ──────────────────────────────────────────────────────────────
+function RequestCard({
+  req,
+  onDragStart,
+  onStatusChange,
+  onDelete,
+}: {
+  req: DesignRequest;
+  onDragStart: (id: string) => void;
+  onStatusChange: (id: string, status: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [moving, setMoving]         = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const pm = PRIORITY_META[req.priority] ?? { label: req.priority, color: 'text-gray-400 bg-gray-500/10' };
+  const storeName = req.stores?.store_name || req.stores?.store_url || '—';
+  const fmt = (d: string) => new Date(d).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+
+  return (
+    <>
+      {showDetail && (
+        <RequestDetailModal
+          req={req}
+          onClose={() => setShowDetail(false)}
+          onStatusChange={onStatusChange}
+          onDelete={onDelete}
+        />
+      )}
+      <div
+        draggable
+        onDragStart={() => onDragStart(req.id)}
+        onClick={() => setShowDetail(true)}
+        className="bg-[#130825] border border-purple-500/20 rounded-xl overflow-hidden hover:border-purple-400/40 transition-all cursor-pointer"
+      >
+        <div className="p-3 select-none">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-sm font-medium text-white leading-snug flex-1">{req.title}</p>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-md flex-shrink-0 font-medium ${pm.color}`}>{pm.label}</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap mb-2">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300">{TYPE_LABELS[req.request_type] ?? req.request_type}</span>
+            {req.platform && <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{req.platform}</span>}
+          </div>
+          <p className="text-[10px] text-purple-300/50 mb-2 truncate">{storeName}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-purple-300/30">{fmt(req.created_at)}</span>
+            <div className="flex items-center gap-2">
+              {/* Quick move dots */}
+              <div className="flex items-center gap-1">
+                {COLUMNS.filter(c => c.id !== req.status).map(col => (
+                  <button key={col.id} disabled={moving}
+                    onClick={async (e) => { e.stopPropagation(); setMoving(true); await onStatusChange(req.id, col.id); setMoving(false); }}
+                    title={`نقل إلى: ${col.label}`}
+                    className={`w-2 h-2 rounded-full ${col.dot} opacity-50 hover:opacity-100 transition-opacity`}
+                  />
+                ))}
+              </div>
+              {/* فتح التفاصيل */}
+              <button onClick={(e) => { e.stopPropagation(); setShowDetail(true); }} title="التفاصيل والمحادثة"
+                className="p-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors">
+                <svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </button>
-              <input ref={fileRef} type="file" multiple className="hidden"
-                onChange={e => setFiles(p => [...p, ...Array.from(e.target.files ?? [])])} />
-              <button onClick={sendComment} disabled={sending || (!commentText.trim() && files.length === 0)}
-                className="flex-1 py-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-lg text-[10px] font-medium text-white disabled:opacity-50">
-                {sending ? 'جاري...' : 'إرسال'}
+              {/* Delete */}
+              <button onClick={(e) => { e.stopPropagation(); onDelete(req.id); }} title="حذف الطلب"
+                className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors">
+                <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
             </div>
           </div>
+          {req.description && <p className="text-[10px] text-purple-300/40 mt-2 line-clamp-2">{req.description}</p>}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
