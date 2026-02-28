@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     if (!userId) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+      return NextResponse.json({ success: true });
     }
 
     const { data, error } = await supabase
@@ -88,7 +88,7 @@ export async function PUT(request: Request) {
     }
 
     if (!userId) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
+      return NextResponse.json({ success: true });
     }
 
     // تحديث last_login في admin_users (لحالة الاتصال الفوري)
