@@ -490,7 +490,7 @@ export default function StorePublicPage() {
             {/* — بانتظار مراجعتك — */}
             {pendingReview.length > 0 && (
               <div className="space-y-3">
-                {pendingReview.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} highlight />)}
+                {pendingReview.map(req => <DesignCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} highlight />)}
               </div>
             )}
 
@@ -501,7 +501,7 @@ export default function StorePublicPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
                   تحت التعديل
                 </p>
-                {revisionDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+                {revisionDesigns.map(req => <DesignCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} />)}
               </div>
             )}
 
@@ -512,14 +512,14 @@ export default function StorePublicPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
                   معتمدة
                 </p>
-                {approvedDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+                {approvedDesigns.map(req => <DesignCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} />)}
               </div>
             )}
 
             {/* — أخرى (canceled, waiting_info...) — */}
             {otherDesigns.length > 0 && (
               <div className="space-y-2">
-                {otherDesigns.map(req => <DesignCard key={req.id} req={req} onFeedback={handleFeedback} />)}
+                {otherDesigns.map(req => <DesignCard key={req.id} req={req} storeId={storeId} onFeedback={handleFeedback} />)}
               </div>
             )}
 
@@ -1173,8 +1173,9 @@ function RequestCard({ req, storeId, onFeedback, onRefresh }: {
 }
 
 // ─── DesignDetailModal ────────────────────────────────────────────────────────
-function DesignDetailModal({ req, onFeedback, onClose }: {
+function DesignDetailModal({ req, storeId, onFeedback, onClose }: {
   req: CreativeRequest;
+  storeId: string;
   onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void;
   onClose: () => void;
 }) {
@@ -1200,7 +1201,7 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
   const loadComments = async () => {
     setCommLoading(true);
     try {
-      const res  = await fetch(`/api/public/store/${req.store_id}/requests/${req.id}/comments`);
+      const res  = await fetch(`/api/public/store/${storeId}/requests/${req.id}/comments`);
       if (res.ok) { const d = await res.json(); setComments(d.comments ?? []); }
     } catch { /* silent */ }
     finally { setCommLoading(false); }
@@ -1222,7 +1223,7 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
     setSending(true);
     try {
       const urls = (await Promise.all(files.map(uploadFile))).filter(Boolean) as string[];
-      await fetch(`/api/public/store/${req.store_id}/requests/${req.id}/comments`, {
+      await fetch(`/api/public/store/${storeId}/requests/${req.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: commentText, author_name: 'العميل', author_role: 'client', file_urls: urls }),
@@ -1409,7 +1410,7 @@ function DesignDetailModal({ req, onFeedback, onClose }: {
 }
 
 // ─── DesignCard ───────────────────────────────────────────────────────────────
-function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
+function DesignCard({ req, storeId, onFeedback, highlight }: { req: CreativeRequest; storeId: string; onFeedback: (id: string, fb: 'approved' | 'revision_requested', note?: string) => void; highlight?: boolean }) {
   const [showModal, setShowModal] = useState(false);
   const isDone       = req.status === 'done';
   const isReview     = req.status === 'review';
@@ -1426,7 +1427,7 @@ function DesignCard({ req, onFeedback, highlight }: { req: CreativeRequest; onFe
   return (
     <>
       {showModal && (
-        <DesignDetailModal req={req} onFeedback={onFeedback} onClose={() => setShowModal(false)} />
+        <DesignDetailModal req={req} storeId={storeId} onFeedback={onFeedback} onClose={() => setShowModal(false)} />
       )}
       <div
         onClick={() => setShowModal(true)}
