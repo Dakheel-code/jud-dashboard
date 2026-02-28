@@ -6,11 +6,13 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { TasksByCategory } from '@/types';
 
-const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false });
+const SectionSkeleton = () => <div className="h-16 rounded-2xl bg-purple-500/5 border border-purple-500/10 animate-pulse" />;
+
+const SnapchatCampaignsSection = dynamic(() => import('@/components/SnapchatCampaignsSection'), { ssr: false, loading: () => <SectionSkeleton /> });
 const AddStoreModal = dynamic(() => import('@/components/AddStoreModal'), { ssr: false });
-const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false });
+const MetaAdsCard = dynamic<{ storeId: string; embedded?: boolean }>(() => import('@/components/MetaAdsCard'), { ssr: false, loading: () => <SectionSkeleton /> });
 const GoogleAdsConnectButton = dynamic<{ storeId: string }>(() => import('@/components/GoogleAdsConnectButton'), { ssr: false });
-const DesignsSection = dynamic<{ storeId: string; storeName?: string }>(() => import('@/components/DesignsSection'), { ssr: false });
+const DesignsSection = dynamic<{ storeId: string; storeName?: string }>(() => import('@/components/DesignsSection'), { ssr: false, loading: () => <SectionSkeleton /> });
 
 interface StoreFullData {
   id: string;
