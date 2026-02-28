@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminBottomNav from '@/components/AdminBottomNav';
@@ -17,7 +17,19 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
-  
+
+  // تنبيه الـ Lambdas الأساسية لتقليل Cold Start
+  useEffect(() => {
+    if (pathname === '/admin/login') return;
+    const apis = [
+      '/api/ping',
+      '/api/admin/stats',
+      '/api/admin/designs',
+      '/api/admin/dashboard',
+    ];
+    apis.forEach(url => fetch(url, { method: 'GET', cache: 'no-store' }).catch(() => {}));
+  }, []);
+
   // لا نعرض الـ layout في صفحة تسجيل الدخول
   if (pathname === '/admin/login') {
     return <>{children}</>;
