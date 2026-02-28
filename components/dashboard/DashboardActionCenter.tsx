@@ -249,7 +249,7 @@ export default function DashboardActionCenter({ items }: DashboardActionCenterPr
       {items.length > 6 && (
         <div className="mt-4 text-center">
           <Link
-            href="/admin/tasks?filter=urgent"
+            href="/admin/store-tasks"
             className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
           >
             عرض {items.length - 6} عنصر إضافي ←

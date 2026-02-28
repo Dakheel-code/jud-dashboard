@@ -99,7 +99,7 @@ export default function TodayTasksWidget({ tasks }: TodayTasksWidgetProps) {
         {/* Quick Actions */}
         <div className="flex items-center gap-2">
           <Link
-            href="/admin/tasks/new"
+            href="/admin/store-tasks"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium hover:bg-green-500/30 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +108,7 @@ export default function TodayTasksWidget({ tasks }: TodayTasksWidgetProps) {
             <span>إنشاء مهمة</span>
           </Link>
           <Link
-            href="/admin/tasks"
+            href="/admin/store-tasks"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-500/30 transition-colors"
           >
             <span>لوحة المهام</span>
@@ -131,7 +131,7 @@ export default function TodayTasksWidget({ tasks }: TodayTasksWidgetProps) {
           <h4 className="text-white font-medium mb-1">لا توجد مهام لليوم!</h4>
           <p className="text-purple-300/60 text-sm mb-4">جميع المهام مكتملة أو لا توجد مهام مجدولة</p>
           <Link
-            href="/admin/tasks/new"
+            href="/admin/store-tasks"
             className="flex items-center gap-1.5 px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-500/30 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,7 +197,7 @@ export default function TodayTasksWidget({ tasks }: TodayTasksWidgetProps) {
       {tasks.length > 8 && (
         <div className="mt-4 text-center">
           <Link
-            href="/admin/tasks?filter=today"
+            href="/admin/store-tasks"
             className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 transition-colors"
           >
             <span>عرض كل المهام ({tasks.length})</span>
