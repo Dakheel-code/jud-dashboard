@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       id, title, request_type, status, priority, platform,
       description, result_files, created_at, updated_at,
       store_id,
+      client_feedback, client_feedback_note, client_feedback_at,
       campaign_goals, campaign_goals_other, has_offer, target_audience,
       content_tone, brand_colors, brand_fonts, discount_code,
       current_discounts, free_shipping, product_links, product_media_links,

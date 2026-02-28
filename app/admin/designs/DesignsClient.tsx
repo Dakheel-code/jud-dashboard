@@ -138,6 +138,9 @@ interface DesignRequest {
   free_shipping?: string;
   product_links?: string;
   product_media_links?: string;
+  client_feedback?: string | null;
+  client_feedback_note?: string | null;
+  client_feedback_at?: string | null;
 }
 
 interface BrandIdentity {
@@ -306,6 +309,24 @@ function RequestDetailModal({
             <div className="px-5 py-4">
               <p className="text-xs font-semibold text-purple-300/50 uppercase tracking-wider mb-2">الوصف</p>
               <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">{req.description}</p>
+            </div>
+          )}
+
+          {/* ملاحظات التعديل من العميل */}
+          {req.client_feedback_note && (
+            <div className="px-5 py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider">ملاحظات التعديل من العميل</p>
+                {req.client_feedback_at && (
+                  <span className="text-[10px] text-orange-300/40 mr-auto">{fmtFull(req.client_feedback_at)}</span>
+                )}
+              </div>
+              <div className="bg-orange-500/10 border border-orange-500/25 rounded-xl p-3">
+                <p className="text-sm text-orange-200 leading-relaxed whitespace-pre-wrap">{req.client_feedback_note}</p>
+              </div>
             </div>
           )}
 
