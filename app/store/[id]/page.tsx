@@ -217,10 +217,12 @@ export default function StorePublicPage() {
     finally { setLoading(false); }
   }, [storeId]);
 
-  // polling كل 30 ثانية لتحديث حالة الطلبات
+  // polling — يتوقف عند إخفاء الصفحة لتقليل الضغط
   useEffect(() => {
     fetchData();
-    const t = setInterval(fetchData, 10_000);
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchData();
+    }, 30_000);
     return () => clearInterval(t);
   }, [fetchData]);
 
@@ -841,11 +843,9 @@ function RequestCard({ req, storeId, onFeedback, onRefresh }: {
     if (!commentText.trim() && files.length === 0) return;
     setSending(true);
     try {
-      const uploadedUrls: string[] = [];
-      for (const f of files) {
-        const url = await uploadFile(f);
-        if (url) uploadedUrls.push(url);
-      }
+      // رفع الملفات بالتوازي
+      const results = await Promise.all(files.map(f => uploadFile(f)));
+      const uploadedUrls = results.filter(Boolean) as string[];
       await fetch(`/api/public/store/${storeId}/requests/${req.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

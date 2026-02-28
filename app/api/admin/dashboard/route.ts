@@ -229,6 +229,8 @@ export async function GET(request: NextRequest) {
         totalActive: 0, dailySpend: 0,
         bestCampaign: null, worstCampaign: null, noConversions: []
       }
+    }, {
+      headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' }
     });
 
   } catch (error) {

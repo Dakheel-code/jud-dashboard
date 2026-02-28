@@ -18,12 +18,15 @@ export async function GET(
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('request_comments')
-    .select('*')
+    .select('id, request_id, body, author_name, author_role, file_urls, created_at')
     .eq('request_id', params.reqId)
     .order('created_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ comments: data ?? [] });
+  return NextResponse.json(
+    { comments: data ?? [] },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
 
 // POST /api/admin/designs/[reqId]/comments

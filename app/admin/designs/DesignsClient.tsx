@@ -212,8 +212,9 @@ function RequestCard({
     if (!commentText.trim() && files.length === 0) return;
     setSending(true);
     try {
-      const urls: string[] = [];
-      for (const f of files) { const u = await uploadFile(f); if (u) urls.push(u); }
+      // رفع الملفات بالتوازي بدل sequential
+      const results = await Promise.all(files.map(f => uploadFile(f)));
+      const urls = results.filter(Boolean) as string[];
       const adminUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
       await fetch(`/api/admin/designs/${req.id}/comments`, {
         method: 'POST',
@@ -552,7 +553,10 @@ export default function DesignsClient() {
 
   useEffect(() => {
     fetchRequests();
-    const t = setInterval(() => fetchRequests(true), 15_000);
+    const t = setInterval(() => {
+      // لا تحدّث إذا كانت الصفحة مخفية (تقليل الضغط على السيرفر)
+      if (document.visibilityState === 'visible') fetchRequests(true);
+    }, 20_000);
     return () => clearInterval(t);
   }, [fetchRequests]);
 
