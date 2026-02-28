@@ -217,7 +217,17 @@ export default function StorePublicPage() {
     finally { setLoading(false); }
   }, [storeId]);
 
-  // polling — يتوقف عند إخفاء الصفحة لتقليل الضغط
+  // polling خفيف كل 10 ثوانٍ للطلبات فقط — يعكس تغييرات الإدارة بسرعة
+  const fetchRequestsOnly = useCallback(async () => {
+    try {
+      const res  = await fetch(`/api/public/store/${storeId}/requests-only?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setRequests(data.requests ?? []);
+    } catch { /* silent */ }
+  }, [storeId]);
+
+  // polling الكامل كل 30 ثانية (متجر + مهام + طلبات)
   useEffect(() => {
     fetchData();
     const t = setInterval(() => {
@@ -225,6 +235,14 @@ export default function StorePublicPage() {
     }, 30_000);
     return () => clearInterval(t);
   }, [fetchData]);
+
+  // polling خفيف كل 10 ثوانٍ للطلبات فقط
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchRequestsOnly();
+    }, 10_000);
+    return () => clearInterval(t);
+  }, [fetchRequestsOnly]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
