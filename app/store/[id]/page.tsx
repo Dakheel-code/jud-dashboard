@@ -437,21 +437,6 @@ export default function StorePublicPage() {
               </a>
             )}
 
-            {/* شريط إحصائيات سريع */}
-            <div className="flex items-center gap-4 mt-5 w-full justify-center">
-              <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white/5 border border-purple-500/15 min-w-[72px]">
-                <span className="text-lg font-black text-purple-300">{requests.filter(r => !['review','done'].includes(r.status) || !['design','video','photo','copy','other'].includes(r.request_type)).length}</span>
-                <span className="text-[10px] text-purple-300/40 mt-0.5">طلب نشط</span>
-              </div>
-              <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white/5 border border-orange-500/15 min-w-[72px]">
-                <span className="text-lg font-black text-orange-300">{requests.filter(r => r.status === 'review').length}</span>
-                <span className="text-[10px] text-orange-300/40 mt-0.5">بانتظار رأيك</span>
-              </div>
-              <div className="flex flex-col items-center px-4 py-2 rounded-2xl bg-white/5 border border-green-500/15 min-w-[72px]">
-                <span className="text-lg font-black text-green-300">{requests.filter(r => r.status === 'done').length}</span>
-                <span className="text-[10px] text-green-300/40 mt-0.5">معتمد</span>
-              </div>
-            </div>
           </div>
         </div>
 
