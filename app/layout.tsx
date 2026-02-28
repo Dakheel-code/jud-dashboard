@@ -12,18 +12,18 @@ const UrgentAnnouncementModal = dynamic(
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-cairo",
-  display: "block",
+  display: "swap",
   preload: true,
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
-  display: "block",
-  preload: true,
+  display: "swap",
+  preload: false,
 });
 
 // جلب بيانات الـ branding من الملف مباشرة (Server-Side)

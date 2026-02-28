@@ -465,11 +465,8 @@ export default function PermissionsPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#0a0118] text-white" style={{ fontFamily: "'Tajawal', 'IBM Plex Sans Arabic', sans-serif" }}>
-      {/* خط Tajawal من Google Fonts */}
+    <div dir="rtl" className="min-h-screen bg-[#0a0118] text-white" style={{ fontFamily: "var(--font-cairo), system-ui, sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
-
         * { box-sizing: border-box; }
 
         .glass-card {

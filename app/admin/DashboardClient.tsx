@@ -191,16 +191,15 @@ function AdminPageContent() {
     syncUserToLocalStorage();
   }, []);
 
-  // تحديث تلقائي للبيانات
+  // تحديث تلقائي للبيانات — كل الـ calls تعمل بالتوازي
   useEffect(() => {
-    fetchData();
-    fetchDashboardSummary();
-    fetchWidgetSettings();
-    
-    // إعداد التحديث التلقائي
+    // تحميل أولي بالتوازي
+    Promise.all([fetchData(), fetchDashboardSummary(), fetchWidgetSettings()]);
+
     const interval = setInterval(() => {
-      fetchDataSilent();
-      fetchDashboardSummary();
+      // لا تحدّث إذا كانت الصفحة مخفية
+      if (document.visibilityState !== 'visible') return;
+      Promise.all([fetchDataSilent(), fetchDashboardSummary()]);
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
