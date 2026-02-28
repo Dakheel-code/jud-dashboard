@@ -30,12 +30,12 @@ export async function POST(
     const path = `brand-identity/${storeId}/${type}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('designs')
+      .from('request-files')
       .upload(path, file, { upsert: false, contentType: file.type });
 
     if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
 
-    const { data: { publicUrl } } = supabase.storage.from('designs').getPublicUrl(path);
+    const { data: { publicUrl } } = supabase.storage.from('request-files').getPublicUrl(path);
 
     return NextResponse.json({ url: publicUrl });
   } catch (e: any) {
